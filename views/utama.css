@@ -1,4 +1,7 @@
-body {
+*, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
       font-family: "Poppins", sans-serif;
       background-color: #0e1e40;
       color: #c0d6f9;
@@ -126,9 +129,11 @@ body {
     }
 
     main {
-      padding: 4rem 1.5rem 3rem;
-      max-width: 5xl;
-      margin-left: 0;
+      padding: 5rem 1rem 3rem;
+      max-width: 1200px;
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
       transition: margin-left 0.35s ease;
       flex-grow: 1;
     }
