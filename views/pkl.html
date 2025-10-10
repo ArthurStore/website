@@ -1,0 +1,711 @@
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1" name="viewport" />
+  <title>Laporan PKL - Penyelesaian Quiz & Lab Linux Fundamental Adinusa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/pkl.css">
+</head>
+<body>
+  <button
+    aria-controls="sidebar"
+    aria-expanded="false"
+    aria-label="Toggle menu"
+    id="hamburger-btn"
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+  <div id="sidebar-overlay" tabindex="-1"></div>
+  <aside aria-label="Sidebar navigation" id="sidebar">
+    <ul>
+      <li>
+        <a aria-label="Beranda" href="/" tabindex="0">
+      <i class="fas fa-home">
+      </i>
+      <span>
+       Beranda
+      </span>
+     </a>
+    </li>
+    <li>
+     <a aria-label="Tentang Bot WhatsApp" href="/#about" tabindex="0">
+      <i class="fas fa-robot">
+      </i>
+      <span>
+       Tentang Bot
+      </span>
+     </a>
+    </li>
+    <li>
+        <a aria-label="Pkl" href="/pkl" tabindex="0">
+        <i class="fas fa-file-alt"></i>
+       <span>
+       Laporan PKL
+       </span>
+        </a>
+      </li>
+      <li>
+     <a aria-label="Portofolio" href="/portofolio" tabindex="0">
+      <i class="fas fa-folder-open">
+      </i>
+      <span>
+       Portofolio
+      </span>
+     </a>
+    </li>
+    <li>
+     <a aria-label="Sertifikat" href="/sertifikat" tabindex="0">
+      <i class="fas fa-certificate">
+      </i>
+      <span>
+       Sertifikat
+      </span>
+     </a>
+    </li>
+    <li>
+     <a aria-label="Kontak" href="/#contact" tabindex="0">
+      <i class="fas fa-envelope">
+      </i>
+      <span>
+       Kontak
+      </span>
+     </a>
+    </li>
+    </ul>
+  </aside>
+  <main id="main-content" tabindex="-1" class="">
+    <section id="intro" class="content-container fade-in-slide" style="animation-delay: 0.2s;">
+      <h1 class="text-4xl font-extrabold text-blue-400 mb-6 text-center">
+        Laporan PKL - Penyelesaian Quiz & Lab Linux Fundamental Adinusa
+      </h1>
+      <p class="text-blue-200 max-w-3xl mx-auto text-center text-lg leading-relaxed">
+        Pada tanggal 7-9 April 2025, saya telah menyelesaikan course Linux Fundamental di adinusa.id. Berikut adalah dokumentasi lengkap penyelesaian quiz dan lab yang saya kerjakan selama course tersebut, lengkap dengan perintah, penjelasan, dan gambar pendukung.
+      </p>
+      <div class="mt-8 max-w-md mx-auto rounded-full overflow-hidden shadow-lg ring-4 ring-blue-700">
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEggKzAApDyRYuRraDZtkjHpn40bnJ5Y1NLGoPfNRDcnI_y_RPsDVrF7ijJq-gFHwJyaN68uN0dJ3TkcOviML-Sqs-BgKaLtNXvJqHzxYfQTqRLTTUg-1u5-GHQ4H9uz6DM95xptQ15x02cDYNcPB7a5_s4v2WBTrjWxPc7eH7UC_wmuVQucU_D_RiB_QKI/s474/Screenshot_20250409_130526.png"
+          alt="Screenshot hasil penyelesaian quiz dan lab Linux Fundamental di adinusa.id pada tanggal 7-9 April 2025, menampilkan tampilan terminal dengan perintah dan output"
+          loading="lazy"
+          width="474"
+          height="auto"
+          class="object-cover w-full h-auto"
+          tabindex="0"
+        />
+      </div>
+    </section>
+
+    <section id="materi-list" class="content-container fade-in-slide" style="animation-delay: 0.4s;">
+      <h2 class="text-3xl font-bold text-blue-400 border-b-2 border-blue-600 inline-block pb-2 mb-6 text-center">
+        Daftar Materi
+      </h2>
+      <nav class="list-titles" role="tablist" aria-label="Daftar materi laporan PKL">
+        <button role="tab" aria-selected="true" aria-controls="materi-1" id="tab-1" tabindex="0" class="active">Lab 2.1 : Installing Docker</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-2" id="tab-2" tabindex="-1">Lab 2.2 : Docker Run - Part 1</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-3" id="tab-3" tabindex="-1">Lab 2.3 : Docker Run - Part 2</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-4" id="tab-4" tabindex="-1">Lab 2.1 : List and Count Files</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-5" id="tab-5" tabindex="-1">Quiz 1 : Configure Resource Limits</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-6" id="tab-6" tabindex="-1">Lab 4.1 : killall and pkill</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-7" id="tab-7" tabindex="-1">Lab 5.1 : Installing Package</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-8" id="tab-8" tabindex="-1">Quiz 2 : Installing Package With Repository</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-9" id="tab-9" tabindex="-1">Lab 6.1 : Monitoring Process States</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-10" id="tab-10" tabindex="-1">Lab 8.1 : Making Links Between Files</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-11" id="tab-11" tabindex="-1">Lab 9.1 : Create Swap File</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-12" id="tab-12" tabindex="-1">Lab 10.1 : Logical Volumes</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-13" id="tab-13" tabindex="-1">Lab 12.1 : Manage User and Groups</button>
+        <button role="tab" aria-selected="false" aria-controls="materi-14" id="tab-14" tabindex="-1">Lab 12.2 : Configure SSH Key Auth</button>
+      </nav>
+    </section>
+
+    <section id="materi-content" class="content-container fade-in-slide" style="animation-delay: 0.6s;">
+      <article
+        id="materi-1"
+        role="tabpanel"
+        aria-labelledby="tab-1"
+        tabindex="0"
+        class="content-section"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 2.1 : Installing Docker</h3>
+        <pre>
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+docker version
+docker info
+sudo usermod -aG docker $USER
+sudo chmod 666 /var/run/docker.sock
+docker run registry.adinusa.id/btacademy/hello-world
+docker image ls
+sudo systemctl restart docker
+        </pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEggKzAApDyRYuRraDZtkjHpn40bnJ5Y1NLGoPfNRDcnI_y_RPsDVrF7ijJq-gFHwJyaN68uN0dJ3TkcOviML-Sqs-BgKaLtNXvJqHzxYfQTqRLTTUg-1u5-GHQ4H9uz6DM95xptQ15x02cDYNcPB7a5_s4v2WBTrjWxPc7eH7UC_wmuVQucU_D_RiB_QKI/s474/Screenshot_20250409_130526.png"
+          alt="Screenshot terminal perintah instalasi Docker di Linux Ubuntu dengan langkah-langkah update, install, dan menjalankan container hello-world"
+          loading="lazy"
+          width="474"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-2"
+        role="tabpanel"
+        aria-labelledby="tab-2"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 2.2 : Docker Run - Part 1</h3>
+        <pre>
+docker search redis
+skopeo list-tags docker://registry.adinusa.id/btacademy/redis
+docker run registry.adinusa.id/btacademy/redis, ctrl + c
+docker run -d registry.adinusa.id/btacademy/redis
+docker run -d --name redis1 registry.adinusa.id/btacademy/redis
+docker ps
+docker container ls
+docker inspect redis1
+docker logs redis1
+docker stats redis1
+docker top redis1
+docker stop redis1
+docker search nginx
+skopeo list-tags docker://registry.adinusa.id/btacademy/nginx
+docker run -d --name nginx1 -p 80:80 registry.adinusa.id/btacademy/nginx:latest
+docker inspect nginx1
+docker run -d --name nginx2 -p 80 registry.adinusa.id/btacademy/nginx:latest
+curl localhost:$(docker port nginx2 80 | cut -d : -f 2)
+docker ps -a
+docker container ls -a
+docker images
+        </pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjIPpk1O0LaCtxvzqiMFXjd-fiDgPU-K_PBCaUTIeIioh5AHCeW0EA0zfQu_UCN_SR3h76sauBbC3SksreZ_3x7oeBi4n-1Oc46oCy5HrUgKPFOHoHmuM1rCqRjnkru3HB3yiQFfRRnlpng35SDU7lg5WWEzUFK3NL6AlGEf67HleSqWBXHmzXEEw0ATdE"
+          alt="Screenshot terminal menjalankan perintah docker run dan inspect container redis di Linux"
+          loading="lazy"
+          width="600"
+          height="400"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-3"
+        role="tabpanel"
+        aria-labelledby="tab-3"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 2.3 : Docker Run - Part 2</h3>
+        <pre>
+docker search nginx
+skopeo list-tags docker://registry.adinusa.id/btacademy/nginx
+docker inspect nginx1
+docker ps -a
+curl localhost:8080
+curl localhost:8081
+docker exec -it nginx2 /bin/bash
+apt-get update -y && apt-get install nano -y
+nano index.html
+isi dengan hello, geralda.
+jika sudah ctrl + x lalu y enter
+mv index.html /usr/share/nginx/html
+service nginx restart
+docker start nginx2
+docker inspect nginx1
+docker inspect nginx2
+docker logs nginx1
+docker logs nginx2
+docker stats nginx1
+docker stats nginx2
+docker top nginx1
+docker top nginx2
+docker search ubuntu
+skopeo list-tags docker://registry.adinusa.id/btacademy/ubuntu
+docker pull registry.adinusa.id/btacademy/ubuntu
+docker run -it --name ubuntu1 registry.adinusa.id/btacademy/ubuntu
+docker ps -a
+docker run -it --rm --name ubuntu2 registry.adinusa.id/btacademy/ubuntu
+docker ps -a
+        </pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjIPpk1O0LaCtxvzqiMFXjd-fiDgPU-K_PBCaUTIeIioh5AHCeW0EA0zfQu_UCN_SR3h76sauBbC3SksreZ_3x7oeBi4n-1Oc46oCy5HrUgKPFOHoHmuM1rCqRjnkru3HB3yiQFfRRnlpng35SDU7lg5WWEzUFK3NL6AlGEf67HleSqWBXHmzXEEw0ATdE"
+          alt="Screenshot terminal menjalankan perintah docker run dan konfigurasi nginx container di Linux"
+          loading="lazy"
+          width="600"
+          height="400"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-4"
+        role="tabpanel"
+        aria-labelledby="tab-4"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 2.1: List and Count Files</h3>
+        <p>
+          Langkah pertama yang dilakukan adalah mengetikkan <code>nusactl login</code>, dan memasukkan username dan password akun Adinusa kalian. Setelah berhasil login, kita akan lanjut mengetik <code>nusactl start linlab-002-1</code>.
+        </p>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjIPpk1O0LaCtxvzqiMFXjd-fiDgPU-K_PBCaUTIeIioh5AHCeW0EA0zfQu_UCN_SR3h76sauBbC3SksreZ_3x7oeBi4n-1Oc46oCy5HrUgKPFOHoHmuM1rCqRjnkru3HB3yiQFfRRnlpng35SDU7lg5WWEzUFK3NL6AlGEf67HleSqWBXHmzXEEw0ATdE"
+          alt="Screenshot terminal login nusactl dan start lab linlab-002-1 di Linux"
+          loading="lazy"
+          width="600"
+          height="400"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiKJePsNVp8VyZ-LGmRNlJOXcbIzDQd2IH7q0wmFk35XroTLvbrBfhLsLQiPucOFv84cIXjAXbP-soifoiVWxXzyXRr58QeruLoTjB64HILhlks5fqK8ovou6wq9lbRfeASHug7OGCkDFOnP3RQxF8RxMMgdHa1WfMs7_pqMXYFRqWr3JDVOxr3aXnh6Zc/s801/Screenshot_20250409_135544.png"
+          alt="Screenshot terminal menjalankan perintah lab list and count files di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-5"
+        role="tabpanel"
+        aria-labelledby="tab-5"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Quiz 1 Configure Resource Limits</h3>
+        <p>Lakukan edit pada <code>/etc/security/limits.conf</code> dengan cara:</p>
+        <pre>nano /etc/security/limits.conf</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh3AuUsI0jPS7HyOAO95Y4FWzuDCKRu38T3KtX0ljZktm07-jI40jm2aftXc2ZddoMcW6Q_EPcoyU1tON3F71moR9iY5Hb9LDYFelnjFb0NIW3iKsQLoWMopCWBW1zZCBXW8elM1af1tPQjyWoeVR87kWVyhVroy-BoK10epVjBGINGAJ1Vgs1aiXKcBqU/s801/Screenshot_20250409_141015.png"
+          alt="Screenshot terminal edit file limits.conf menggunakan nano di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Jalankan perintah berikut dan edit:</p>
+        <pre>sudo nano /etc/pam.d/common-session</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgm7WUm4oCCMIfTRNJccvdEKiEDM9MYF5RVCLToSZrbzUkBXclls7HqVDQDCcLiQgat6fLRECHS35KRPxDDGYg8jwD7OtcgcBrwXdHeskYSK2THB2m_r6Dww1EZ_JZhEpdP-h_Ly5Bww0Yf1t4vNmVyxqTO3UYhKoH0_xsDw2U3eaJvS5123ix35g54WvQ/s801/Screenshot_20250409_141456.png"
+          alt="Screenshot terminal edit file common-session menggunakan nano di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Lakukan perintah <code>sudo reboot</code> dan lakukan seperti ini:</p>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEgpm-cYXYl-jW3gBF9DY9UnupR3bi5on-GGrRHdZn4UnitcZtgawBU55OVSEzPThO2QYIRgGZ8Vr99RvTu1FyrlZMeiC3E7RxHbLhr8j7KcfNQA5kvXwcOzTs2S5X5J9wKlkKR2llsxIJOpeOBaAoyATNEGBDzMdKfEz2vxdpN-IrK-UjEspAuNAO9MszU"
+          alt="Screenshot terminal setelah reboot dan konfigurasi resource limits di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-6"
+        role="tabpanel"
+        aria-labelledby="tab-6"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 4.1 : killall and pkill</h3>
+        <p>Buat skrip dengan cara mengetikkan:</p>
+        <pre>vim /home/student/lab4/killing</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEj0Tq6hi1esXKwXbUMWuBVtrjSS65QcKgvnsNC6L6O9cJM8TPOgXdAePdVHAJxAlE06S2n_G0EES2irG6-bd9MBlF1q1PsbckzNNIATRbfA_mJII4B1sZTlyBP0ikEsdp2D4ohEMA63jrKCjZ4oM8R12Sd5EEJF41nSO_ETXLLtbH49AHQZCVvXljsJl2I"
+          alt="Screenshot terminal membuat skrip killing menggunakan vim di Linux"
+          loading="lazy"
+          width="392"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Ubah skrip menjadi executable dengan cara:</p>
+        <pre>chmod +x ~/lab4/killing</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEh_H5dKHdCuJDUQMwFJV05knHnTLhORJF5-S-Sdp4Ga86HRwgOmH0jLv2HmbIEo4Br7lQVM6eh7ywKpl-Go0QeNLqeAvpFrY5B_vrOvozVqLvPMxKsqPgW6nzYlybcFyAR2c2hvLw2F_bBV-GMS1YWrVJJpgr9pWWNClkgXvSSJ_kACTbvDQo0vGE2URY0"
+          alt="Screenshot terminal mengubah skrip menjadi executable dengan chmod di Linux"
+          loading="lazy"
+          width="392"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Lakukan seperti ini:</p>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjrJk48msVBlpLhHNcczSb_K2pUDUU-SIKBGp9RtgfyI0-3G-Ay55oHaZ2pK-QchDKC8L5ALN9lIDpfWq8k6CRd0Tec_yWzeUvcajWectTJ6Bm7vJjKvMOSxcgbBJjkRaHGcxNvTr2rAmjdDvEIvei93u1amJFvEhPkDxOdQKbKZV55uwRWtSObrn1nxhc"
+          alt="Screenshot terminal menjalankan skrip killing di Linux"
+          loading="lazy"
+          width="392"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-7"
+        role="tabpanel"
+        aria-labelledby="tab-7"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 5.1: Installing Package</h3>
+        <p>Lakukan update dan upgrade paket:</p>
+        <pre>sudo apt update && sudo apt upgrade</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjjq8qAPj7LNIcV10lruxGWwa754QutmUqvR72hInBwstaAq6gpBWdnhTI0L4CV8eAuzgK-gxrxDCKIAq7nGtEaJjrTYuQqEh4jSIH7UVNlnHPO25PE0wqY-bvLzajAeJtBw3azrvwpqw6n_HRv-p4L5OyqoQ3HCNbAj0XoVz0yjoUr3P5YREwXn98K7OU"
+          alt="Screenshot terminal update dan upgrade paket di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Install Apache2:</p>
+        <pre>sudo apt install apache2</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEiE0iXOr-lupNhg_SkNSbp-R6WHdx07vyXRah0hMzI9wIW3SCu7xFIiHvyVuchDKbENLghvcZNZV-_PUz1rOGCDiP4ssDeztebmPIWPDd4gNqX4dR_R87d53M7Rnw32aTq691rEJystWvQQg4UD7Q0kL87Ch3qP7e6t9Cj6dFNj0VWJLLGrNay_2UrHtwE"
+          alt="Screenshot terminal instalasi apache2 di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-8"
+        role="tabpanel"
+        aria-labelledby="tab-8"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Quiz 2 Installing Package With Repository</h3>
+        <p>Lakukan instalasi paket dengan repository seperti ini:</p>
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjYPV06FCIM6iKbSAqBiXEhaNsDHDxgVDU7SlCWy9wt3zh0EcEYJ-maf11cH2Y39RcH8fJVYB2x_KWewOtlzrD77tABZXLTSEuNwFul0DOMnXpGZm6cFefBOg3v0JSTXTns-R_xfBAN0cH_3hYo5Zj7BxhyphenhyphengdvoQP3EIXKozKCWfLZ52V43bkQuX2HSV4g/s801/Screenshot_20250410_160318.png"
+          alt="Screenshot terminal instalasi paket dengan repository di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-9"
+        role="tabpanel"
+        aria-labelledby="tab-9"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 6.1: Monitoring Process States</h3>
+        <p>Buat skrip baru dengan cara:</p>
+        <pre>vim /home/student/lab6/monitor</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEhurjbt9RUPh32uIGGGgtf0UHUs_1Xcqw4hjckBP5zHduuYP33E7Y06anfeQTil0EL358jGZaxMzHTlHI4TKzhT6O_Oe4xkLvDTylSXsZV73CgdOm0Rm_wHtdQpUOXe2K2PB2pahavKvIMe_Xm_5PeL4PlGzA-K3bX9YAwuUNTslQzeNu6VXjiJyiAhKuY"
+          alt="Screenshot terminal membuat skrip monitor menggunakan vim di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Ubah skrip menjadi executable:</p>
+        <pre>chmod a+x /home/student/lab6/monitor</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjWaELlHIt0iHLO8VmaNmK8crZbLIiuNUDDIYY0XSzM9FSSKDdfw7L9VfO7OJQlEyD7O_BLq7AlHDYC2bDf2TfKiwWGN57IikrIIT0G6YLYEjateuBFHc6RymJljSR3DKtPAFEzQE65jpr41AND6kBzZl7_hH2JAMGgQHAStrc6sg2PewNn1Ankzzkh4Ms"
+          alt="Screenshot terminal chmod executable skrip monitor di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Jalankan skrip di background:</p>
+        <pre>./monitor &amp;</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEi0ngYwCwgv0y2VIFWOZRkrlbwrKYAgTJdQIq6IQLPOKkuvUVFc-SCBnNxgPNSVJc0_05ZXVUR6PE9KpR16IuvSBZja-p79E03pv_jnrDf0kHuKn0ax5pOiDTDRdrdMmhnGgQhwHvUFChYV11BVCUGjJZAt3jDTte4Qu-ZXnk0IJyT91K4JSm1UQUwkZs8"
+          alt="Screenshot terminal menjalankan skrip monitor di background di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Gunakan perintah <code>top</code> untuk melihat performa CPU:</p>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEg2v0CsSBhp7Gi2CnMJoLr5S4NKOIaHEBNK7rLvc4LECOhewBnXFgs5dIlVhno4CIHoLWaG-aBf01DBJQ0sljvXipX9-pdKMpzmykckXxeq_7JMLo0F432Ld2jSCe_P6nUR-vERHUFU41HHlYYPY-YW_7U5VMZTcEBq4YY22T_e-yagXlcQvNEqnDoXDco"
+          alt="Screenshot terminal perintah top untuk monitoring CPU di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-10"
+        role="tabpanel"
+        aria-labelledby="tab-10"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 8.1: Making Links Between Files</h3>
+        <p>Lakukan seperti ini:</p>
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgRIcaSZUsx_HDLqLha-UDYeoblPEo8SCF_6OfmrOy7Hjbtrp9zbWVfVU0BUuNpLOsVpH6lVcsUE9iR8rSehxBNFAEcL2cXUffIRW1g7iwnoNoRNA71YB5NCnf9nt-RPx0nIs5SBy4EXGOYoG31TYLaXmNflBkjq7Bj3aaksFcu1M7fVgYSGqdF7mRwskw/s801/Screenshot_20250411_083212.png"
+          alt="Screenshot terminal membuat link antara file di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-11"
+        role="tabpanel"
+        aria-labelledby="tab-11"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 9.1: Create Swap File</h3>
+        <pre>
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+sudo nano /etc/fstab
+# Tambahkan entri swapfile di fstab
+# Setelah selesai ctrl+x, y, enter
+swapon --show
+        </pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjonXPVnvnEmrzHWFjv5uVK_FZJFGN5nokiT-K7NBheEG-gQ5aJQq8Jx94cIsQo29gizEB0QWMz0kXslmWL-7grIhQ6oI3G8qs_Rxi_erAZj4rwCnYTJ6VVnzfqk-nLaCCHIzXP4Pq1bEnNzsPCUxyVhp4GoCyeMt21NO6ntx1S4BA5d23f8-tBry7MsPc/s801/Screenshot_20250411_084719.png"
+          alt="Screenshot terminal edit file fstab untuk swapfile di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhWtu5ncJ8fdilEOT1Qi2HN5NX0vfVFQbPfrViilzvB8BI-pQqzvwBhcvOEGfRJKBogAP76qJAqYSfjIrPh8qKUp5LHFQJYhQGmjKD6JNziDx77zmVqXQafHkPoW6PDFb-hTbr3SxSvIRe9ZTavgdUvgbhcZsY2KwFnnFy1DrGxmxbxH1M5rDUr-Jp55xw/s801/Screenshot_20250411_084826.png"
+          alt="Screenshot terminal perintah swapon --show untuk cek swap aktif di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-12"
+        role="tabpanel"
+        aria-labelledby="tab-12"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 10.1: Logical Volumes</h3>
+        <p>Lakukan langkah-langkah berikut:</p>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjvazn25iFj-N8XJMb4zJWq6myP3cUz6a-1oLU5F7H_a6wtnQmiIxY0f24ZzZEbOGyRKVi2ScZJbKLEdnIj-gPb8Tqt2RI4V2JShJ3hujSgUgVmXV-sgeoeB2tfr2jlrFjFVTlW1C1yYgI58dOuD6vKkqvoCUErB6bT2CDoHaoBzjM2130uh8-rcyXknZk"
+          alt="Screenshot terminal konfigurasi logical volumes di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjXoJhGhOHo7avTsQ3uOrRx9Brk0r3nQcoK8F1PKtLBNpL1kFZdkNK4HU4gCbbiYwWaZKp9aluOB82ErZD5eXwr_-6chM5jEXv9Y2GCq8oJI-22gSOXocOR4pSeTvsq5_o5D2kXDE2OdL81rul4pMGiEsHIKTSv60mvopezgS6pqr8UvaRiocrnMyJv9R4"
+          alt="Screenshot terminal konfigurasi logical volumes dan fstab di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <img
+          src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgAWmUCWfw7tXcKC2hn0C2Ur5t5ELEUMURa5_wfgwW6nfBOsJdl9JmXNA_njMRtSnPEUwszshhiItTbZAvLXJfxPkQTERgTaXBMIwQcKqUF1KNcIh0KmV-GJp5obQOqTaPm7x3Yt2E33T9lhLi6gbjwTV4mKFgoAZq85QFnyvH_fLVWqugD52QVrDl6f2E/s801/Screenshot_20250411_093514.png"
+          alt="Screenshot terminal edit file fstab untuk logical volumes di Linux"
+          loading="lazy"
+          width="801"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <p>Reload konfigurasi fstab:</p>
+        <pre>systemctl daemon-reload</pre>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEhM7oPO1Z9z5Qek_oczVu-tId66Np6IVLq4EM1XIRIHWX7TtlVhWHgtW1VwiaPaJLxsDKXyOnNAuUAA8kf9daHLJntKlwg7xSmayRofeGvGc_snHa9d-XY3iqwyNNl-vWukliXyfgf4nPDdo7GHGk6GQsZyuYJbs5eeZP_YmFbIb7e9NyAeBeNrUqsSVmQ"
+          alt="Screenshot terminal reload daemon systemd di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEgcwRZGW39ViwUS2BsWPG1wHMVGBcH860VHPFD_eDurzA1jtjYOsUQRsRw26cph09xg4SwX4zfjLcn89SC6reC_tkUhgB_P8EoiTwgEq4PiUmb8TDA-aD9J9OmSFGgNgQD50hVVri_4Y1VS2Ro02MN2RLe01S9qD1NtGI5qjMPUWO1fNVDHWoqPpcmzH7E"
+          alt="Screenshot terminal reload daemon systemd di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-13"
+        role="tabpanel"
+        aria-labelledby="tab-13"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 12.1: Manage User and Groups</h3>
+        <p>Lakukan seperti ini:</p>
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEjXI5-XCAFuraAYKYLRWvGMOcYN-CmyeY9WYmZEHAqJ-OHAV90YoI7e8xp_4LfkbZlrUUA5PfZRJKD1sAX3Vs8MTWSymGsaI8YfyaMCbZ8EEnUlnz6hT4cMMxULkWOB6xT8vRJDAqN-zIvY-Fu7ylKpxiOCBSiImR4Ir55pMqOqkPA6UYkGsWSRZ51ijm4"
+          alt="Screenshot terminal manajemen user dan grup di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEhe29bpyRNi2cRc_GT5n_26hBzo9U_8bf6Mpit1F-MPtqb7CztgZdMOfcBkKocoiz0lVNchnKrHKEyD7PUnJrvmNZXYjzT_aDMwvTpYaIy0bOBR_oFTMbOlaUyCupZiN9vRAJ6hOTzPs5IoGKKPl46jb7NIfdZn1bLO5igsu-z27TmRlPrUpHn9-t44Jfk"
+          alt="Screenshot terminal manajemen user dan grup di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+        <img
+          src="https://blogger.googleusercontent.com/img/a/AVvXsEj5POyRc_pAgCO4MVhBhj9wFbdC9mZnQ-u4VRU5oKdXNz-qx76o-uuujcrFm7hyfTGzPcApmnZia_kV1XNn5zr_hDx60g84mH3hCPJuDbqBUStDG7ucOAqsfFnV-geHXPc81E33LjXh3ut6RkaMoVrlbXqf-s_Yvi_b4MZNwOZWqBcB7ei4HwVOxfzXLoI"
+          alt="Screenshot terminal manajemen user dan grup di Linux"
+          loading="lazy"
+          width="600"
+          height="auto"
+          class="mt-4 rounded-lg"
+          tabindex="0"
+        />
+      </article>
+
+      <article
+        id="materi-14"
+        role="tabpanel"
+        aria-labelledby="tab-14"
+        tabindex="-1"
+        class="content-section hidden"
+      >
+        <h3 class="text-2xl font-semibold text-blue-300 mb-4">Lab 12.2: Configure SSH Key Auth</h3>
+        <p>Generate SSH Key tanpa passphrase:</p>
+        <pre>
+ssh-keygen -t rsa -b 2048
+# Saat diminta lokasi file:
+# Enter file in which to save the key (/home/student/.ssh/id_rsa): [tekan ENTER]
+# Enter passphrase (empty for no passphrase): [tekan ENTER]
+# Enter same passphrase again: [tekan ENTER]
+        </pre>
+        <p>Kirim public key ke server:</p>
+        <pre>ssh-copy-id -i ~/.ssh/id_rsa.pub -p 50001 btastudent@lab.adinusa.id</pre>
+        <p>Masukkan password:</p>
+        <pre>BTABtech</pre>
+        <p>Coba SSH tanpa password:</p>
+        <pre>ssh -p 50001 btastudent@lab.adinusa.id hostname</pre>
+        <p>Jalankan perintah remote:</p>
+        <pre>
+ssh -p 50001 btastudent@lab.adinusa.id cat .ssh/authorized_keys
+ssh -p 50001 btastudent@lab.adinusa.id hostname
+        </pre>
+        <p>Quiz 3 Create User and Group:</p>
+        <pre>
+sudo su
+useradd -m -s /bin/sh labuser
+echo "geralda:bta!@#adn" | chpaswwd
+chage -d 0 geralda
+groupadd mentor
+usermod -aG mentor geralda
+        </pre>
+      </article>
+    </section>
+
+    <section id="contact" class="content-container fade-in-slide" style="animation-delay: 0.8s;">
+      <h2 class="text-3xl font-bold text-blue-400 border-b-2 border-blue-600 inline-block pb-2 mb-6 text-center">
+        Kontak
+      </h2>
+      <p class="text-center max-w-md mx-auto text-blue-200">
+        Jika ada pertanyaan atau ingin berdiskusi lebih lanjut, silakan hubungi saya melalui WhatsApp:
+      </p>
+      <div class="mt-4 text-center">
+        <a
+          href="https://wa.me/6285102775181"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition"
+          >Hubungi via WhatsApp <i class="fab fa-whatsapp ml-2"></i></a
+        >
+      </div>
+    </section>
+
+    <footer>
+      <div aria-label="Hashtag populer" class="hashtags" role="contentinfo" tabindex="0">
+        <span>#LaporanPKL</span>
+        <span>#LinuxFundamental</span>
+        <span>#Adinusa</span>
+        <span>#Docker</span>
+        <span>#PacketTracer</span>
+      </div>
+      <div aria-label="Hak cipta" class="copyright" tabindex="0">
+        © 2024 Laporan PKL Adinusa. Semua hak dilindungi.
+      </div>
+    </footer>
+  </main>
+
+  <div aria-label="Image preview modal" aria-modal="true" id="image-modal" role="dialog" tabindex="-1">
+    <div class="modal-content">
+      <button aria-label="Close image preview" class="close-btn" id="modal-close-btn" type="button">×</button>
+      <img alt="" id="modal-image" src="" />
+    </div>
+  </div>
+  <script defer src="/pkl.js"></script>
+</body>
+</html>
