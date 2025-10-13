@@ -1,3 +1,58 @@
+// Animated Background Particles
+function createParticles() {
+  const particleContainer = document.createElement('div');
+  particleContainer.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  `;
+  document.body.appendChild(particleContainer);
+
+  for (let i = 0; i < 30; i++) {
+    const particle = document.createElement('div');
+    const size = Math.random() * 4 + 2;
+    const duration = Math.random() * 20 + 15;
+    const delay = Math.random() * 5;
+    const startX = Math.random() * 100;
+    const endX = startX + (Math.random() * 20 - 10);
+    
+    particle.style.cssText = `
+      position: absolute;
+      width: ${size}px;
+      height: ${size}px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.6), transparent);
+      border-radius: 50%;
+      top: ${Math.random() * 100}%;
+      left: ${startX}%;
+      animation: float${i} ${duration}s ease-in-out ${delay}s infinite;
+      opacity: ${Math.random() * 0.5 + 0.3};
+    `;
+    
+    const keyframes = `
+      @keyframes float${i} {
+        0%, 100% { transform: translate(0, 0); }
+        25% { transform: translate(${Math.random() * 30 - 15}px, ${Math.random() * 30 - 15}px); }
+        50% { transform: translate(${Math.random() * 50 - 25}px, ${Math.random() * 50 - 25}px); }
+        75% { transform: translate(${Math.random() * 30 - 15}px, ${Math.random() * 30 - 15}px); }
+      }
+    `;
+    
+    const styleSheet = document.createElement('style');
+    styleSheet.textContent = keyframes;
+    document.head.appendChild(styleSheet);
+    
+    particleContainer.appendChild(particle);
+  }
+}
+
+// Initialize particles
+createParticles();
+
 const hamburgerBtn = document.getElementById("hamburger-btn");
   const sidebar = document.getElementById("sidebar");
   const sidebarOverlay = document.getElementById("sidebar-overlay");

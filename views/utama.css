@@ -1,11 +1,55 @@
 body {
       font-family: "Poppins", sans-serif;
-      background-color: #0e1e40;
+      background: linear-gradient(135deg, #0e1e40 0%, #1a2b5a 25%, #0e1e40 50%, #162548 75%, #0e1e40 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
       color: #c0d6f9;
       overflow-x: hidden;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(96, 165, 250, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(59, 130, 246, 0.03) 2px, rgba(59, 130, 246, 0.03) 4px),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(59, 130, 246, 0.03) 2px, rgba(59, 130, 246, 0.03) 4px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
     }
 
     #sidebar-overlay {
@@ -131,6 +175,8 @@ body {
       margin-left: 0;
       transition: margin-left 0.35s ease;
       flex-grow: 1;
+      position: relative;
+      z-index: 1;
     }
     @media (min-width: 768px) {
       main.sidebar-open {
@@ -172,6 +218,8 @@ body {
       font-size: 0.9rem;
       user-select: none;
       flex-shrink: 0;
+      position: relative;
+      z-index: 1;
     }
     footer .hashtags {
       display: flex;
