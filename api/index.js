@@ -39,6 +39,8 @@ app.get('/pkl', (req, res) => {
 });
 
 app.get('/portofolio', (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(__dirname, '../views/portofolio.html'));
 });
 
