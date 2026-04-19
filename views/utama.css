@@ -1,8 +1,12 @@
 body {
       font-family: "Poppins", sans-serif;
-      background: linear-gradient(135deg, #0e1e40 0%, #1a2b5a 25%, #0e1e40 50%, #162548 75%, #0e1e40 100%);
-      background-size: 400% 400%;
-      animation: gradientShift 15s ease infinite;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.2), transparent 38%),
+        radial-gradient(circle at 80% 10%, rgba(56, 189, 248, 0.14), transparent 34%),
+        radial-gradient(circle at 70% 80%, rgba(99, 102, 241, 0.16), transparent 42%),
+        linear-gradient(140deg, #050c1d 0%, #0e1e40 35%, #132a59 65%, #0a1734 100%);
+      background-size: 120% 120%, 120% 120%, 120% 120%, 260% 260%;
+      animation: auroraDrift 20s ease-in-out infinite;
       color: #c0d6f9;
       overflow-x: hidden;
       min-height: 100vh;
@@ -14,14 +18,12 @@ body {
     body::before {
       content: '';
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: -20%;
       background-image: 
-        radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.1) 0%, transparent 50%),
-        radial-gradient(circle at 40% 20%, rgba(96, 165, 250, 0.08) 0%, transparent 50%);
+        radial-gradient(circle at 25% 35%, rgba(59, 130, 246, 0.2) 0%, transparent 46%),
+        radial-gradient(circle at 72% 68%, rgba(14, 165, 233, 0.16) 0%, transparent 42%);
+      filter: blur(36px);
+      animation: ambientFloat 22s ease-in-out infinite;
       pointer-events: none;
       z-index: 0;
     }
@@ -29,26 +31,46 @@ body {
     body::after {
       content: '';
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: 
-        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(59, 130, 246, 0.03) 2px, rgba(59, 130, 246, 0.03) 4px),
-        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(59, 130, 246, 0.03) 2px, rgba(59, 130, 246, 0.03) 4px);
+      inset: 0;
+      background:
+        radial-gradient(circle at center, transparent 45%, rgba(2, 6, 23, 0.58) 100%),
+        linear-gradient(180deg, rgba(12, 22, 48, 0.06) 0%, rgba(7, 13, 30, 0.42) 100%);
       pointer-events: none;
       z-index: 0;
     }
 
-    @keyframes gradientShift {
+    @keyframes auroraDrift {
       0% {
-        background-position: 0% 50%;
+        background-position: 0% 0%, 100% 0%, 100% 100%, 0% 50%;
       }
       50% {
-        background-position: 100% 50%;
+        background-position: 12% 18%, 86% 6%, 74% 86%, 100% 50%;
       }
       100% {
-        background-position: 0% 50%;
+        background-position: 0% 0%, 100% 0%, 100% 100%, 0% 50%;
+      }
+    }
+
+    @keyframes ambientFloat {
+      0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+      50% {
+        transform: translate3d(2%, -2%, 0) scale(1.04);
+      }
+    }
+
+    @keyframes ambientParticle {
+      0% {
+        transform: translate3d(0, 0, 0);
+        opacity: 0.2;
+      }
+      50% {
+        opacity: 0.7;
+      }
+      100% {
+        transform: translate3d(var(--tx), var(--ty), 0);
+        opacity: 0.25;
       }
     }
 
@@ -386,19 +408,93 @@ body {
       box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
     
-    /* Button Improvements */
-    button, .inline-block {
-      transition: all 0.3s ease;
+    .hero-highlights {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-bottom: 1.75rem;
     }
-    
-    /* Card Hover Effects */
-    article {
-      transition: all 0.3s ease;
+
+    .hero-highlights li {
+      list-style: none;
+      background: rgba(30, 64, 175, 0.25);
+      border: 1px solid rgba(147, 197, 253, 0.32);
+      color: #dbeafe;
+      font-size: 0.875rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
     }
-    
-    article:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+
+    .cta-button {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      border: 1px solid transparent;
+      transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    }
+
+    .cta-button::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.28) 48%, transparent 100%);
+      transform: translateX(-130%);
+      transition: transform 0.6s ease;
+      z-index: -1;
+    }
+
+    .cta-button:hover::before,
+    .cta-button:focus-visible::before {
+      transform: translateX(130%);
+    }
+
+    .cta-button:hover,
+    .cta-button:focus-visible {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 22px rgba(30, 64, 175, 0.34);
+      outline: none;
+    }
+
+    .cta-primary {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #1e40af 100%);
+      border-color: rgba(147, 197, 253, 0.35);
+    }
+
+    .cta-secondary {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 45%, #0f766e 100%);
+      border-color: rgba(125, 211, 252, 0.4);
+    }
+
+    .service-link {
+      color: #93c5fd;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.25s ease, gap 0.25s ease;
+    }
+
+    .service-link:hover,
+    .service-link:focus-visible {
+      color: #dbeafe;
+      gap: 0.8rem;
+      outline: none;
+    }
+
+    #projects article,
+    #portfolio article,
+    #certificates article {
+      border: 1px solid rgba(96, 165, 250, 0.2);
+      box-shadow: 0 10px 26px rgba(8, 47, 73, 0.35);
+      transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+    }
+
+    #projects article:hover,
+    #portfolio article:hover,
+    #certificates article:hover {
+      transform: translateY(-6px);
+      border-color: rgba(96, 165, 250, 0.45);
+      box-shadow: 0 16px 34px rgba(37, 99, 235, 0.34);
     }
     
     /* Text Improvements */
@@ -449,6 +545,10 @@ body {
     }
     
     @media (min-width: 768px) {
+      .hero-highlights {
+        justify-content: flex-start;
+      }
+
       .md\\:flex-row {
         flex-direction: row;
       }
@@ -459,5 +559,15 @@ body {
       
       .md\\:inline {
         display: inline;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
       }
     }

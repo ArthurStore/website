@@ -1,57 +1,45 @@
-// Animated Background Particles
-function createParticles() {
-  const particleContainer = document.createElement('div');
+function createAmbientParticles() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) return;
+
+  const particleContainer = document.createElement("div");
+  particleContainer.setAttribute("aria-hidden", "true");
   particleContainer.style.cssText = `
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
   `;
   document.body.appendChild(particleContainer);
 
-  for (let i = 0; i < 30; i++) {
-    const particle = document.createElement('div');
-    const size = Math.random() * 4 + 2;
-    const duration = Math.random() * 20 + 15;
-    const delay = Math.random() * 5;
-    const startX = Math.random() * 100;
-    const endX = startX + (Math.random() * 20 - 10);
-    
+  for (let i = 0; i < 14; i += 1) {
+    const particle = document.createElement("span");
+    const size = Math.random() * 2.8 + 1.2;
+    const duration = Math.random() * 20 + 18;
+    const delay = Math.random() * 8;
+    const travelX = Math.random() * 42 - 21;
+    const travelY = Math.random() * 70 - 35;
+
     particle.style.cssText = `
       position: absolute;
       width: ${size}px;
       height: ${size}px;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.6), transparent);
       border-radius: 50%;
+      background: rgba(147, 197, 253, ${Math.random() * 0.45 + 0.25});
       top: ${Math.random() * 100}%;
-      left: ${startX}%;
-      animation: float${i} ${duration}s ease-in-out ${delay}s infinite;
-      opacity: ${Math.random() * 0.5 + 0.3};
+      left: ${Math.random() * 100}%;
+      filter: blur(0.5px);
+      animation: ambientParticle ${duration}s ease-in-out ${delay}s infinite alternate;
+      --tx: ${travelX}px;
+      --ty: ${travelY}px;
     `;
-    
-    const keyframes = `
-      @keyframes float${i} {
-        0%, 100% { transform: translate(0, 0); }
-        25% { transform: translate(${Math.random() * 30 - 15}px, ${Math.random() * 30 - 15}px); }
-        50% { transform: translate(${Math.random() * 50 - 25}px, ${Math.random() * 50 - 25}px); }
-        75% { transform: translate(${Math.random() * 30 - 15}px, ${Math.random() * 30 - 15}px); }
-      }
-    `;
-    
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = keyframes;
-    document.head.appendChild(styleSheet);
-    
+
     particleContainer.appendChild(particle);
   }
 }
 
-// Initialize particles
-createParticles();
+createAmbientParticles();
 
 const lazyImages = document.querySelectorAll('img[data-src]');
 if ('IntersectionObserver' in window) {
