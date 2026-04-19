@@ -1,0 +1,303 @@
+# Deployment VPS (Node.js + PM2 + Nginx + SSL)
+
+Panduan ini dibuat untuk project ini agar online 24/7 menggunakan PM2, domain `arthurg.my.id`, dan SSL HTTPS.
+
+---
+
+## 1) Persiapan VPS
+
+Login ke VPS:
+
+```bash
+ssh root@IP_VPS_ANDA
+```
+
+Update package:
+
+```bash
+apt update && apt upgrade -y
+```
+
+Install tool dasar:
+
+```bash
+apt install -y curl git ufw nginx
+```
+
+Aktifkan firewall dasar:
+
+```bash
+ufw allow OpenSSH
+ufw allow 'Nginx Full'
+ufw --force enable
+ufw status
+```
+
+---
+
+## 2) Pasang Node.js LTS + PM2
+
+Install Node.js 22 LTS (disarankan):
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt install -y nodejs
+node -v
+npm -v
+```
+
+Install PM2 global:
+
+```bash
+npm install -g pm2
+pm2 -v
+```
+
+---
+
+## 3) Clone project ke VPS
+
+Masuk ke folder yang diinginkan:
+
+```bash
+cd /var/www
+```
+
+Clone repo:
+
+```bash
+git clone https://github.com/ArthurStore/website.git
+cd website
+```
+
+Checkout branch terbaru (opsional, jika mau pakai branch tertentu):
+
+```bash
+git checkout cursor/ui-polish-profesional-98aa
+```
+
+Install dependency:
+
+```bash
+npm ci
+```
+
+---
+
+## 4) Jalankan app dengan PM2
+
+Di folder project (`/var/www/website`), jalankan:
+
+```bash
+pm2 start ecosystem.config.cjs
+pm2 status
+```
+
+Simpan agar auto start saat VPS reboot:
+
+```bash
+pm2 save
+pm2 startup systemd -u root --hp /root
+```
+
+Setelah menjalankan perintah `pm2 startup`, copy-paste command tambahan yang muncul di terminal (jika ada), lalu jalankan lagi:
+
+```bash
+pm2 save
+```
+
+---
+
+## 5) Konfigurasi DNS domain `arthurg.my.id`
+
+Di panel DNS domain Anda, buat record:
+
+- **Type:** A  
+- **Name/Host:** `@`  
+- **Value:** `IP_VPS_ANDA`  
+- **TTL:** Auto / 300
+
+Jika mau subdomain `www` juga aktif:
+
+- **Type:** CNAME  
+- **Name/Host:** `www`  
+- **Value:** `arthurg.my.id`
+
+Tunggu propagasi DNS (biasanya beberapa menit, kadang lebih lama).
+
+Cek DNS dari VPS:
+
+```bash
+dig +short arthurg.my.id
+```
+
+Hasilnya harus IP VPS Anda.
+
+---
+
+## 6) Konfigurasi Nginx reverse proxy
+
+Buat file nginx:
+
+```bash
+nano /etc/nginx/sites-available/arthurg.my.id
+```
+
+Isi dengan konfigurasi ini:
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name arthurg.my.id www.arthurg.my.id;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Aktifkan site:
+
+```bash
+ln -s /etc/nginx/sites-available/arthurg.my.id /etc/nginx/sites-enabled/
+```
+
+Nonaktifkan default (opsional tapi disarankan):
+
+```bash
+rm -f /etc/nginx/sites-enabled/default
+```
+
+Test dan reload nginx:
+
+```bash
+nginx -t
+systemctl reload nginx
+systemctl status nginx --no-pager
+```
+
+Sampai sini website harus sudah bisa diakses via:
+- `http://arthurg.my.id`
+
+---
+
+## 7) Pasang SSL Let's Encrypt (HTTPS)
+
+Install certbot:
+
+```bash
+apt install -y certbot python3-certbot-nginx
+```
+
+Generate SSL untuk domain:
+
+```bash
+certbot --nginx -d arthurg.my.id -d www.arthurg.my.id
+```
+
+Pilih opsi redirect ke HTTPS saat diminta.
+
+Tes auto-renew SSL:
+
+```bash
+certbot renew --dry-run
+```
+
+Sekarang domain aktif di:
+- `https://arthurg.my.id`
+
+---
+
+## 8) Perintah operasional harian
+
+Cek app:
+
+```bash
+pm2 status
+pm2 logs arthurg-website
+```
+
+Restart app setelah update:
+
+```bash
+cd /var/www/website
+git pull
+npm ci
+pm2 restart arthurg-website
+pm2 save
+```
+
+Cek port listening:
+
+```bash
+ss -tulpn | rg ':3000|:80|:443'
+```
+
+---
+
+## 9) Troubleshooting cepat
+
+Jika domain tidak kebuka:
+1. Pastikan DNS `arthurg.my.id` mengarah ke IP VPS yang benar.
+2. Cek nginx:
+   ```bash
+   nginx -t
+   systemctl status nginx --no-pager
+   ```
+3. Cek PM2:
+   ```bash
+   pm2 status
+   pm2 logs arthurg-website --lines 100
+   ```
+4. Cek firewall:
+   ```bash
+   ufw status
+   ```
+
+---
+
+## 10) Catatan environment variable
+
+Aplikasi ini memakai email/captcha route. Supaya aman, set ENV di server (jangan hardcode kredensial):
+
+Contoh (temporary session):
+
+```bash
+export NODE_ENV=production
+export PORT=3000
+export SESSION_SECRET='ganti-dengan-random-secret'
+export EMAIL_USER='email-anda'
+export EMAIL_PASS='app-password-anda'
+export EMAIL_TO='email-tujuan'
+```
+
+Jika ingin permanen, bisa pakai file ecosystem PM2 langsung (`env_production`) lalu restart:
+
+```bash
+pm2 restart arthurg-website --env production
+pm2 save
+```
+
+---
+
+## 11) Opsional: jalankan sebagai user non-root (lebih aman)
+
+Disarankan membuat user deploy agar aplikasi tidak berjalan sebagai root:
+
+```bash
+adduser deploy
+usermod -aG sudo deploy
+mkdir -p /var/www
+chown -R deploy:deploy /var/www
+```
+
+Lalu login sebagai deploy, clone project, install dependency, dan jalankan PM2 dari user tersebut.
+
