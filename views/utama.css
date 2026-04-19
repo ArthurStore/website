@@ -266,6 +266,23 @@ body {
       box-shadow: 0 0 15px rgba(59, 130, 246, 0.7);
     }
 
+    img.optimized-image {
+      opacity: 1;
+      transition: opacity 0.45s ease, filter 0.45s ease;
+    }
+
+    img.optimized-image.is-lazy,
+    img.optimized-image.is-loading {
+      opacity: 0.6;
+      filter: blur(8px);
+    }
+
+    img.optimized-image.is-ready,
+    img.optimized-image.is-loaded {
+      opacity: 1;
+      filter: blur(0);
+    }
+
     .bot-previews-container {
       max-width: 1000px;
       margin: 0 auto;

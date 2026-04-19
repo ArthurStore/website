@@ -53,6 +53,37 @@ function createParticles() {
 // Initialize particles
 createParticles();
 
+const lazyImages = document.querySelectorAll('img[data-src]');
+if ('IntersectionObserver' in window) {
+  const lazyObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const img = entry.target;
+      const source = img.getAttribute('data-src');
+      if (source) {
+        img.src = source;
+      }
+      img.addEventListener('load', () => {
+        img.classList.remove('is-loading');
+        img.classList.add('is-ready');
+      }, { once: true });
+      img.addEventListener('error', () => {
+        img.classList.remove('is-loading');
+      }, { once: true });
+      observer.unobserve(img);
+    });
+  }, { rootMargin: '200px 0px' });
+
+  lazyImages.forEach((img) => lazyObserver.observe(img));
+} else {
+  lazyImages.forEach((img) => {
+    const source = img.getAttribute('data-src');
+    if (source) img.src = source;
+    img.classList.remove('is-loading');
+    img.classList.add('is-ready');
+  });
+}
+
 const hamburgerBtn = document.getElementById("hamburger-btn");
   const sidebar = document.getElementById("sidebar");
   const sidebarOverlay = document.getElementById("sidebar-overlay");

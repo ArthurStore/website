@@ -5,11 +5,22 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const shortLinks = new Map();
+const fileVaultEntries = new Map();
 const MAX_HISTORY_PER_LINK = 20;
+const UPLOAD_STORAGE_DIR = process.env.UPLOAD_STORAGE_DIR || path.join(os.tmpdir(), 'indragpt-file-vault');
+const STORAGE_CAPACITY_BYTES = (Number(process.env.STORAGE_CAPACITY_MB || 512) || 512) * 1024 * 1024;
+const MAX_UPLOAD_FILE_SIZE_BYTES = (Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 50) || 50) * 1024 * 1024;
+
+if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
+  fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
+}
 
 app.enable("trust proxy");
 app.set("json spaces", 2);
@@ -51,6 +62,298 @@ app.get('/short-link', (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(__dirname, '../views/short-link.html'));
+});
+
+app.get('/file-vault', (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(__dirname, '../views/file-vault.html'));
+});
+
+app.get('/ip-calculator', (req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(__dirname, '../views/ip-calculator.html'));
+});
+
+const uploadStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOAD_STORAGE_DIR),
+  filename: (_req, file, cb) => {
+    const randomSuffix = crypto.randomBytes(6).toString('hex');
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    cb(null, `${Date.now()}-${randomSuffix}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: {
+    fileSize: MAX_UPLOAD_FILE_SIZE_BYTES,
+    files: 200
+  }
+});
+
+function getFileStatus(entry) {
+  if (typeof entry.expiresAt === 'number' && Date.now() > entry.expiresAt) {
+    return 'expired';
+  }
+  return 'active';
+}
+
+function getUsedStorageBytes() {
+  return Array.from(fileVaultEntries.values()).reduce((acc, entry) => acc + entry.sizeBytes, 0);
+}
+
+function buildUploadPublicUrl(req, id) {
+  return `${req.protocol}://${req.get('host')}/u/${id}`;
+}
+
+function buildUploadDownloadUrl(req, id) {
+  return `${req.protocol}://${req.get('host')}/api/uploads/${id}/download`;
+}
+
+function serializeUploadEntry(req, entry) {
+  return {
+    id: entry.id,
+    originalName: entry.originalName,
+    relativePath: entry.relativePath,
+    sizeBytes: entry.sizeBytes,
+    contentType: entry.contentType,
+    createdAt: entry.createdAt,
+    expiresAt: entry.expiresAt,
+    status: getFileStatus(entry),
+    clickCount: entry.clickCount,
+    downloadCount: entry.downloadCount,
+    lastClickedAt: entry.lastClickedAt,
+    lastDownloadedAt: entry.lastDownloadedAt,
+    openUrl: buildUploadPublicUrl(req, entry.id),
+    downloadUrl: buildUploadDownloadUrl(req, entry.id)
+  };
+}
+
+function deleteUploadFile(entry) {
+  if (!entry || !entry.filePath) return;
+  try {
+    if (fs.existsSync(entry.filePath)) {
+      fs.unlinkSync(entry.filePath);
+    }
+  } catch (error) {
+    console.error('Gagal menghapus file upload:', error.message);
+  }
+}
+
+function cleanupExpiredUploads() {
+  const now = Date.now();
+  for (const [id, entry] of fileVaultEntries.entries()) {
+    if (typeof entry.expiresAt === 'number' && now > entry.expiresAt) {
+      deleteUploadFile(entry);
+      fileVaultEntries.delete(id);
+    }
+  }
+}
+
+function createUploadSummary() {
+  const entries = Array.from(fileVaultEntries.values());
+  const usedBytes = entries.reduce((acc, item) => acc + item.sizeBytes, 0);
+  const totalClicks = entries.reduce((acc, item) => acc + item.clickCount, 0);
+  const totalDownloads = entries.reduce((acc, item) => acc + item.downloadCount, 0);
+
+  return {
+    totalFiles: entries.length,
+    usedBytes,
+    totalCapacityBytes: STORAGE_CAPACITY_BYTES,
+    remainingBytes: Math.max(0, STORAGE_CAPACITY_BYTES - usedBytes),
+    storagePercent: STORAGE_CAPACITY_BYTES > 0
+      ? Number(((usedBytes / STORAGE_CAPACITY_BYTES) * 100).toFixed(2))
+      : 0,
+    totalClicks,
+    totalDownloads
+  };
+}
+
+function parseRelativePaths(value) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function cleanupUploadedTempFiles(files) {
+  (files || []).forEach((file) => {
+    try {
+      if (file?.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    } catch (_error) {
+      // ignore cleanup error
+    }
+  });
+}
+
+app.get('/api/uploads', (req, res) => {
+  cleanupExpiredUploads();
+
+  const entries = Array.from(fileVaultEntries.values())
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .map((entry) => serializeUploadEntry(req, entry));
+
+  return res.json({
+    summary: createUploadSummary(),
+    entries
+  });
+});
+
+app.post('/api/uploads', (req, res) => {
+  upload.array('files', 200)(req, res, (error) => {
+    if (error) {
+      const message = error.code === 'LIMIT_FILE_SIZE'
+        ? `Ukuran file melebihi batas ${Math.floor(MAX_UPLOAD_FILE_SIZE_BYTES / (1024 * 1024))}MB per file.`
+        : 'Gagal upload file. Pastikan format dan ukuran valid.';
+      return res.status(400).json({ message });
+    }
+
+    cleanupExpiredUploads();
+
+    const files = req.files || [];
+    if (files.length === 0) {
+      return res.status(400).json({ message: 'Minimal upload 1 file.' });
+    }
+
+    const expiresInDaysInput = String(req.body.expiresInDays || '').trim();
+    let expiresInDays = null;
+    if (expiresInDaysInput) {
+      const parsedDays = Number(expiresInDaysInput);
+      if (!Number.isFinite(parsedDays) || parsedDays <= 0 || parsedDays > 3650) {
+        cleanupUploadedTempFiles(files);
+        return res.status(400).json({ message: 'Durasi file harus di antara 1 sampai 3650 hari.' });
+      }
+      expiresInDays = parsedDays;
+    }
+
+    const incomingBytes = files.reduce((acc, file) => acc + (file.size || 0), 0);
+    if ((getUsedStorageBytes() + incomingBytes) > STORAGE_CAPACITY_BYTES) {
+      cleanupUploadedTempFiles(files);
+      const summary = createUploadSummary();
+      return res.status(413).json({
+        message: 'Storage penuh. Kurangi ukuran file atau hapus file lama.',
+        summary
+      });
+    }
+
+    const createdAt = Date.now();
+    const expiresAt = expiresInDays ? createdAt + (expiresInDays * 24 * 60 * 60 * 1000) : null;
+    const relativePaths = parseRelativePaths(req.body.relativePaths);
+
+    const savedEntries = files.map((file, index) => {
+      const id = generateCode() + crypto.randomBytes(2).toString('hex');
+      const entry = {
+        id,
+        filePath: file.path,
+        storedName: file.filename,
+        originalName: file.originalname,
+        relativePath: relativePaths[index] || file.originalname,
+        sizeBytes: file.size || 0,
+        contentType: file.mimetype || 'application/octet-stream',
+        createdAt,
+        expiresAt,
+        clickCount: 0,
+        downloadCount: 0,
+        lastClickedAt: null,
+        lastDownloadedAt: null
+      };
+      fileVaultEntries.set(id, entry);
+      return serializeUploadEntry(req, entry);
+    });
+
+    return res.status(201).json({
+      message: `${savedEntries.length} file berhasil diupload.`,
+      entries: savedEntries,
+      summary: createUploadSummary()
+    });
+  });
+});
+
+app.delete('/api/uploads/:id', (req, res) => {
+  cleanupExpiredUploads();
+  const id = String(req.params.id || '').trim();
+  const entry = fileVaultEntries.get(id);
+
+  if (!entry) {
+    return res.status(404).json({ message: 'File tidak ditemukan.' });
+  }
+
+  deleteUploadFile(entry);
+  fileVaultEntries.delete(id);
+
+  return res.json({
+    message: 'File berhasil dihapus.',
+    summary: createUploadSummary()
+  });
+});
+
+app.get('/u/:id', (req, res) => {
+  cleanupExpiredUploads();
+  const id = String(req.params.id || '').trim();
+  const entry = fileVaultEntries.get(id);
+
+  if (!entry) {
+    return res.status(404).send(renderShortLinkErrorPage(
+      'File Tidak Ditemukan',
+      'File kemungkinan sudah dihapus atau masa berlakunya habis.'
+    ));
+  }
+
+  entry.clickCount += 1;
+  entry.lastClickedAt = Date.now();
+
+  return res.send(`
+    <!DOCTYPE html>
+    <html lang="id">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>File Vault - ${entry.originalName}</title>
+        <style>
+          body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #1e3a8a, #020617); color: #dbeafe; font-family: Arial, sans-serif; display: grid; place-items: center; padding: 24px; }
+          .card { width: min(600px, 100%); background: rgba(15, 23, 42, 0.86); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 14px; padding: 24px; box-shadow: 0 15px 30px rgba(2, 6, 23, 0.45);}
+          h1 { margin: 0 0 12px; color: #93c5fd; font-size: 1.3rem; word-break: break-all; }
+          p { margin: 6px 0; color: #bfdbfe; line-height: 1.6; }
+          a.button { display: inline-block; margin-top: 18px; padding: 10px 16px; border-radius: 10px; background: #2563eb; color: #fff; text-decoration: none; font-weight: 700; }
+          a.button:hover { background: #1d4ed8; }
+        </style>
+      </head>
+      <body>
+        <main class="card">
+          <h1>${entry.originalName}</h1>
+          <p>File size: ${(entry.sizeBytes / 1024 / 1024).toFixed(2)} MB</p>
+          <p>Total klik: ${entry.clickCount}</p>
+          <p>Total download: ${entry.downloadCount}</p>
+          <a class="button" href="${buildUploadDownloadUrl(req, entry.id)}">Download File</a>
+          <p style="margin-top: 14px;"><a style="color:#93c5fd;" href="/file-vault">Kembali ke File Vault</a></p>
+        </main>
+      </body>
+    </html>
+  `);
+});
+
+app.get('/api/uploads/:id/download', (req, res) => {
+  cleanupExpiredUploads();
+  const id = String(req.params.id || '').trim();
+  const entry = fileVaultEntries.get(id);
+
+  if (!entry) {
+    return res.status(404).json({ message: 'File tidak ditemukan atau sudah expired.' });
+  }
+
+  if (!fs.existsSync(entry.filePath)) {
+    fileVaultEntries.delete(id);
+    return res.status(404).json({ message: 'File fisik tidak ditemukan.' });
+  }
+
+  entry.downloadCount += 1;
+  entry.lastDownloadedAt = Date.now();
+  return res.download(entry.filePath, entry.originalName);
 });
 
 function isValidHttpUrl(urlValue) {
@@ -437,12 +740,19 @@ if (require.main === module) {
     console.log(`   - GET  /pkl           → pkl.html`);
     console.log(`   - GET  /portofolio    → portofolio.html`);
     console.log(`   - GET  /short-link    → short-link.html`);
+    console.log(`   - GET  /file-vault    → file-vault.html`);
+    console.log(`   - GET  /ip-calculator → ip-calculator.html`);
     console.log(`   - GET  /captcha       → Generate captcha`);
     console.log(`   - GET  /s/:code       → Redirect shortlink`);
+    console.log(`   - GET  /u/:id         → File public landing`);
     console.log(`   - GET  /api/short-links      → List shortlink`);
     console.log(`   - POST /api/short-links      → Create shortlink`);
     console.log(`   - GET  /api/short-links/:code  → Shortlink detail`);
     console.log(`   - DELETE /api/short-links/:code → Delete shortlink`);
+    console.log(`   - GET  /api/uploads           → List upload`);
+    console.log(`   - POST /api/uploads           → Upload files/folder`);
+    console.log(`   - DELETE /api/uploads/:id     → Delete uploaded file`);
+    console.log(`   - GET  /api/uploads/:id/download → Download file`);
     console.log(`   - POST /contact       → Send email`);
     console.log('='.repeat(50));
     console.log('Press Ctrl+C to stop server');
