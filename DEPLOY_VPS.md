@@ -96,6 +96,18 @@ Bagian penting yang harus kamu cek:
 - `PDF_TMP_PUBLIC_BASE_URL` (wajib untuk tool PDF to JPG)
   - isi domain publik server, contoh: `https://arthurg.my.id`
   - dipakai untuk bikin URL PDF temporary (24 jam) yang bisa diakses API converter eksternal
+- `PDF_CONVERTER_TIMEOUT_MS` (opsional, default `28000`)
+  - timeout request ke provider converter dalam milidetik
+  - contoh aman: `35000` atau `45000` kalau provider lagi lambat
+- `PDF_CONVERTER_GITHUB_REPO` (opsional, disarankan untuk fallback)
+  - format: `owner/repo` (contoh: `ArthurStore/imagae`)
+  - repo wajib public jika ingin raw URL bisa diakses provider converter
+- `PDF_CONVERTER_GITHUB_BRANCH` (opsional, default `main`)
+- `PDF_CONVERTER_GITHUB_BASE_PATH` (opsional, default `tmp/pdf-to-jpg`)
+- `PDF_CONVERTER_GITHUB_TOKEN` (opsional, tapi wajib kalau pakai fallback GitHub raw)
+  - gunakan token GitHub dengan scope `repo` (minimal write contents)
+  - dipakai ketika provider menolak URL temporary dengan pesan:
+    `Unsupported CDN provider ...`
 - `STORAGE_CAPACITY_MB`
   - isi `0` atau hapus untuk mode unlimited
   - isi angka > 0 kalau ingin dibatasi (contoh `10240`)
@@ -108,6 +120,11 @@ env_production: {
   PORT: 3000,
   TOOL_ACCESS_PIN: "050507",
   PDF_TMP_PUBLIC_BASE_URL: "https://arthurg.my.id",
+  PDF_CONVERTER_TIMEOUT_MS: 35000,
+  PDF_CONVERTER_GITHUB_REPO: "ArthurStore/imagae",
+  PDF_CONVERTER_GITHUB_BRANCH: "main",
+  PDF_CONVERTER_GITHUB_BASE_PATH: "tmp/pdf-to-jpg",
+  PDF_CONVERTER_GITHUB_TOKEN: "ghp_xxx_ganti_token_asli",
   STORAGE_CAPACITY_MB: 0
 }
 ```

@@ -259,6 +259,9 @@
           } else if (response.status === 502) {
             finalMessage = `${finalMessage} Provider converter sedang error (502), coba ulang beberapa menit lagi.`;
           }
+          if (payload && payload.hint && /fallback github/i.test(String(payload.hint))) {
+            finalMessage = `${finalMessage} Jika mau auto-fallback raw GitHub, set env PDF_CONVERTER_GITHUB_REPO + PDF_CONVERTER_GITHUB_TOKEN di server.`;
+          }
           playSound('error');
           throw new Error(finalMessage);
         }

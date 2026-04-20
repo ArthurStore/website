@@ -47,6 +47,10 @@ const PDF_CONVERTER_API_KEY = String(
   process.env.NEOXR_APIKEY ||
   'yokheimoet'
 ).trim();
+const PDF_CONVERTER_GITHUB_REPO = String(process.env.PDF_CONVERTER_GITHUB_REPO || '').trim();
+const PDF_CONVERTER_GITHUB_BRANCH = String(process.env.PDF_CONVERTER_GITHUB_BRANCH || 'main').trim();
+const PDF_CONVERTER_GITHUB_TOKEN = String(process.env.PDF_CONVERTER_GITHUB_TOKEN || '').trim();
+const PDF_CONVERTER_GITHUB_BASE_PATH = String(process.env.PDF_CONVERTER_GITHUB_BASE_PATH || 'tmp/pdf-to-jpg').trim().replace(/^\/+|\/+$/g, '');
 const configuredPdfConverterTimeoutMs = Number(process.env.PDF_CONVERTER_TIMEOUT_MS || 28000);
 const PDF_CONVERTER_TIMEOUT_MS = Number.isFinite(configuredPdfConverterTimeoutMs) &&
   configuredPdfConverterTimeoutMs >= 5000 &&
@@ -1069,6 +1073,108 @@ async function convertPdfByUrl(url, filename, to) {
   return payload;
 }
 
+function isUnsupportedCdnError(error) {
+  const text = String(
+    error?.message ||
+    error?.payload?.msg ||
+    error?.payload?.message ||
+    ''
+  ).toLowerCase();
+  return text.includes('unsupported cdn provider');
+}
+
+function isGithubRawFallbackConfigured() {
+  return Boolean(PDF_CONVERTER_GITHUB_REPO && PDF_CONVERTER_GITHUB_TOKEN);
+}
+
+function normalizeGitHubPath(value) {
+  return String(value || '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+    .replace(/\/+/g, '/')
+    .trim();
+}
+
+function encodeGitHubPath(filePath) {
+  return normalizeGitHubPath(filePath)
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+}
+
+function buildGitHubRawUrl(repo, branch, filePath) {
+  const safeRepo = String(repo || '').trim();
+  const safeBranch = encodeURIComponent(String(branch || 'main').trim() || 'main');
+  const safePath = encodeGitHubPath(filePath);
+  return `https://raw.githubusercontent.com/${safeRepo}/${safeBranch}/${safePath}`;
+}
+
+async function uploadPdfToGitHubRaw(localFilePath, originalName, token) {
+  if (!isGithubRawFallbackConfigured()) {
+    throw new Error('Fallback GitHub belum dikonfigurasi.');
+  }
+  if (!localFilePath || !fs.existsSync(localFilePath)) {
+    throw new Error('File PDF temporary tidak ditemukan untuk fallback GitHub.');
+  }
+
+  const nowStamp = Date.now();
+  const randomPart = crypto.randomBytes(5).toString('hex');
+  const ext = path.extname(originalName || '').toLowerCase() || '.pdf';
+  const baseName = (path.parse(originalName || 'converted').name || 'converted')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60) || 'converted';
+  const relativePath = normalizeGitHubPath(
+    `${PDF_CONVERTER_GITHUB_BASE_PATH}/${nowStamp}-${randomPart}-${baseName}${ext}`
+  );
+
+  const contentBase64 = fs.readFileSync(localFilePath).toString('base64');
+  const encodedPath = encodeGitHubPath(relativePath);
+  const endpoint = `https://api.github.com/repos/${encodeURIComponent(PDF_CONVERTER_GITHUB_REPO)}/contents/${encodedPath}`;
+  const payload = {
+    message: `chore(pdf-to-jpg): temp upload ${nowStamp}`,
+    content: contentBase64,
+    branch: PDF_CONVERTER_GITHUB_BRANCH
+  };
+
+  const response = await fetch(endpoint, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'arthur-bot-pdf-to-jpg-fallback'
+    },
+    body: JSON.stringify(payload)
+  });
+  const rawText = await response.text();
+  let parsed = {};
+  try {
+    parsed = rawText ? JSON.parse(rawText) : {};
+  } catch (_error) {
+    parsed = { raw: rawText };
+  }
+
+  if (!response.ok) {
+    const apiMessage = parsed?.message || `GitHub upload gagal (${response.status})`;
+    const uploadError = new Error(apiMessage);
+    uploadError.statusCode = 502;
+    uploadError.payload = parsed;
+    throw uploadError;
+  }
+
+  const githubUrl = buildGitHubRawUrl(
+    PDF_CONVERTER_GITHUB_REPO,
+    PDF_CONVERTER_GITHUB_BRANCH,
+    relativePath
+  );
+  return {
+    url: githubUrl,
+    path: relativePath
+  };
+}
+
 app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
   pdfToJpgUpload.single('pdf')(req, res, async (error) => {
     cleanupExpiredPdfUploads();
@@ -1139,7 +1245,18 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
     }
 
     try {
-      const payload = await convertPdfByUrl(tempPdfUrl, safeFilename, to);
+      let payload = await convertPdfByUrl(tempPdfUrl, safeFilename, to);
+      let converterSourceUrl = tempPdfUrl;
+      let githubFallback = null;
+
+      if (payload && typeof payload === 'object' && payload.status === false && isUnsupportedCdnError(payload)) {
+        // defensive path if provider responds status:false without throwing
+        const providerError = new Error(payload?.msg || payload?.message || 'Unsupported CDN provider.');
+        providerError.statusCode = 502;
+        providerError.payload = payload;
+        throw providerError;
+      }
+
       const imageLinks = [];
       collectImageLinks(payload, imageLinks);
       const uniqueImageLinks = [...new Set(imageLinks)];
@@ -1160,9 +1277,77 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
           sizeBytes: file.size || 0,
           expiresAt
         },
+        converterSource: {
+          url: converterSourceUrl,
+          fallback: Boolean(githubFallback),
+          githubPath: githubFallback?.path || null
+        },
         upstream: payload
       });
     } catch (err) {
+      if (isUnsupportedCdnError(err)) {
+        if (!isGithubRawFallbackConfigured()) {
+          return res.status(502).json({
+            message: err.message || 'Provider converter menolak URL CDN.',
+            hint: 'Set env PDF_CONVERTER_GITHUB_REPO + PDF_CONVERTER_GITHUB_TOKEN agar server bisa fallback upload ke raw GitHub.',
+            uploadedPdf: {
+              token,
+              tempUrl: tempPdfUrl,
+              originalName: file.originalname,
+              sizeBytes: file.size || 0,
+              expiresAt
+            },
+            upstream: err?.payload || null
+          });
+        }
+
+        try {
+          const githubFallback = await uploadPdfToGitHubRaw(file.path, file.originalname, PDF_CONVERTER_GITHUB_TOKEN);
+          const retriedPayload = await convertPdfByUrl(githubFallback.url, safeFilename, to);
+          const imageLinks = [];
+          collectImageLinks(retriedPayload, imageLinks);
+          const uniqueImageLinks = [...new Set(imageLinks)];
+          const archiveUrl = retriedPayload?.data?.url && /^https?:\/\//i.test(retriedPayload.data.url)
+            ? retriedPayload.data.url
+            : '';
+
+          return res.json({
+            message: uniqueImageLinks.length > 0
+              ? `Konversi PDF ke ${to.toUpperCase()} berhasil (fallback GitHub raw).`
+              : 'Konversi diproses via fallback GitHub raw. Cek detail respons provider.',
+            images: uniqueImageLinks,
+            archiveUrl,
+            uploadedPdf: {
+              token,
+              tempUrl: tempPdfUrl,
+              originalName: file.originalname,
+              sizeBytes: file.size || 0,
+              expiresAt
+            },
+            converterSource: {
+              url: githubFallback.url,
+              fallback: true,
+              githubPath: githubFallback.path
+            },
+            upstream: retriedPayload
+          });
+        } catch (retryError) {
+          const retryStatus = Number(retryError?.statusCode) || 502;
+          return res.status(retryStatus).json({
+            message: retryError.message || 'Fallback GitHub raw gagal.',
+            hint: 'Pastikan repo GitHub publik, token valid, branch/path benar, lalu coba lagi.',
+            uploadedPdf: {
+              token,
+              tempUrl: tempPdfUrl,
+              originalName: file.originalname,
+              sizeBytes: file.size || 0,
+              expiresAt
+            },
+            upstream: retryError?.payload || err?.payload || null
+          });
+        }
+      }
+
       const statusCode = Number(err?.statusCode) || 502;
       const hint = statusCode === 504
         ? 'Provider converter terlalu lama merespons (timeout). Coba lagi dengan file lebih kecil atau ulang beberapa saat lagi.'

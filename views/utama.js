@@ -466,19 +466,16 @@ function playFirstLoadSound() {
 
 function createFirstLoadExperience() {
   if (!document.body) return;
-  const firstLoadKey = "arthur-site-first-load-v1";
-  let isFirstLoad = false;
-
-  try {
-    isFirstLoad = !window.localStorage.getItem(firstLoadKey);
-    if (isFirstLoad) {
-      window.localStorage.setItem(firstLoadKey, String(Date.now()));
+  const firstLoadAlwaysKey = "arthur-site-first-load-always-v1";
+  const alwaysPlayIntro = (() => {
+    try {
+      const value = window.localStorage.getItem(firstLoadAlwaysKey);
+      return value !== "off";
+    } catch (_error) {
+      return true;
     }
-  } catch (_error) {
-    isFirstLoad = true;
-  }
-
-  if (!isFirstLoad) return;
+  })();
+  if (!alwaysPlayIntro) return;
 
   document.body.classList.add("first-load-active");
   introReadyPlayed = false;
@@ -515,6 +512,32 @@ function createFirstLoadExperience() {
   window.setTimeout(() => {
     introLayer.remove();
   }, 4300);
+}
+
+function forceWelcomeReadySoundOnce() {
+  const readyKey = "arthur-ready-chime-v2";
+  if (!document.body) return;
+  let shouldPlay = false;
+  try {
+    shouldPlay = !window.sessionStorage.getItem(readyKey);
+    if (shouldPlay) {
+      window.sessionStorage.setItem(readyKey, "1");
+    }
+  } catch (_error) {
+    shouldPlay = true;
+  }
+  if (!shouldPlay) return;
+
+  const trigger = () => {
+    unlockAudioOnce();
+    if (!introReadyPlayed) {
+      playReadyJrengSound();
+      introReadyPlayed = true;
+    }
+  };
+  ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+    window.addEventListener(eventName, trigger, { once: true, passive: true });
+  });
 }
 
 window.ArthurSiteSoundFX = {
@@ -582,6 +605,7 @@ window.ArthurSiteSoundFX = {
 };
 
 createFirstLoadExperience();
+forceWelcomeReadySoundOnce();
 createSoundToggle();
 attachGlobalClickSound();
 attachScrollWhiteMaskFix();
