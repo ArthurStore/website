@@ -62,6 +62,7 @@ function createCursorTrail() {
   let dotX = targetX;
   let dotY = targetY;
   let rafId = 0;
+  let lastMoveAt = 0;
 
   const setHoverState = (target) => {
     if (!(target instanceof Element)) return;
@@ -69,11 +70,26 @@ function createCursorTrail() {
     document.body.classList.toggle("cursor-hovering-link", Boolean(clickable));
   };
 
-  const onPointerMove = (event) => {
-    targetX = event.clientX;
-    targetY = event.clientY;
+  const activateTracking = (x, y, target) => {
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      targetX = x;
+      targetY = y;
+      lastMoveAt = Date.now();
+    }
     document.body.classList.add("cursor-tracking");
-    setHoverState(event.target);
+    if (target) setHoverState(target);
+  };
+
+  const onPointerMove = (event) => {
+    activateTracking(event.clientX, event.clientY, event.target);
+  };
+
+  const onMouseMove = (event) => {
+    activateTracking(event.clientX, event.clientY, event.target);
+  };
+
+  const onPointerEnter = (event) => {
+    activateTracking(event.clientX, event.clientY, event.target);
   };
 
   const onPointerLeave = () => {
@@ -81,7 +97,29 @@ function createCursorTrail() {
     document.body.classList.remove("cursor-hovering-link");
   };
 
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      onPointerLeave();
+      return;
+    }
+    document.body.classList.add("cursor-tracking");
+  };
+
+  const onWindowFocus = () => {
+    document.body.classList.add("cursor-tracking");
+  };
+
+  const onWindowBlur = () => {
+    onPointerLeave();
+  };
+
   const tick = () => {
+    if (!lastMoveAt && document.hasFocus()) {
+      document.body.classList.add("cursor-tracking");
+    }
+    if (lastMoveAt && Date.now() - lastMoveAt > 1800 && document.hasFocus()) {
+      document.body.classList.add("cursor-tracking");
+    }
     glowX += (targetX - glowX) * 0.16;
     glowY += (targetY - glowY) * 0.16;
     dotX += (targetX - dotX) * 0.35;
@@ -92,14 +130,25 @@ function createCursorTrail() {
   };
 
   window.addEventListener("pointermove", onPointerMove, { passive: true });
+  window.addEventListener("mousemove", onMouseMove, { passive: true });
+  window.addEventListener("pointerenter", onPointerEnter, { passive: true });
   document.addEventListener("pointerleave", onPointerLeave);
   document.addEventListener("pointerdown", (event) => setHoverState(event.target));
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("focus", onWindowFocus);
+  window.addEventListener("blur", onWindowBlur);
+  document.body.classList.add("cursor-tracking");
   rafId = window.requestAnimationFrame(tick);
 
   window.addEventListener("beforeunload", () => {
     if (rafId) window.cancelAnimationFrame(rafId);
     window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("mousemove", onMouseMove);
+    window.removeEventListener("pointerenter", onPointerEnter);
     document.removeEventListener("pointerleave", onPointerLeave);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    window.removeEventListener("focus", onWindowFocus);
+    window.removeEventListener("blur", onWindowBlur);
   }, { once: true });
 }
 
