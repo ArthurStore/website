@@ -387,7 +387,7 @@ app.post(`${TOOL_PREFIX}/login`, (req, res) => {
   const candidate = String(req.body?.pin || '').trim();
   if (candidate && candidate === TOOL_ACCESS_PIN) {
     req.session.toolAccessGranted = true;
-    return res.redirect(`${TOOL_PREFIX}/file-vault`);
+    return res.redirect(`${TOOL_PREFIX}`);
   }
   return res.redirect(`${TOOL_PREFIX}?error=1`);
 });

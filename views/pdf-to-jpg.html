@@ -221,7 +221,18 @@
           method: 'POST',
           body: formData
         });
-        const payload = await response.json();
+        const rawText = await response.text();
+        let payload = {};
+        try {
+          payload = rawText ? JSON.parse(rawText) : {};
+        } catch (_parseError) {
+          const looksLikeHtml = /<\s*!doctype html|<\s*html/i.test(rawText || '');
+          payload = {
+            message: looksLikeHtml
+              ? 'Respons server bukan JSON (kemungkinan session admin habis). Login ulang lalu coba lagi.'
+              : (rawText || 'Server mengembalikan respons non-JSON.')
+          };
+        }
         if (!response.ok) {
           const details = [payload.message, payload.hint].filter(Boolean).join(' ');
           throw new Error(details || 'Konversi gagal.');
