@@ -26,41 +26,16 @@ const MAX_UPLOAD_FILE_SIZE_BYTES = Number.isFinite(configuredMaxUploadMb) && con
   ? configuredMaxUploadMb * 1024 * 1024
   : null;
 const TOOL_PREFIX = (() => {
-  const raw = String(process.env.TOOL_PREFIX || '/arthur-admin').trim();
-  if (!raw || raw === '/') return '/arthur-admin';
+  const raw = String(process.env.TOOL_PREFIX || '/admin').trim();
+  if (!raw || raw === '/') return '/admin';
   const normalized = raw.startsWith('/') ? raw : `/${raw}`;
   return normalized.replace(/\/+$/, '');
 })();
-const TOOL_ACCESS_KEY_FILE = process.env.TOOL_ACCESS_KEY_FILE || path.join(UPLOAD_STORAGE_DIR, '.tool-access.key');
-let TOOL_ACCESS_KEY = '';
+const TOOL_ACCESS_PIN = String(process.env.TOOL_ACCESS_PIN || '050507').trim();
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
 }
-
-function resolveToolAccessKey() {
-  const envKey = String(process.env.TOOL_ACCESS_KEY || '').trim();
-  if (envKey) return envKey;
-
-  try {
-    if (fs.existsSync(TOOL_ACCESS_KEY_FILE)) {
-      const fileKey = fs.readFileSync(TOOL_ACCESS_KEY_FILE, 'utf8').trim();
-      if (fileKey) return fileKey;
-    }
-  } catch (_error) {
-    // ignore read error and fallback to regenerate
-  }
-
-  const generatedKey = crypto.randomBytes(24).toString('hex');
-  try {
-    fs.writeFileSync(TOOL_ACCESS_KEY_FILE, generatedKey, { mode: 0o600 });
-  } catch (_error) {
-    // if write fails, use generated key in-memory for this boot
-  }
-  return generatedKey;
-}
-
-TOOL_ACCESS_KEY = resolveToolAccessKey();
 
 app.enable("trust proxy");
 app.set("json spaces", 2);
@@ -94,19 +69,8 @@ function normalizeRelativePath(relativePath, fallback) {
 }
 
 function ensureToolAccess(req, res, next) {
-  if (!TOOL_ACCESS_KEY) return next();
   if (req.session?.toolAccessGranted) return next();
-
-  const candidate = String(req.query?.key || req.get('x-tool-key') || '').trim();
-  if (candidate && candidate === TOOL_ACCESS_KEY) {
-    req.session.toolAccessGranted = true;
-    return next();
-  }
-
-  return res.status(404).send(renderShortLinkErrorPage(
-    'Halaman Tidak Ditemukan',
-    'URL yang kamu akses tidak tersedia.'
-  ));
+  return res.redirect(`${TOOL_PREFIX}`);
 }
 
 function sendToolView(res, fileName) {
@@ -147,20 +111,102 @@ app.get('/ip-calculator', (_req, res) => res.status(404).send(renderShortLinkErr
   'Endpoint ini tidak tersedia untuk publik.'
 )));
 
-app.get(`${TOOL_PREFIX}/login`, (req, res) => {
-  const candidate = String(req.query?.key || '').trim();
-  if (!TOOL_ACCESS_KEY || (candidate && candidate === TOOL_ACCESS_KEY)) {
-    req.session.toolAccessGranted = true;
+app.get(`${TOOL_PREFIX}`, (req, res) => {
+  if (req.session?.toolAccessGranted) {
     return res.redirect(`${TOOL_PREFIX}/file-vault`);
   }
 
-  return res.status(404).send(renderShortLinkErrorPage(
-    'Halaman Tidak Ditemukan',
-    'URL yang kamu akses tidak tersedia.'
-  ));
+  return res.send(`
+    <!DOCTYPE html>
+    <html lang="id">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Admin Access</title>
+        <style>
+          :root { color-scheme: dark; }
+          body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            font-family: Arial, sans-serif;
+            background: radial-gradient(circle at top, #1d4ed8 0%, #0f172a 72%);
+            color: #dbeafe;
+          }
+          .card {
+            width: min(420px, 100%);
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 16px;
+            box-shadow: 0 18px 36px rgba(2, 6, 23, 0.42);
+            padding: 24px;
+          }
+          h1 { margin: 0 0 8px; font-size: 1.35rem; color: #93c5fd; }
+          p { margin: 0 0 16px; color: #bfdbfe; line-height: 1.6; font-size: 0.95rem; }
+          label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #cbd5e1; }
+          input {
+            width: 100%;
+            box-sizing: border-box;
+            border-radius: 10px;
+            border: 1px solid rgba(59, 130, 246, 0.45);
+            background: rgba(2, 6, 23, 0.7);
+            color: #e2e8f0;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+          }
+          button {
+            width: 100%;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            font-weight: 700;
+            padding: 10px 12px;
+            cursor: pointer;
+          }
+          .error {
+            margin-top: 12px;
+            border: 1px solid rgba(248, 113, 113, 0.45);
+            background: rgba(127, 29, 29, 0.35);
+            color: #fecaca;
+            border-radius: 10px;
+            padding: 9px 10px;
+            font-size: 0.86rem;
+          }
+        </style>
+      </head>
+      <body>
+        <main class="card">
+          <h1>Admin Tool Access</h1>
+          <p>Masukkan PIN untuk membuka File Vault, Short Link, dan IP Calculator.</p>
+          <form method="POST" action="${TOOL_PREFIX}/login">
+            <label for="pin">PIN Admin</label>
+            <input id="pin" name="pin" inputmode="numeric" autocomplete="one-time-code" required />
+            <button type="submit">Masuk</button>
+          </form>
+          ${req.query?.error ? '<div class="error">PIN salah. Coba lagi.</div>' : ''}
+        </main>
+      </body>
+    </html>
+  `);
 });
 
-app.get(`${TOOL_PREFIX}`, ensureToolAccess, (_req, res) => res.redirect(`${TOOL_PREFIX}/file-vault`));
+app.post(`${TOOL_PREFIX}/login`, (req, res) => {
+  const candidate = String(req.body?.pin || '').trim();
+  if (candidate && candidate === TOOL_ACCESS_PIN) {
+    req.session.toolAccessGranted = true;
+    return res.redirect(`${TOOL_PREFIX}/file-vault`);
+  }
+  return res.redirect(`${TOOL_PREFIX}?error=1`);
+});
+
+app.get(`${TOOL_PREFIX}/logout`, (req, res) => {
+  req.session.toolAccessGranted = false;
+  return res.redirect(`${TOOL_PREFIX}`);
+});
+
 app.get(`${TOOL_PREFIX}/short-link`, ensureToolAccess, (_req, res) => sendToolView(res, 'short-link.html'));
 app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolView(res, 'file-vault.html'));
 app.get(`${TOOL_PREFIX}/ip-calculator`, ensureToolAccess, (_req, res) => sendToolView(res, 'ip-calculator.html'));
