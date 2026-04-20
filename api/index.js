@@ -720,7 +720,7 @@ app.post('/contact', (req, res) => {
     if (error) {
       return res.status(500).send('Gagal mengirim email: ' + error.message);
     }
-    res.status(200).send('Email berhasil dikirim: ' + info.response);
+    res.status(200).send('Pesan berhasil dikirim. Terima kasih, kami akan segera merespons.');
   });
 });
 

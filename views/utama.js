@@ -113,17 +113,13 @@ const hamburgerBtn = document.getElementById("hamburger-btn");
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add("visible");
-      } else {
-        entry.target.classList.remove("visible");
-      }
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("visible");
+      observer.unobserve(entry.target);
     });
   }, options);
 
-  animatedElements.forEach((el) => {
-    observer.observe(el);
-  });
+  animatedElements.forEach((el) => observer.observe(el));
 
   const modal = document.getElementById('image-modal');
   const modalImage = document.getElementById('modal-image');
