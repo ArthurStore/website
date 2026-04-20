@@ -75,10 +75,10 @@
     <header class="glass rounded-2xl p-6 md:p-8">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <p class="text-sm uppercase tracking-[0.25em] text-blue-300">/file-vault</p>
+          <p class="text-sm uppercase tracking-[0.25em] text-blue-300">/admin/file-vault</p>
           <h1 class="mt-2 text-3xl font-bold text-blue-100 md:text-4xl">File Vault (Upload + Auto Expired)</h1>
           <p class="mt-3 max-w-3xl text-sm text-blue-200 md:text-base">
-            Upload file/folder, atur masa aktif (hari), pantau sisa storage, statistik klik, dan statistik download.
+            Upload file/folder, atur masa aktif (hari), pantau sisa storage, statistik klik/download, dan upload folder sebagai 1 link publik.
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -149,8 +149,8 @@
               <p class="font-semibold text-blue-100">Catatan:</p>
               <ul class="mt-2 list-inside list-disc space-y-1">
                 <li>Tanpa durasi = file tetap ada selama server hidup.</li>
-                <li>Link publik file: <code>/u/:id</code> (tracking klik).</li>
-                <li>Download via tombol (tracking download).</li>
+                <li>Upload folder akan jadi 1 link publik: <code>/u/f/:folderId</code>.</li>
+                <li>User publik bisa preview isi folder + download all (ZIP).</li>
               </ul>
             </div>
           </div>
@@ -227,7 +227,7 @@
         <table class="min-w-full border-separate border-spacing-y-2 text-sm">
           <thead>
             <tr class="text-left text-xs uppercase tracking-[0.12em] text-blue-300">
-              <th class="px-3 py-2">File</th>
+              <th class="px-3 py-2">File / Folder</th>
               <th class="px-3 py-2">Status</th>
               <th class="px-3 py-2">Klik / Download</th>
               <th class="px-3 py-2">Masa Aktif</th>
@@ -263,6 +263,7 @@
     const storagePercent = document.getElementById('storage-percent');
 
     let entries = [];
+    let folders = [];
 
     function formatBytes(bytes) {
       if (bytes === null || bytes === undefined) return 'Unlimited';
@@ -325,11 +326,48 @@
 
     function renderRows() {
       entriesBody.innerHTML = '';
-      if (!entries.length) {
+      if (!entries.length && !folders.length) {
         emptyState.classList.remove('hidden');
         return;
       }
       emptyState.classList.add('hidden');
+
+      folders.forEach((folder) => {
+        const statusBadge = folder.status === 'active'
+          ? '<span class="rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-200">Folder Aktif</span>'
+          : '<span class="rounded-full border border-rose-400/40 bg-rose-500/20 px-2 py-0.5 text-xs text-rose-200">Folder Expired</span>';
+
+        const row = document.createElement('tr');
+        row.className = 'bg-slate-900/55';
+        row.innerHTML = `
+          <td class="rounded-l-lg px-3 py-3 align-top">
+            <p class="font-semibold text-blue-100 break-all">📁 ${folder.folderName}</p>
+            <p class="text-xs text-blue-300">Total file: ${folder.fileCount}</p>
+            <p class="mt-1 text-xs text-blue-300">Ukuran: ${formatBytes(folder.totalSizeBytes)}</p>
+            <p class="text-xs text-blue-300">Upload: ${formatDate(folder.createdAt)}</p>
+          </td>
+          <td class="px-3 py-3 align-top">${statusBadge}</td>
+          <td class="px-3 py-3 align-top">
+            <p class="text-sm text-blue-100">Klik: <strong>${folder.clickCount}</strong></p>
+            <p class="text-sm text-blue-100">Download: <strong>${folder.downloadCount}</strong></p>
+            <p class="mt-1 text-xs text-blue-300">Klik terakhir: ${formatDate(folder.lastClickedAt)}</p>
+            <p class="text-xs text-blue-300">Download terakhir: ${formatDate(folder.lastDownloadedAt)}</p>
+          </td>
+          <td class="px-3 py-3 align-top">
+            <p class="text-blue-100">${formatRemaining(folder.expiresAt)}</p>
+            <p class="text-xs text-blue-300">Expired: ${formatDate(folder.expiresAt)}</p>
+          </td>
+          <td class="rounded-r-lg px-3 py-3 align-top">
+            <div class="flex flex-col gap-2">
+              <a href="${folder.openUrl}" target="_blank" class="rounded-md border border-blue-400/40 px-2 py-1 text-center text-xs font-semibold text-blue-100 hover:bg-blue-500/20">Preview Folder</a>
+              <a href="${folder.downloadAllUrl}" class="rounded-md border border-cyan-400/40 px-2 py-1 text-center text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20">Download All</a>
+              <button data-action="copy-folder" data-url="${folder.openUrl}" class="rounded-md border border-violet-400/40 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-500/20">Copy Link</button>
+              <button data-action="delete-folder" data-id="${folder.folderId}" class="rounded-md border border-rose-400/40 px-2 py-1 text-xs font-semibold text-rose-200 hover:bg-rose-500/20">Hapus Folder</button>
+            </div>
+          </td>
+        `;
+        entriesBody.appendChild(row);
+      });
 
       entries.forEach((entry) => {
         const statusBadge = entry.status === 'active'
@@ -340,7 +378,7 @@
         row.className = 'bg-slate-900/55';
         row.innerHTML = `
           <td class="rounded-l-lg px-3 py-3 align-top">
-            <p class="font-semibold text-blue-100 break-all">${entry.originalName}</p>
+            <p class="font-semibold text-blue-100 break-all">📄 ${entry.originalName}</p>
             <p class="text-xs text-blue-300 break-all">${entry.relativePath || '-'}</p>
             <p class="mt-1 text-xs text-blue-300">Ukuran: ${formatBytes(entry.sizeBytes)}</p>
             <p class="text-xs text-blue-300">Upload: ${formatDate(entry.createdAt)}</p>
@@ -375,6 +413,7 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Gagal memuat data.');
         entries = data.entries || [];
+        folders = data.folders || [];
         updateSummary(data.summary || {});
         renderRows();
       } catch (error) {
@@ -427,7 +466,7 @@
       if (!(target instanceof HTMLElement)) return;
       const action = target.getAttribute('data-action');
 
-      if (action === 'copy') {
+      if (action === 'copy' || action === 'copy-folder') {
         const url = target.getAttribute('data-url') || '';
         const copied = await copyText(url);
         showFeedback(copied ? 'success' : 'error', copied ? 'Link berhasil disalin.' : 'Gagal menyalin link.');
@@ -444,6 +483,23 @@
           const data = await response.json();
           if (!response.ok) throw new Error(data.message || 'Gagal menghapus file.');
           showFeedback('success', data.message || 'File dihapus.');
+          await loadEntries();
+        } catch (error) {
+          showFeedback('error', error.message);
+        }
+      }
+
+      if (action === 'delete-folder') {
+        const folderId = target.getAttribute('data-id') || '';
+        if (!folderId) return;
+        const yes = confirm('Yakin ingin menghapus folder ini beserta semua file di dalamnya?');
+        if (!yes) return;
+
+        try {
+          const response = await fetch(`/api/folders/${encodeURIComponent(folderId)}`, { method: 'DELETE' });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'Gagal menghapus folder.');
+          showFeedback('success', data.message || 'Folder dihapus.');
           await loadEntries();
         } catch (error) {
           showFeedback('error', error.message);

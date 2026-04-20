@@ -68,6 +68,16 @@ function normalizeRelativePath(relativePath, fallback) {
   return rawPath || String(fallback || 'file');
 }
 
+function normalizeFolderKey(folderName) {
+  const base = String(folderName || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+  return base || 'folder';
+}
+
 function isStorageLimitEnabled() {
   return Number.isFinite(STORAGE_CAPACITY_BYTES) && STORAGE_CAPACITY_BYTES > 0;
 }
@@ -337,7 +347,16 @@ function buildUploadDownloadUrl(req, id) {
   return `${req.protocol}://${req.get('host')}/api/uploads/${id}/download`;
 }
 
+function buildFolderPublicUrl(req, folderId) {
+  return `${req.protocol}://${req.get('host')}/u/f/${folderId}`;
+}
+
+function buildFolderDownloadAllUrl(req, folderId) {
+  return `${req.protocol}://${req.get('host')}/api/folders/${folderId}/download-all`;
+}
+
 function serializeUploadEntry(req, entry) {
+  const folder = entry.folderId ? fileVaultFolders.get(entry.folderId) : null;
   return {
     id: entry.id,
     originalName: entry.originalName,
@@ -351,8 +370,43 @@ function serializeUploadEntry(req, entry) {
     downloadCount: entry.downloadCount,
     lastClickedAt: entry.lastClickedAt,
     lastDownloadedAt: entry.lastDownloadedAt,
+    folderId: entry.folderId || null,
+    folderName: folder?.name || null,
     openUrl: buildUploadPublicUrl(req, entry.id),
     downloadUrl: buildUploadDownloadUrl(req, entry.id)
+  };
+}
+
+function serializeFolderEntry(req, folder) {
+  const files = folder.fileIds
+    .map((id) => fileVaultEntries.get(id))
+    .filter(Boolean);
+  const totalBytes = files.reduce((acc, file) => acc + (file.sizeBytes || 0), 0);
+  const createdAt = files.reduce((acc, file) => Math.min(acc, file.createdAt || Date.now()), Date.now());
+  const expiresAt = files.reduce((acc, file) => {
+    if (file.expiresAt == null) return acc;
+    if (acc == null) return file.expiresAt;
+    return Math.max(acc, file.expiresAt);
+  }, null);
+  const clickCount = files.reduce((acc, file) => acc + (file.clickCount || 0), 0);
+  const downloadCount = files.reduce((acc, file) => acc + (file.downloadCount || 0), 0);
+  const lastClickedAt = files.reduce((acc, file) => Math.max(acc, file.lastClickedAt || 0), 0) || null;
+  const lastDownloadedAt = files.reduce((acc, file) => Math.max(acc, file.lastDownloadedAt || 0), 0) || null;
+
+  return {
+    folderId: folder.id,
+    folderName: folder.name,
+    totalFiles: files.length,
+    totalBytes,
+    createdAt,
+    expiresAt,
+    clickCount,
+    downloadCount,
+    lastClickedAt,
+    lastDownloadedAt,
+    status: files.some((file) => getFileStatus(file) === 'active') ? 'active' : 'expired',
+    openUrl: buildFolderPublicUrl(req, folder.id),
+    downloadAllUrl: buildFolderDownloadAllUrl(req, folder.id)
   };
 }
 
@@ -373,6 +427,14 @@ function cleanupExpiredUploads() {
     if (typeof entry.expiresAt === 'number' && now > entry.expiresAt) {
       deleteUploadFile(entry);
       fileVaultEntries.delete(id);
+    }
+  }
+  for (const [folderId, folder] of fileVaultFolders.entries()) {
+    const activeFileIds = folder.fileIds.filter((id) => fileVaultEntries.has(id));
+    if (activeFileIds.length === 0) {
+      fileVaultFolders.delete(folderId);
+    } else {
+      folder.fileIds = activeFileIds;
     }
   }
 }
@@ -423,13 +485,20 @@ function cleanupUploadedTempFiles(files) {
 app.get('/api/uploads', (req, res) => {
   cleanupExpiredUploads();
 
-  const entries = Array.from(fileVaultEntries.values())
+  const allEntries = Array.from(fileVaultEntries.values())
     .sort((a, b) => b.createdAt - a.createdAt)
     .map((entry) => serializeUploadEntry(req, entry));
+  const folders = Array.from(fileVaultFolders.values())
+    .map((folder) => serializeFolderEntry(req, folder))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  const folderIds = new Set(folders.map((folder) => folder.folderId));
+  const standaloneEntries = allEntries.filter((entry) => !entry.folderId || !folderIds.has(entry.folderId));
 
   return res.json({
     summary: createUploadSummary(),
-    entries
+    entries: standaloneEntries,
+    folders
   });
 });
 
@@ -474,14 +543,35 @@ app.post('/api/uploads', (req, res) => {
     const expiresAt = expiresInDays ? createdAt + (expiresInDays * 24 * 60 * 60 * 1000) : null;
     const relativePaths = parseRelativePaths(req.body.relativePaths);
 
+    const parsedRelativePaths = files.map((file, index) => normalizeRelativePath(relativePaths[index], file.originalname));
+    const folderCandidates = parsedRelativePaths
+      .map((relativePath) => relativePath.split('/').filter(Boolean))
+      .filter((segments) => segments.length > 1);
+    const firstFolder = folderCandidates.length > 0 ? folderCandidates[0][0] : null;
+    const isSingleFolderUpload = Boolean(
+      firstFolder &&
+      folderCandidates.length > 0 &&
+      folderCandidates.every((segments) => segments[0] === firstFolder)
+    );
+    const folderRecord = isSingleFolderUpload
+      ? {
+          id: `${normalizeFolderKey(firstFolder)}-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`,
+          name: firstFolder,
+          createdAt,
+          fileIds: []
+        }
+      : null;
+
     const savedEntries = files.map((file, index) => {
       const id = generateCode() + crypto.randomBytes(2).toString('hex');
+      const relativePath = parsedRelativePaths[index];
       const entry = {
         id,
         filePath: file.path,
         storedName: file.filename,
         originalName: file.originalname,
-        relativePath: relativePaths[index] || file.originalname,
+        relativePath,
+        folderId: folderRecord ? folderRecord.id : null,
         sizeBytes: file.size || 0,
         contentType: file.mimetype || 'application/octet-stream',
         createdAt,
@@ -492,12 +582,18 @@ app.post('/api/uploads', (req, res) => {
         lastDownloadedAt: null
       };
       fileVaultEntries.set(id, entry);
+      if (folderRecord) folderRecord.fileIds.push(id);
       return serializeUploadEntry(req, entry);
     });
+
+    if (folderRecord && folderRecord.fileIds.length > 0) {
+      fileVaultFolders.set(folderRecord.id, folderRecord);
+    }
 
     return res.status(201).json({
       message: `${savedEntries.length} file berhasil diupload.`,
       entries: savedEntries,
+      folder: folderRecord ? serializeFolderEntry(req, folderRecord) : null,
       summary: createUploadSummary()
     });
   });
@@ -513,10 +609,40 @@ app.delete('/api/uploads/:id', (req, res) => {
   }
 
   deleteUploadFile(entry);
+  if (entry.folderId && fileVaultFolders.has(entry.folderId)) {
+    const folder = fileVaultFolders.get(entry.folderId);
+    folder.fileIds = folder.fileIds.filter((fileId) => fileId !== id);
+    if (folder.fileIds.length === 0) {
+      fileVaultFolders.delete(entry.folderId);
+    }
+  }
   fileVaultEntries.delete(id);
 
   return res.json({
     message: 'File berhasil dihapus.',
+    summary: createUploadSummary()
+  });
+});
+
+app.delete('/api/folders/:folderId', (req, res) => {
+  cleanupExpiredUploads();
+  const folderId = String(req.params.folderId || '').trim();
+  const folder = fileVaultFolders.get(folderId);
+  if (!folder) {
+    return res.status(404).json({ message: 'Folder tidak ditemukan.' });
+  }
+
+  folder.fileIds.forEach((fileId) => {
+    const entry = fileVaultEntries.get(fileId);
+    if (entry) {
+      deleteUploadFile(entry);
+      fileVaultEntries.delete(fileId);
+    }
+  });
+  fileVaultFolders.delete(folderId);
+
+  return res.json({
+    message: 'Folder berhasil dihapus.',
     summary: createUploadSummary()
   });
 });
@@ -559,7 +685,85 @@ app.get('/u/:id', (req, res) => {
           <p>Total klik: ${entry.clickCount}</p>
           <p>Total download: ${entry.downloadCount}</p>
           <a class="button" href="${buildUploadDownloadUrl(req, entry.id)}">Download File</a>
-          <p style="margin-top: 14px;"><a style="color:#93c5fd;" href="/file-vault">Kembali ke File Vault</a></p>
+        </main>
+      </body>
+    </html>
+  `);
+});
+
+app.get('/u/f/:folderId', (req, res) => {
+  cleanupExpiredUploads();
+  const folderId = String(req.params.folderId || '').trim();
+  const folder = fileVaultFolders.get(folderId);
+  if (!folder) {
+    return res.status(404).send(renderShortLinkErrorPage(
+      'Folder Tidak Ditemukan',
+      'Folder kemungkinan sudah dihapus atau masa berlakunya habis.'
+    ));
+  }
+
+  const files = folder.fileIds
+    .map((id) => fileVaultEntries.get(id))
+    .filter(Boolean);
+  if (files.length === 0) {
+    fileVaultFolders.delete(folderId);
+    return res.status(404).send(renderShortLinkErrorPage(
+      'Folder Tidak Ditemukan',
+      'Folder tidak memiliki file aktif.'
+    ));
+  }
+
+  files.forEach((file) => {
+    file.clickCount += 1;
+    file.lastClickedAt = Date.now();
+  });
+
+  const fileRows = files.map((file, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHtml(file.relativePath)}</td>
+      <td>${(file.sizeBytes / 1024 / 1024).toFixed(2)} MB</td>
+      <td><a href="${buildUploadDownloadUrl(req, file.id)}">Download</a></td>
+    </tr>
+  `).join('');
+
+  return res.send(`
+    <!DOCTYPE html>
+    <html lang="id">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Folder - ${escapeHtml(folder.name)}</title>
+        <style>
+          body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top, #1e3a8a, #020617); color: #dbeafe; font-family: Arial, sans-serif; padding: 24px; }
+          .card { max-width: 980px; margin: 0 auto; background: rgba(15, 23, 42, 0.86); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 14px; padding: 24px; box-shadow: 0 15px 30px rgba(2, 6, 23, 0.45);}
+          h1 { margin: 0 0 12px; color: #93c5fd; font-size: 1.35rem; word-break: break-word; }
+          p { margin: 6px 0 14px; color: #bfdbfe; line-height: 1.6; }
+          .btn { display: inline-block; margin-bottom: 16px; padding: 10px 16px; border-radius: 10px; background: #2563eb; color: #fff; text-decoration: none; font-weight: 700; }
+          .btn:hover { background: #1d4ed8; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border-bottom: 1px solid rgba(148, 163, 184, 0.25); padding: 10px 8px; text-align: left; }
+          th { color: #93c5fd; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; }
+          td a { color: #93c5fd; text-decoration: none; font-weight: 700; }
+          td a:hover { color: #bfdbfe; text-decoration: underline; }
+        </style>
+      </head>
+      <body>
+        <main class="card">
+          <h1>Folder: ${escapeHtml(folder.name)}</h1>
+          <p>${files.length} file tersedia dalam folder ini.</p>
+          <a class="btn" href="${buildFolderDownloadAllUrl(req, folder.id)}">Download All (ZIP)</a>
+          <table>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>File</th>
+                <th>Ukuran</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>${fileRows}</tbody>
+          </table>
         </main>
       </body>
     </html>
@@ -583,6 +787,45 @@ app.get('/api/uploads/:id/download', (req, res) => {
   entry.downloadCount += 1;
   entry.lastDownloadedAt = Date.now();
   return res.download(entry.filePath, entry.originalName);
+});
+
+app.get('/api/folders/:folderId/download-all', (req, res) => {
+  cleanupExpiredUploads();
+  const folderId = String(req.params.folderId || '').trim();
+  const folder = fileVaultFolders.get(folderId);
+  if (!folder) {
+    return res.status(404).json({ message: 'Folder tidak ditemukan.' });
+  }
+
+  const files = folder.fileIds
+    .map((id) => fileVaultEntries.get(id))
+    .filter(Boolean);
+  if (files.length === 0) {
+    fileVaultFolders.delete(folderId);
+    return res.status(404).json({ message: 'Folder tidak memiliki file aktif.' });
+  }
+
+  const archiveName = `${normalizeFolderKey(folder.name)}.zip`;
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${archiveName}"`);
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  archive.on('error', (error) => {
+    if (!res.headersSent) {
+      res.status(500).json({ message: `Gagal membuat arsip: ${error.message}` });
+    } else {
+      res.end();
+    }
+  });
+  archive.pipe(res);
+
+  files.forEach((entry) => {
+    entry.downloadCount += 1;
+    entry.lastDownloadedAt = Date.now();
+    archive.file(entry.filePath, { name: entry.relativePath || entry.originalName });
+  });
+
+  archive.finalize();
 });
 
 function isValidHttpUrl(urlValue) {
