@@ -91,7 +91,8 @@ nano /var/www/arthurg-website/ecosystem.config.cjs
 Bagian penting yang harus kamu cek:
 
 - `PORT` (default `3000`)
-- `ADMIN_PIN` (ganti dari default agar lebih aman)
+- `TOOL_ACCESS_PIN` (ganti dari default agar lebih aman)
+  - kompatibel juga dengan `ADMIN_PIN` untuk versi lama, tapi disarankan pakai `TOOL_ACCESS_PIN`
 - `STORAGE_CAPACITY_MB`
   - isi `0` atau hapus untuk mode unlimited
   - isi angka > 0 kalau ingin dibatasi (contoh `10240`)
@@ -102,7 +103,7 @@ Contoh minimal:
 env_production: {
   NODE_ENV: "production",
   PORT: 3000,
-  ADMIN_PIN: "050507",
+  TOOL_ACCESS_PIN: "050507",
   STORAGE_CAPACITY_MB: 0
 }
 ```
@@ -303,7 +304,7 @@ Contoh (temporary session):
 export NODE_ENV=production
 export PORT=3000
 export SESSION_SECRET='ganti-dengan-random-secret'
-export ADMIN_PIN='050507'
+export TOOL_ACCESS_PIN='050507'
 export EMAIL_USER='email-anda'
 export EMAIL_PASS='app-password-anda'
 export EMAIL_TO='email-tujuan'
@@ -323,7 +324,7 @@ pm2 save
 Setelah semua aktif, akses:
 
 - Login admin: `https://arthurg.my.id/admin`
-- Masukkan `ADMIN_PIN`
+- Masukkan `TOOL_ACCESS_PIN`
 - Setelah login, pilih tool dari dashboard:
   - File Vault
   - Short Link

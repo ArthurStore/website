@@ -39,7 +39,71 @@ function createAmbientParticles() {
   }
 }
 
+function createCursorTrail() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const finePointer = window.matchMedia("(pointer: fine)").matches;
+  if (reduceMotion || !finePointer) return;
+  if (!document.body) return;
+
+  const glow = document.createElement("div");
+  glow.className = "cursor-glow";
+  glow.setAttribute("aria-hidden", "true");
+  const dot = document.createElement("div");
+  dot.className = "cursor-dot";
+  dot.setAttribute("aria-hidden", "true");
+  document.body.appendChild(glow);
+  document.body.appendChild(dot);
+
+  let targetX = window.innerWidth / 2;
+  let targetY = window.innerHeight / 2;
+  let glowX = targetX;
+  let glowY = targetY;
+  let dotX = targetX;
+  let dotY = targetY;
+  let rafId = 0;
+
+  const setHoverState = (target) => {
+    if (!(target instanceof Element)) return;
+    const clickable = target.closest("a, button, input, textarea, select, [role='button'], .cta-button, .service-link, .bot-preview");
+    document.body.classList.toggle("cursor-hovering-link", Boolean(clickable));
+  };
+
+  const onPointerMove = (event) => {
+    targetX = event.clientX;
+    targetY = event.clientY;
+    document.body.classList.add("cursor-tracking");
+    setHoverState(event.target);
+  };
+
+  const onPointerLeave = () => {
+    document.body.classList.remove("cursor-tracking");
+    document.body.classList.remove("cursor-hovering-link");
+  };
+
+  const tick = () => {
+    glowX += (targetX - glowX) * 0.16;
+    glowY += (targetY - glowY) * 0.16;
+    dotX += (targetX - dotX) * 0.35;
+    dotY += (targetY - dotY) * 0.35;
+    glow.style.transform = `translate3d(${glowX - 19}px, ${glowY - 19}px, 0)`;
+    dot.style.transform = `translate3d(${dotX - 4}px, ${dotY - 4}px, 0)`;
+    rafId = window.requestAnimationFrame(tick);
+  };
+
+  window.addEventListener("pointermove", onPointerMove, { passive: true });
+  document.addEventListener("pointerleave", onPointerLeave);
+  document.addEventListener("pointerdown", (event) => setHoverState(event.target));
+  rafId = window.requestAnimationFrame(tick);
+
+  window.addEventListener("beforeunload", () => {
+    if (rafId) window.cancelAnimationFrame(rafId);
+    window.removeEventListener("pointermove", onPointerMove);
+    document.removeEventListener("pointerleave", onPointerLeave);
+  }, { once: true });
+}
+
 createAmbientParticles();
+createCursorTrail();
 
 const lazyImages = document.querySelectorAll('img[data-src]');
 if ('IntersectionObserver' in window) {

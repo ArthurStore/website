@@ -31,7 +31,11 @@ const TOOL_PREFIX = (() => {
   const normalized = raw.startsWith('/') ? raw : `/${raw}`;
   return normalized.replace(/\/+$/, '');
 })();
-const TOOL_ACCESS_PIN = String(process.env.TOOL_ACCESS_PIN || '050507').trim();
+const TOOL_ACCESS_PIN = String(
+  process.env.TOOL_ACCESS_PIN ||
+  process.env.ADMIN_PIN ||
+  '050507'
+).trim();
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
@@ -231,32 +235,44 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
             place-items: center;
             padding: 24px;
             font-family: Arial, sans-serif;
-            background: radial-gradient(circle at top, #1d4ed8 0%, #0f172a 72%);
+            background:
+              radial-gradient(circle at 16% 12%, rgba(59, 130, 246, 0.3), transparent 35%),
+              radial-gradient(circle at 80% 8%, rgba(14, 165, 233, 0.22), transparent 36%),
+              linear-gradient(145deg, #020617 0%, #0b1733 52%, #06152e 100%);
             color: #dbeafe;
           }
           .card {
-            width: min(420px, 100%);
-            background: rgba(15, 23, 42, 0.85);
-            border: 1px solid rgba(148, 163, 184, 0.28);
-            border-radius: 16px;
-            box-shadow: 0 18px 36px rgba(2, 6, 23, 0.42);
-            padding: 24px;
+            width: min(460px, 100%);
+            background: linear-gradient(160deg, rgba(15, 23, 42, 0.88), rgba(8, 15, 32, 0.82));
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 18px;
+            box-shadow: 0 18px 42px rgba(2, 6, 23, 0.48);
+            padding: 28px;
+            backdrop-filter: blur(8px);
           }
-          h1 { margin: 0 0 8px; font-size: 1.35rem; color: #93c5fd; }
-          p { margin: 0 0 16px; color: #bfdbfe; line-height: 1.6; font-size: 0.95rem; }
+          h1 { margin: 0 0 8px; font-size: 1.4rem; color: #93c5fd; }
+          p { margin: 0 0 18px; color: #bfdbfe; line-height: 1.6; font-size: 0.95rem; }
           label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #cbd5e1; }
+          .pin-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+          }
           input {
             width: 100%;
             box-sizing: border-box;
             border-radius: 10px;
             border: 1px solid rgba(59, 130, 246, 0.45);
-            background: rgba(2, 6, 23, 0.7);
+            background: rgba(2, 6, 23, 0.72);
             color: #e2e8f0;
             padding: 10px 12px;
-            margin-bottom: 12px;
+          }
+          input:focus {
+            outline: 2px solid rgba(96, 165, 250, 0.55);
+            outline-offset: 1px;
           }
           button {
-            width: 100%;
             border: none;
             border-radius: 10px;
             background: linear-gradient(135deg, #2563eb, #1d4ed8);
@@ -264,6 +280,26 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
             font-weight: 700;
             padding: 10px 12px;
             cursor: pointer;
+          }
+          button[type="submit"] {
+            width: 100%;
+          }
+          .toggle-pin {
+            width: auto;
+            border: 1px solid rgba(96, 165, 250, 0.48);
+            background: rgba(30, 64, 175, 0.25);
+            color: #bfdbfe;
+            font-size: 0.8rem;
+            padding: 10px 12px;
+            white-space: nowrap;
+          }
+          .toggle-pin:hover {
+            background: rgba(30, 64, 175, 0.45);
+          }
+          .hint {
+            margin-top: 8px;
+            color: #93c5fd;
+            font-size: 0.82rem;
           }
           .error {
             margin-top: 12px;
@@ -282,11 +318,36 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
           <p>Masukkan PIN untuk membuka File Vault, Short Link, dan IP Calculator.</p>
           <form method="POST" action="${TOOL_PREFIX}/login">
             <label for="pin">PIN Admin</label>
-            <input id="pin" name="pin" inputmode="numeric" autocomplete="one-time-code" required />
+            <div class="pin-wrap">
+              <input
+                id="pin"
+                name="pin"
+                type="password"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                autocomplete="current-password"
+                placeholder="••••••"
+                required
+              />
+              <button id="toggle-pin" class="toggle-pin" type="button" aria-label="Tampilkan PIN">Lihat</button>
+            </div>
             <button type="submit">Masuk</button>
+            <p class="hint">PIN disembunyikan untuk menjaga privasi saat input.</p>
           </form>
           ${req.query?.error ? '<div class="error">PIN salah. Coba lagi.</div>' : ''}
         </main>
+        <script>
+          const pinInput = document.getElementById('pin');
+          const toggleButton = document.getElementById('toggle-pin');
+          if (pinInput && toggleButton) {
+            toggleButton.addEventListener('click', () => {
+              const reveal = pinInput.type === 'password';
+              pinInput.type = reveal ? 'text' : 'password';
+              toggleButton.textContent = reveal ? 'Sembunyi' : 'Lihat';
+              toggleButton.setAttribute('aria-label', reveal ? 'Sembunyikan PIN' : 'Tampilkan PIN');
+            });
+          }
+        </script>
       </body>
     </html>
   `);
