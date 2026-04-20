@@ -38,7 +38,13 @@
           <h1 class="mt-2 text-3xl font-bold text-blue-100">IP Calculator Paket Lengkap (Subnetting)</h1>
           <p class="mt-2 text-sm text-blue-200 md:text-base">Hitung network, broadcast, host range, wildcard mask, dan pembagian subnet otomatis.</p>
         </div>
-        <a href="/admin" class="inline-flex rounded-lg border border-blue-400/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Kembali</a>
+        <div class="flex flex-wrap gap-2">
+          <a href="/admin" class="inline-flex rounded-lg border border-blue-400/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Dashboard Admin</a>
+          <a href="/admin/file-vault" class="inline-flex rounded-lg border border-blue-400/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">File Vault</a>
+          <form method="POST" action="/admin/logout">
+            <button type="submit" class="inline-flex rounded-lg border border-rose-400/50 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20">Logout</button>
+          </form>
+        </div>
       </div>
     </header>
 

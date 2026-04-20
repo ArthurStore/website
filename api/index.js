@@ -68,6 +68,10 @@ function normalizeRelativePath(relativePath, fallback) {
   return rawPath || String(fallback || 'file');
 }
 
+function isStorageLimitEnabled() {
+  return Number.isFinite(STORAGE_CAPACITY_BYTES) && STORAGE_CAPACITY_BYTES > 0;
+}
+
 function ensureToolAccess(req, res, next) {
   if (req.session?.toolAccessGranted) return next();
   return res.redirect(`${TOOL_PREFIX}`);
@@ -113,7 +117,92 @@ app.get('/ip-calculator', (_req, res) => res.status(404).send(renderShortLinkErr
 
 app.get(`${TOOL_PREFIX}`, (req, res) => {
   if (req.session?.toolAccessGranted) {
-    return res.redirect(`${TOOL_PREFIX}/file-vault`);
+    return res.send(`
+      <!DOCTYPE html>
+      <html lang="id">
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Admin Dashboard</title>
+          <style>
+            :root { color-scheme: dark; }
+            body {
+              margin: 0;
+              min-height: 100vh;
+              display: grid;
+              place-items: center;
+              padding: 24px;
+              font-family: Arial, sans-serif;
+              background:
+                radial-gradient(circle at 14% 16%, rgba(56, 189, 248, 0.26), transparent 32%),
+                radial-gradient(circle at 80% 8%, rgba(59, 130, 246, 0.2), transparent 36%),
+                linear-gradient(145deg, #030712 0%, #0b1733 50%, #06152e 100%);
+              color: #dbeafe;
+            }
+            .card {
+              width: min(760px, 100%);
+              background: rgba(15, 23, 42, 0.85);
+              border: 1px solid rgba(148, 163, 184, 0.28);
+              border-radius: 16px;
+              box-shadow: 0 18px 36px rgba(2, 6, 23, 0.42);
+              padding: 24px;
+            }
+            h1 { margin: 0 0 8px; font-size: 1.5rem; color: #93c5fd; }
+            p { margin: 0 0 18px; color: #bfdbfe; line-height: 1.6; }
+            .tools { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+            a.tool {
+              display: block;
+              text-decoration: none;
+              border-radius: 12px;
+              border: 1px solid rgba(96, 165, 250, 0.36);
+              background: linear-gradient(160deg, rgba(30, 64, 175, 0.35), rgba(15, 23, 42, 0.78));
+              color: #e2e8f0;
+              padding: 14px;
+              font-weight: 700;
+              text-align: center;
+              transition: transform .2s ease, border-color .2s ease;
+            }
+            a.tool:hover {
+              transform: translateY(-1px);
+              border-color: rgba(147, 197, 253, 0.7);
+            }
+            .footer {
+              margin-top: 16px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              gap: 10px;
+              flex-wrap: wrap;
+            }
+            .hint { color: #93c5fd; font-size: .88rem; }
+            .logout {
+              border: 1px solid rgba(248, 113, 113, 0.45);
+              border-radius: 10px;
+              background: rgba(127, 29, 29, 0.35);
+              color: #fecaca;
+              padding: 8px 12px;
+              font-weight: 700;
+              text-decoration: none;
+            }
+          </style>
+        </head>
+        <body>
+          <main class="card">
+            <h1>Admin Dashboard</h1>
+            <p>Pilih tool yang ingin kamu gunakan.</p>
+            <div class="tools">
+              <a class="tool" href="${TOOL_PREFIX}/file-vault">File Vault</a>
+              <a class="tool" href="${TOOL_PREFIX}/short-link">Short Link</a>
+              <a class="tool" href="${TOOL_PREFIX}/ip-calculator">IP Calculator</a>
+            </div>
+            <div class="footer">
+              <span class="hint">Akses privat aktif</span>
+              <a class="logout" href="${TOOL_PREFIX}/logout">Logout</a>
+            </div>
+          </main>
+        </body>
+      </html>
+    `);
   }
 
   return res.send(`
@@ -293,15 +382,19 @@ function createUploadSummary() {
   const usedBytes = entries.reduce((acc, item) => acc + item.sizeBytes, 0);
   const totalClicks = entries.reduce((acc, item) => acc + item.clickCount, 0);
   const totalDownloads = entries.reduce((acc, item) => acc + item.downloadCount, 0);
+  const totalCapacity = isStorageLimitEnabled() ? STORAGE_CAPACITY_BYTES : null;
+  const remainingBytes = totalCapacity === null ? null : Math.max(0, totalCapacity - usedBytes);
+  const storagePercent = totalCapacity
+    ? Number(((usedBytes / totalCapacity) * 100).toFixed(2))
+    : 0;
 
   return {
     totalFiles: entries.length,
     usedBytes,
-    totalCapacityBytes: STORAGE_CAPACITY_BYTES,
-    remainingBytes: Math.max(0, STORAGE_CAPACITY_BYTES - usedBytes),
-    storagePercent: STORAGE_CAPACITY_BYTES > 0
-      ? Number(((usedBytes / STORAGE_CAPACITY_BYTES) * 100).toFixed(2))
-      : 0,
+    totalCapacityBytes: totalCapacity,
+    remainingBytes,
+    storagePercent,
+    unlimitedStorage: totalCapacity === null,
     totalClicks,
     totalDownloads
   };
@@ -368,7 +461,7 @@ app.post('/api/uploads', (req, res) => {
     }
 
     const incomingBytes = files.reduce((acc, file) => acc + (file.size || 0), 0);
-    if ((getUsedStorageBytes() + incomingBytes) > STORAGE_CAPACITY_BYTES) {
+    if (isStorageLimitEnabled() && (getUsedStorageBytes() + incomingBytes) > STORAGE_CAPACITY_BYTES) {
       cleanupUploadedTempFiles(files);
       const summary = createUploadSummary();
       return res.status(413).json({

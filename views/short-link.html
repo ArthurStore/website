@@ -67,11 +67,19 @@
           </p>
         </div>
         <a
-          href="/"
+          href="/admin"
           class="inline-flex items-center justify-center rounded-lg border border-blue-400 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-600/30"
         >
-          Kembali ke Beranda
+          Dashboard Admin
         </a>
+        <form method="GET" action="/admin/logout" class="inline-flex">
+          <button
+            type="submit"
+            class="inline-flex items-center justify-center rounded-lg border border-rose-400/60 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20"
+          >
+            Logout
+          </button>
+        </form>
       </div>
     </header>
 
