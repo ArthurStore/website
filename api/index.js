@@ -8,15 +8,30 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const multer = require('multer');
+const archiver = require('archiver');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const shortLinks = new Map();
 const fileVaultEntries = new Map();
+const fileVaultFolders = new Map();
 const MAX_HISTORY_PER_LINK = 20;
 const UPLOAD_STORAGE_DIR = process.env.UPLOAD_STORAGE_DIR || path.join(os.tmpdir(), 'indragpt-file-vault');
-const STORAGE_CAPACITY_BYTES = (Number(process.env.STORAGE_CAPACITY_MB || 512) || 512) * 1024 * 1024;
-const MAX_UPLOAD_FILE_SIZE_BYTES = (Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 50) || 50) * 1024 * 1024;
+const configuredStorageMb = Number(process.env.STORAGE_CAPACITY_MB || 0);
+const configuredMaxUploadMb = Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 0);
+const STORAGE_CAPACITY_BYTES = Number.isFinite(configuredStorageMb) && configuredStorageMb > 0
+  ? configuredStorageMb * 1024 * 1024
+  : null;
+const MAX_UPLOAD_FILE_SIZE_BYTES = Number.isFinite(configuredMaxUploadMb) && configuredMaxUploadMb > 0
+  ? configuredMaxUploadMb * 1024 * 1024
+  : null;
+const TOOL_PREFIX = (() => {
+  const raw = String(process.env.TOOL_PREFIX || '/arthur-admin').trim();
+  if (!raw || raw === '/') return '/arthur-admin';
+  const normalized = raw.startsWith('/') ? raw : `/${raw}`;
+  return normalized.replace(/\/+$/, '');
+})();
+const TOOL_ACCESS_KEY = String(process.env.TOOL_ACCESS_KEY || '').trim();
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
@@ -39,6 +54,42 @@ app.use(sesss({
   cookie: { secure: process.env.NODE_ENV === 'production' }
 }));
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function normalizeRelativePath(relativePath, fallback) {
+  const rawPath = String(relativePath || fallback || '').replace(/\\/g, '/').trim();
+  return rawPath || String(fallback || 'file');
+}
+
+function ensureToolAccess(req, res, next) {
+  if (!TOOL_ACCESS_KEY) return next();
+  if (req.session?.toolAccessGranted) return next();
+
+  const candidate = String(req.query?.key || '').trim();
+  if (candidate && candidate === TOOL_ACCESS_KEY) {
+    req.session.toolAccessGranted = true;
+    return next();
+  }
+
+  return res.status(404).send(renderShortLinkErrorPage(
+    'Halaman Tidak Ditemukan',
+    'URL yang kamu akses tidak tersedia.'
+  ));
+}
+
+function sendToolView(res, fileName) {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, `../views/${fileName}`));
+}
+
 // Router
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../views/thur.html'));
@@ -58,23 +109,23 @@ app.get('/portofolio', (req, res) => {
     res.sendFile(path.join(__dirname, '../views/portofolio.html'));
 });
 
-app.get('/short-link', (req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.sendFile(path.join(__dirname, '../views/short-link.html'));
-});
+app.get('/short-link', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
+  'Halaman Tidak Ditemukan',
+  'Endpoint ini tidak tersedia untuk publik.'
+)));
+app.get('/file-vault', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
+  'Halaman Tidak Ditemukan',
+  'Endpoint ini tidak tersedia untuk publik.'
+)));
+app.get('/ip-calculator', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
+  'Halaman Tidak Ditemukan',
+  'Endpoint ini tidak tersedia untuk publik.'
+)));
 
-app.get('/file-vault', (req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.sendFile(path.join(__dirname, '../views/file-vault.html'));
-});
-
-app.get('/ip-calculator', (req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.sendFile(path.join(__dirname, '../views/ip-calculator.html'));
-});
+app.get(`${TOOL_PREFIX}`, ensureToolAccess, (_req, res) => res.redirect(`${TOOL_PREFIX}/file-vault`));
+app.get(`${TOOL_PREFIX}/short-link`, ensureToolAccess, (_req, res) => sendToolView(res, 'short-link.html'));
+app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolView(res, 'file-vault.html'));
+app.get(`${TOOL_PREFIX}/ip-calculator`, ensureToolAccess, (_req, res) => sendToolView(res, 'ip-calculator.html'));
 
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_STORAGE_DIR),
