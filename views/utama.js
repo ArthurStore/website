@@ -39,6 +39,176 @@ function createAmbientParticles() {
   }
 }
 
+const UI_SOUND_STATE_KEY = "arthur-ui-sound-enabled-v1";
+let sharedAudioCtx = null;
+let interactionUnlocked = false;
+
+function isReducedMotionEnabled() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function ensureAudioContext() {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (sharedAudioCtx) return sharedAudioCtx;
+  try {
+    sharedAudioCtx = new AudioCtx();
+  } catch (_error) {
+    return null;
+  }
+  return sharedAudioCtx;
+}
+
+function isUiSoundEnabled() {
+  try {
+    const saved = window.localStorage.getItem(UI_SOUND_STATE_KEY);
+    return saved !== "off";
+  } catch (_error) {
+    return true;
+  }
+}
+
+function setUiSoundEnabled(value) {
+  try {
+    window.localStorage.setItem(UI_SOUND_STATE_KEY, value ? "on" : "off");
+  } catch (_error) {
+    // ignore storage issue
+  }
+}
+
+function playUiTone({
+  type = "sine",
+  frequency = 540,
+  frequencyEnd = null,
+  duration = 0.12,
+  delay = 0,
+  volume = 0.03
+} = {}) {
+  if (!isUiSoundEnabled() || isReducedMotionEnabled()) return;
+  const ctx = ensureAudioContext();
+  if (!ctx || ctx.state !== "running") return;
+
+  const start = ctx.currentTime + Math.max(0, delay);
+  const oscillator = ctx.createOscillator();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(Math.max(40, frequency), start);
+  if (Number.isFinite(frequencyEnd) && frequencyEnd > 0) {
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(40, frequencyEnd), start + duration);
+  }
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), start + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+  oscillator.connect(gain);
+  gain.connect(ctx.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration + 0.03);
+}
+
+function playClickSound() {
+  playUiTone({
+    type: "triangle",
+    frequency: 680,
+    frequencyEnd: 920,
+    duration: 0.08,
+    volume: 0.018
+  });
+}
+
+function playSuccessSound() {
+  playUiTone({
+    type: "sine",
+    frequency: 620,
+    frequencyEnd: 820,
+    duration: 0.11,
+    volume: 0.02
+  });
+  playUiTone({
+    type: "triangle",
+    frequency: 880,
+    frequencyEnd: 1180,
+    duration: 0.16,
+    delay: 0.08,
+    volume: 0.024
+  });
+}
+
+function playReadyJrengSound() {
+  playUiTone({
+    type: "triangle",
+    frequency: 420,
+    frequencyEnd: 760,
+    duration: 0.14,
+    volume: 0.02
+  });
+  playUiTone({
+    type: "sine",
+    frequency: 640,
+    frequencyEnd: 1040,
+    duration: 0.2,
+    delay: 0.05,
+    volume: 0.022
+  });
+  playUiTone({
+    type: "sine",
+    frequency: 960,
+    frequencyEnd: 1460,
+    duration: 0.24,
+    delay: 0.11,
+    volume: 0.025
+  });
+}
+
+function unlockAudioOnce() {
+  if (interactionUnlocked) return;
+  interactionUnlocked = true;
+  const ctx = ensureAudioContext();
+  if (!ctx) return;
+  ctx.resume()
+    .then(() => {
+      playClickSound();
+    })
+    .catch(() => {
+      // browser may still block audio
+    });
+}
+
+function createSoundToggle() {
+  if (!document.body) return;
+  if (document.querySelector(".ui-sound-toggle")) return;
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "ui-sound-toggle";
+  toggle.setAttribute("aria-label", "Toggle sound effect");
+  toggle.dataset.soundEnabled = isUiSoundEnabled() ? "on" : "off";
+  toggle.textContent = isUiSoundEnabled() ? "🔊 Sound ON" : "🔈 Sound OFF";
+
+  toggle.addEventListener("click", () => {
+    const enabled = toggle.dataset.soundEnabled !== "on";
+    setUiSoundEnabled(enabled);
+    toggle.dataset.soundEnabled = enabled ? "on" : "off";
+    toggle.textContent = enabled ? "🔊 Sound ON" : "🔈 Sound OFF";
+    unlockAudioOnce();
+    playClickSound();
+  });
+
+  document.body.appendChild(toggle);
+}
+
+function attachGlobalClickSound() {
+  document.addEventListener("pointerdown", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const clickable = target.closest("button, a, input[type='submit'], input[type='button'], [role='button']");
+    if (!clickable) return;
+    unlockAudioOnce();
+    playClickSound();
+  }, { passive: true });
+}
+
 function createCursorTrail() {
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const finePointer = window.matchMedia("(pointer: fine)").matches;
@@ -153,62 +323,20 @@ function createCursorTrail() {
 }
 
 function playFirstLoadSound() {
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (reduceMotion) return;
-
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return;
-
-  let context;
-  try {
-    context = new AudioCtx();
-  } catch (_error) {
-    return;
-  }
-
-  const triggerSound = () => {
-    const now = context.currentTime;
-    const gain = context.createGain();
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.055, now + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
-    gain.connect(context.destination);
-
-    const oscillatorA = context.createOscillator();
-    oscillatorA.type = "triangle";
-    oscillatorA.frequency.setValueAtTime(352, now);
-    oscillatorA.frequency.exponentialRampToValueAtTime(598, now + 0.2);
-    oscillatorA.connect(gain);
-
-    const oscillatorB = context.createOscillator();
-    oscillatorB.type = "sine";
-    oscillatorB.frequency.setValueAtTime(704, now);
-    oscillatorB.frequency.exponentialRampToValueAtTime(932, now + 0.18);
-    oscillatorB.connect(gain);
-
-    oscillatorA.start(now);
-    oscillatorB.start(now + 0.015);
-    oscillatorA.stop(now + 0.5);
-    oscillatorB.stop(now + 0.38);
-  };
-
-  if (context.state === "running") {
-    triggerSound();
-    return;
-  }
-
-  const unlockAndPlay = () => {
-    context.resume()
-      .then(() => {
-        if (context.state === "running") triggerSound();
-      })
-      .catch(() => {
-        // ignore autoplay restrictions silently
-      });
-  };
-
-  ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
-    window.addEventListener(eventName, unlockAndPlay, { once: true, passive: true });
+  playUiTone({
+    type: "triangle",
+    frequency: 352,
+    frequencyEnd: 598,
+    duration: 0.2,
+    volume: 0.035
+  });
+  playUiTone({
+    type: "sine",
+    frequency: 704,
+    frequencyEnd: 932,
+    duration: 0.26,
+    delay: 0.03,
+    volume: 0.03
   });
 }
 
@@ -248,6 +376,7 @@ function createFirstLoadExperience() {
   window.setTimeout(() => {
     introLayer.classList.add("is-fading");
     document.body.classList.remove("first-load-active");
+    playReadyJrengSound();
   }, 1450);
 
   window.setTimeout(() => {
@@ -255,7 +384,62 @@ function createFirstLoadExperience() {
   }, 2500);
 }
 
+function attachFileVaultSuccessSound() {
+  if (!document.body || !window.location.pathname.startsWith("/admin/file-vault")) return;
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type !== "childList" && mutation.type !== "characterData") return;
+      const feedback = document.getElementById("feedback");
+      if (!feedback || feedback.classList.contains("hidden")) return;
+      const text = String(feedback.textContent || "").toLowerCase();
+      if (!text) return;
+      if (text.includes("berhasil") || text.includes("sukses") || text.includes("direfresh")) {
+        playSuccessSound();
+      }
+    });
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
+}
+
+window.ArthurSiteSoundFX = {
+  unlock: unlockAudioOnce,
+  playClick: playClickSound,
+  playSuccess: playSuccessSound,
+  playReady: playReadyJrengSound,
+  playByType(type) {
+    const key = String(type || "").toLowerCase();
+    if (key === "click") {
+      playClickSound();
+      return;
+    }
+    if (key === "success" || key === "upload" || key === "saved") {
+      playSuccessSound();
+      return;
+    }
+    if (key === "ready" || key === "jreng") {
+      playReadyJrengSound();
+      return;
+    }
+    if (key === "error" || key === "fail") {
+      playUiTone({
+        type: "sawtooth",
+        frequency: 260,
+        frequencyEnd: 190,
+        duration: 0.2,
+        volume: 0.018
+      });
+    }
+  }
+};
+
 createFirstLoadExperience();
+createSoundToggle();
+attachGlobalClickSound();
+attachFileVaultSuccessSound();
 createAmbientParticles();
 createCursorTrail();
 

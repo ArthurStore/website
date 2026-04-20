@@ -138,6 +138,7 @@
     </section>
   </main>
 
+  <script src="/utama.js"></script>
   <script>
     const form = document.getElementById('converter-form');
     const feedback = document.getElementById('feedback');
@@ -155,6 +156,12 @@
         feedback.className = 'mt-4 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200';
       } else {
         feedback.className = 'mt-4 rounded-lg border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200';
+      }
+    }
+
+    function playSound(type) {
+      if (window.ArthurSiteSoundFX?.playByType) {
+        window.ArthurSiteSoundFX.playByType(type);
       }
     }
 
@@ -242,11 +249,19 @@
         }
         if (!response.ok) {
           const details = [payload.message, payload.hint].filter(Boolean).join(' ');
-          throw new Error(details || 'Konversi gagal.');
+          let finalMessage = details || 'Konversi gagal.';
+          if (response.status === 504) {
+            finalMessage = `${finalMessage} Provider converter sedang lambat/timeout. Coba lagi sebentar, atau pakai file lebih kecil.`;
+          } else if (response.status === 502) {
+            finalMessage = `${finalMessage} Provider converter sedang error (502), coba ulang beberapa menit lagi.`;
+          }
+          playSound('error');
+          throw new Error(finalMessage);
         }
 
         const url = pickResultUrl(payload);
         if (!url) {
+          playSound('ready');
           showFeedback('success', 'Konversi sukses, tapi URL hasil tidak ditemukan di response API.');
           return;
         }
@@ -276,8 +291,10 @@
         }
 
         resultBox.classList.remove('hidden');
+        playSound('success');
         showFeedback('success', payload.message || 'Konversi PDF ke JPG berhasil.');
       } catch (error) {
+        playSound('error');
         showFeedback('error', error.message || 'Terjadi error saat convert.');
       } finally {
         submitBtn.disabled = false;

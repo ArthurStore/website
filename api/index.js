@@ -47,6 +47,12 @@ const PDF_CONVERTER_API_KEY = String(
   process.env.NEOXR_APIKEY ||
   'yokheimoet'
 ).trim();
+const configuredPdfConverterTimeoutMs = Number(process.env.PDF_CONVERTER_TIMEOUT_MS || 28000);
+const PDF_CONVERTER_TIMEOUT_MS = Number.isFinite(configuredPdfConverterTimeoutMs) &&
+  configuredPdfConverterTimeoutMs >= 5000 &&
+  configuredPdfConverterTimeoutMs <= 180000
+  ? configuredPdfConverterTimeoutMs
+  : 28000;
 const PDF_TMP_PUBLIC_BASE_URL = String(
   process.env.PDF_TMP_PUBLIC_BASE_URL ||
   process.env.TOOL_PUBLIC_BASE_URL ||
@@ -1019,10 +1025,27 @@ async function convertPdfByUrl(url, filename, to) {
     to,
     apikey: PDF_CONVERTER_API_KEY
   });
-  const upstreamResponse = await fetch(`${PDF_CONVERTER_ENDPOINT}?${query.toString()}`, {
-    method: 'GET',
-    headers: { Accept: 'application/json, text/plain;q=0.9,*/*;q=0.8' }
-  });
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), PDF_CONVERTER_TIMEOUT_MS);
+  let upstreamResponse;
+  try {
+    upstreamResponse = await fetch(`${PDF_CONVERTER_ENDPOINT}?${query.toString()}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json, text/plain;q=0.9,*/*;q=0.8' },
+      signal: timeoutController.signal
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const timeoutError = new Error(`Timeout ${Math.round(PDF_CONVERTER_TIMEOUT_MS / 1000)} detik dari provider converter.`);
+      timeoutError.statusCode = 504;
+      throw timeoutError;
+    }
+    const networkError = new Error(`Gagal menghubungi provider converter: ${error.message}`);
+    networkError.statusCode = 502;
+    throw networkError;
+  } finally {
+    clearTimeout(timeoutId);
+  }
   const rawText = await upstreamResponse.text();
   let payload = null;
   try {
@@ -1036,6 +1059,12 @@ async function convertPdfByUrl(url, filename, to) {
     error.statusCode = 502;
     error.payload = payload;
     throw error;
+  }
+  if (payload && typeof payload === 'object' && payload.status === false) {
+    const providerError = new Error(payload?.message || payload?.msg || 'Provider converter gagal memproses file.');
+    providerError.statusCode = 502;
+    providerError.payload = payload;
+    throw providerError;
   }
   return payload;
 }
@@ -1135,8 +1164,14 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
       });
     } catch (err) {
       const statusCode = Number(err?.statusCode) || 502;
+      const hint = statusCode === 504
+        ? 'Provider converter terlalu lama merespons (timeout). Coba lagi dengan file lebih kecil atau ulang beberapa saat lagi.'
+        : statusCode === 502
+          ? 'Server sudah menerima file, tapi koneksi ke provider converter sedang bermasalah.'
+          : undefined;
       return res.status(statusCode).json({
         message: err.message || 'Gagal menghubungi provider converter.',
+        ...(hint ? { hint } : {}),
         uploadedPdf: {
           token,
           tempUrl: tempPdfUrl,

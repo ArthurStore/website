@@ -246,6 +246,7 @@
     </section>
   </main>
 
+  <script src="/utama.js"></script>
   <script>
     const uploadForm = document.getElementById('upload-form');
     const fileInput = document.getElementById('file-input');
@@ -298,6 +299,9 @@
     function showFeedback(type, message) {
       feedback.textContent = message;
       feedback.classList.remove('hidden');
+      if (window.ArthurSiteSoundFX?.playByType) {
+        window.ArthurSiteSoundFX.playByType(type === 'success' ? 'success' : 'error');
+      }
       if (type === 'success') {
         feedback.className = 'mt-4 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200';
       } else {
@@ -457,6 +461,9 @@
         if (!response.ok) throw new Error(data.message || 'Upload gagal.');
 
         showFeedback('success', data.message || 'Upload berhasil.');
+        if (window.ArthurSiteSoundFX?.playByType) {
+          window.ArthurSiteSoundFX.playByType('upload');
+        }
         uploadForm.reset();
         await loadEntries();
       } catch (error) {
