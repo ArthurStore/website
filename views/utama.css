@@ -135,6 +135,69 @@ body {
       }
     }
 
+    @keyframes firstLoadReveal {
+      0% {
+        opacity: 1;
+      }
+      65% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+
+    @keyframes firstLoadShimmer {
+      0% {
+        transform: translate3d(-120%, 0, 0);
+      }
+      100% {
+        transform: translate3d(140%, 0, 0);
+      }
+    }
+
+@keyframes firstLoadRingPulse {
+  0% {
+    transform: scale(0.62);
+    opacity: 0;
+  }
+  45% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.14);
+    opacity: 0;
+  }
+}
+
+@keyframes firstLoadCorePulse {
+  0% {
+    transform: scale(0.52);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.92;
+  }
+  100% {
+    transform: scale(1.24);
+    opacity: 0;
+  }
+}
+
+@keyframes firstLoadLabelPop {
+  0% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.82;
+  }
+}
+
     .cursor-glow {
       position: fixed;
       top: 0;
@@ -179,6 +242,81 @@ body {
       height: 52px;
       background: radial-gradient(circle, rgba(14, 165, 233, 0.45), rgba(2, 132, 199, 0.08) 65%, transparent 100%);
       box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+    }
+
+    body.first-load-active {
+      overflow: hidden;
+    }
+
+    .first-load-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 180;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.2), rgba(2, 6, 23, 0.94) 72%),
+        linear-gradient(150deg, rgba(15, 23, 42, 0.96), rgba(8, 16, 36, 0.92));
+      backdrop-filter: blur(3px);
+    }
+
+    .first-load-overlay.is-visible {
+      opacity: 1;
+    }
+
+    .first-load-overlay.is-fading {
+      animation: firstLoadReveal 980ms ease-out forwards;
+    }
+
+    .first-load-overlay::after {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background: linear-gradient(112deg, transparent 36%, rgba(125, 211, 252, 0.36) 50%, transparent 64%);
+      animation: firstLoadShimmer 980ms ease-out forwards;
+      mix-blend-mode: screen;
+    }
+
+    .first-load-ring {
+      position: absolute;
+      width: min(62vw, 520px);
+      aspect-ratio: 1 / 1;
+      border-radius: 999px;
+      border: 1px solid rgba(125, 211, 252, 0.45);
+      box-shadow:
+        0 0 40px rgba(56, 189, 248, 0.35),
+        inset 0 0 24px rgba(96, 165, 250, 0.2);
+      animation: firstLoadRingPulse 1.25s ease-out 1;
+    }
+
+    .first-load-core {
+      position: absolute;
+      width: min(26vw, 180px);
+      aspect-ratio: 1 / 1;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(191, 219, 254, 0.95) 0%, rgba(59, 130, 246, 0.38) 48%, rgba(30, 64, 175, 0) 72%);
+      filter: blur(0.2px);
+      animation: firstLoadCorePulse 1.18s ease-out 1;
+    }
+
+    .first-load-label {
+      position: relative;
+      z-index: 1;
+      border: 1px solid rgba(125, 211, 252, 0.45);
+      background: rgba(10, 20, 44, 0.58);
+      color: #dbeafe;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.62rem 1rem;
+      border-radius: 999px;
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.36);
+      animation: firstLoadLabelPop 1.18s ease-out 1;
     }
 
     @media (pointer: fine) {
@@ -760,5 +898,9 @@ body {
         animation: none !important;
         color: #93c5fd;
         background-image: none;
+      }
+
+      .first-load-overlay {
+        display: none !important;
       }
     }

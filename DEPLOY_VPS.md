@@ -171,7 +171,7 @@ Hasilnya harus IP VPS Anda.
 
 ## 7) Konfigurasi Nginx reverse proxy
 
-Buat file nginx:
+Edit file virtual host di **sites-available**:
 
 ```bash
 nano /etc/nginx/sites-available/arthurg.my.id
@@ -201,16 +201,28 @@ server {
 
 `client_max_body_size` wajib dinaikkan kalau pakai tool upload (contoh PDF to JPG), supaya tidak kena error **413 Request Entity Too Large** dari nginx.
 
-Aktifkan site:
+Aktifkan site (buat symlink ke **sites-enabled**):
 
 ```bash
 ln -s /etc/nginx/sites-available/arthurg.my.id /etc/nginx/sites-enabled/
 ```
 
-Nonaktifkan default (opsional tapi disarankan):
+Nonaktifkan config default nginx (disarankan supaya tidak bentrok):
 
 ```bash
 rm -f /etc/nginx/sites-enabled/default
+```
+
+Ringkasnya biar tidak bingung:
+
+- **`/etc/nginx/sites-available/`** = tempat file config sumber (yang kamu edit pakai nano)
+- **`/etc/nginx/sites-enabled/`** = daftar site aktif (symlink dari available)
+- **`default`** = config bawaan nginx; aman dihapus dari `sites-enabled` kalau sudah pakai config domain sendiri
+
+Kalau ingin cek site mana yang aktif:
+
+```bash
+ls -lah /etc/nginx/sites-enabled/
 ```
 
 Test dan reload nginx:

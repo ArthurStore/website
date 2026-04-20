@@ -152,6 +152,110 @@ function createCursorTrail() {
   }, { once: true });
 }
 
+function playFirstLoadSound() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) return;
+
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+
+  let context;
+  try {
+    context = new AudioCtx();
+  } catch (_error) {
+    return;
+  }
+
+  const triggerSound = () => {
+    const now = context.currentTime;
+    const gain = context.createGain();
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.055, now + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.52);
+    gain.connect(context.destination);
+
+    const oscillatorA = context.createOscillator();
+    oscillatorA.type = "triangle";
+    oscillatorA.frequency.setValueAtTime(352, now);
+    oscillatorA.frequency.exponentialRampToValueAtTime(598, now + 0.2);
+    oscillatorA.connect(gain);
+
+    const oscillatorB = context.createOscillator();
+    oscillatorB.type = "sine";
+    oscillatorB.frequency.setValueAtTime(704, now);
+    oscillatorB.frequency.exponentialRampToValueAtTime(932, now + 0.18);
+    oscillatorB.connect(gain);
+
+    oscillatorA.start(now);
+    oscillatorB.start(now + 0.015);
+    oscillatorA.stop(now + 0.5);
+    oscillatorB.stop(now + 0.38);
+  };
+
+  if (context.state === "running") {
+    triggerSound();
+    return;
+  }
+
+  const unlockAndPlay = () => {
+    context.resume()
+      .then(() => {
+        if (context.state === "running") triggerSound();
+      })
+      .catch(() => {
+        // ignore autoplay restrictions silently
+      });
+  };
+
+  ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+    window.addEventListener(eventName, unlockAndPlay, { once: true, passive: true });
+  });
+}
+
+function createFirstLoadExperience() {
+  if (!document.body) return;
+  const firstLoadKey = "arthur-site-first-load-v1";
+  let isFirstLoad = false;
+
+  try {
+    isFirstLoad = !window.localStorage.getItem(firstLoadKey);
+    if (isFirstLoad) {
+      window.localStorage.setItem(firstLoadKey, String(Date.now()));
+    }
+  } catch (_error) {
+    isFirstLoad = true;
+  }
+
+  if (!isFirstLoad) return;
+
+  document.body.classList.add("first-load-active");
+  const introLayer = document.createElement("div");
+  introLayer.className = "first-load-overlay";
+  introLayer.setAttribute("aria-hidden", "true");
+  introLayer.innerHTML = `
+    <div class="first-load-ring"></div>
+    <div class="first-load-core"></div>
+    <p class="first-load-label">Arthur Bot Experience</p>
+  `;
+
+  document.body.appendChild(introLayer);
+  window.requestAnimationFrame(() => {
+    introLayer.classList.add("is-visible");
+  });
+
+  playFirstLoadSound();
+
+  window.setTimeout(() => {
+    introLayer.classList.add("is-fading");
+    document.body.classList.remove("first-load-active");
+  }, 1450);
+
+  window.setTimeout(() => {
+    introLayer.remove();
+  }, 2500);
+}
+
+createFirstLoadExperience();
 createAmbientParticles();
 createCursorTrail();
 
