@@ -34,7 +34,21 @@ body {
       inset: 0;
       background:
         radial-gradient(circle at center, transparent 45%, rgba(2, 6, 23, 0.58) 100%),
-        linear-gradient(180deg, rgba(12, 22, 48, 0.06) 0%, rgba(7, 13, 30, 0.42) 100%);
+        linear-gradient(180deg, rgba(12, 22, 48, 0.06) 0%, rgba(7, 13, 30, 0.42) 100%),
+        repeating-linear-gradient(
+          40deg,
+          rgba(148, 163, 184, 0.03) 0px,
+          rgba(148, 163, 184, 0.03) 1px,
+          transparent 1px,
+          transparent 8px
+        ),
+        repeating-linear-gradient(
+          -42deg,
+          rgba(14, 165, 233, 0.025) 0px,
+          rgba(14, 165, 233, 0.025) 1px,
+          transparent 1px,
+          transparent 10px
+        );
       pointer-events: none;
       z-index: 0;
     }
@@ -90,6 +104,18 @@ body {
       }
     }
 
+    @keyframes rgbTextFlow {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
     .cursor-glow {
       position: fixed;
       top: 0;
@@ -134,6 +160,32 @@ body {
       height: 52px;
       background: radial-gradient(circle, rgba(14, 165, 233, 0.45), rgba(2, 132, 199, 0.08) 65%, transparent 100%);
       box-shadow: 0 0 30px rgba(14, 165, 233, 0.5);
+    }
+
+    @media (pointer: fine) {
+      body.cursor-trail-only,
+      body.cursor-trail-only * {
+        cursor: none !important;
+      }
+    }
+
+    .hero-rgb-title .rgb-accent {
+      display: inline-block;
+      background-image: linear-gradient(
+        110deg,
+        #bfdbfe 0%,
+        #7dd3fc 25%,
+        #93c5fd 45%,
+        #a5b4fc 65%,
+        #22d3ee 82%,
+        #dbeafe 100%
+      );
+      background-size: 280% 100%;
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 18px rgba(56, 189, 248, 0.16);
+      animation: rgbTextFlow 7s linear infinite;
     }
 
     #sidebar-overlay {
@@ -652,5 +704,11 @@ body {
       .cursor-glow,
       .cursor-dot {
         display: none !important;
+      }
+
+      .hero-rgb-title .rgb-accent {
+        animation: none !important;
+        color: #93c5fd;
+        background-image: none;
       }
     }

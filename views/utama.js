@@ -44,6 +44,7 @@ function createCursorTrail() {
   const finePointer = window.matchMedia("(pointer: fine)").matches;
   if (reduceMotion || !finePointer) return;
   if (!document.body) return;
+  document.body.classList.add("cursor-trail-only");
 
   const glow = document.createElement("div");
   glow.className = "cursor-glow";
