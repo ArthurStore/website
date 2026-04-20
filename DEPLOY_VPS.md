@@ -184,6 +184,7 @@ server {
     listen 80;
     listen [::]:80;
     server_name arthurg.my.id www.arthurg.my.id;
+    client_max_body_size 200M;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -197,6 +198,8 @@ server {
     }
 }
 ```
+
+`client_max_body_size` wajib dinaikkan kalau pakai tool upload (contoh PDF to JPG), supaya tidak kena error **413 Request Entity Too Large** dari nginx.
 
 Aktifkan site:
 

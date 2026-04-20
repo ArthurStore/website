@@ -227,11 +227,18 @@
           payload = rawText ? JSON.parse(rawText) : {};
         } catch (_parseError) {
           const looksLikeHtml = /<\s*!doctype html|<\s*html/i.test(rawText || '');
-          payload = {
-            message: looksLikeHtml
-              ? 'Respons server bukan JSON (kemungkinan session admin habis). Login ulang lalu coba lagi.'
-              : (rawText || 'Server mengembalikan respons non-JSON.')
-          };
+          if (looksLikeHtml && response.status === 413) {
+            payload = {
+              message: 'Upload ditolak server (413 Request Entity Too Large).',
+              hint: 'Ukuran file kemungkinan melebihi limit Nginx. Naikkan client_max_body_size lalu reload Nginx.'
+            };
+          } else {
+            payload = {
+              message: looksLikeHtml
+                ? `Respons server bukan JSON (HTTP ${response.status || 'unknown'}).`
+                : (rawText || 'Server mengembalikan respons non-JSON.')
+            };
+          }
         }
         if (!response.ok) {
           const details = [payload.message, payload.hint].filter(Boolean).join(' ');
