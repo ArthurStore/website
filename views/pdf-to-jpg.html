@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF to JPG Converter</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      color: #dbeafe;
+      background:
+        radial-gradient(circle at 10% 12%, rgba(59, 130, 246, 0.24), transparent 34%),
+        radial-gradient(circle at 84% 10%, rgba(14, 165, 233, 0.2), transparent 36%),
+        linear-gradient(145deg, #020617 0%, #0b1733 54%, #07152d 100%);
+      background-size: 140% 140%, 140% 140%, 240% 240%;
+      animation: converterBgShift 18s ease-in-out infinite;
+    }
+    .glass {
+      background: linear-gradient(160deg, rgba(15, 23, 42, 0.82), rgba(8, 15, 32, 0.78));
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      box-shadow: 0 16px 42px rgba(2, 6, 23, 0.44);
+      backdrop-filter: blur(8px);
+    }
+    .input-style {
+      width: 100%;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(96, 165, 250, 0.4);
+      background: rgba(2, 6, 23, 0.62);
+      color: #e2e8f0;
+      padding: 0.7rem 0.85rem;
+      font-size: 0.9rem;
+    }
+    .input-style:focus {
+      outline: 2px solid rgba(56, 189, 248, 0.55);
+      outline-offset: 1px;
+    }
+    .action-btn {
+      border: 1px solid rgba(125, 211, 252, 0.38);
+      border-radius: 0.7rem;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 54%, #0ea5e9 100%);
+      color: #fff;
+      font-weight: 700;
+      padding: 0.75rem 1rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(37, 99, 235, 0.35);
+    }
+    @keyframes converterBgShift {
+      0% { background-position: 0% 0%, 100% 0%, 0% 50%; }
+      50% { background-position: 8% 12%, 86% 14%, 100% 50%; }
+      100% { background-position: 0% 0%, 100% 0%, 0% 50%; }
+    }
+  </style>
+</head>
+<body class="px-4 py-8 md:px-8 md:py-10">
+  <main class="mx-auto max-w-6xl space-y-6">
+    <header class="glass rounded-2xl p-6 md:p-8">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p class="text-sm uppercase tracking-[0.25em] text-blue-300">/admin/pdf-to-jpg</p>
+          <h1 class="mt-2 text-3xl font-bold text-blue-100 md:text-4xl">PDF to JPG Converter</h1>
+          <p class="mt-3 max-w-3xl text-sm text-blue-200 md:text-base">
+            Masukkan URL PDF publik, lalu convert ke JPG lewat API converter. Tidak ada limit size dari sisi aplikasi ini.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="/admin" class="rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20">Admin Home</a>
+          <a href="/admin/file-vault" class="rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20">File Vault</a>
+          <a href="/admin/short-link" class="rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20">Short Link</a>
+          <a href="/admin/ip-calculator" class="rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/20">IP Calculator</a>
+          <a href="/admin/logout" class="rounded-lg border border-rose-300/60 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20">Logout</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+      <div class="glass rounded-2xl p-6 md:p-7">
+        <h2 class="text-xl font-semibold text-blue-100">Konversi PDF ke JPG</h2>
+        <p class="mt-2 text-sm text-blue-200">Input URL PDF wajib bisa diakses publik tanpa login/auth.</p>
+
+        <form id="converter-form" class="mt-5 space-y-4">
+          <div>
+            <label for="pdf-url" class="mb-2 block text-sm font-semibold text-blue-200">URL PDF</label>
+            <input id="pdf-url" class="input-style" type="url" required placeholder="https://contoh.com/file.pdf" />
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label for="output-name" class="mb-2 block text-sm font-semibold text-blue-200">Nama Output</label>
+              <input id="output-name" class="input-style" type="text" required placeholder="example" />
+            </div>
+            <div>
+              <label for="format-to" class="mb-2 block text-sm font-semibold text-blue-200">Format Tujuan</label>
+              <select id="format-to" class="input-style">
+                <option value="jpg" selected>jpg</option>
+                <option value="jpeg">jpeg</option>
+                <option value="png">png</option>
+              </select>
+            </div>
+          </div>
+
+          <button id="submit-btn" type="submit" class="action-btn w-full sm:w-auto">Convert Sekarang</button>
+        </form>
+
+        <div id="feedback" class="mt-4 hidden rounded-lg border px-4 py-3 text-sm"></div>
+      </div>
+
+      <aside class="glass rounded-2xl p-6 md:p-7">
+        <h2 class="text-xl font-semibold text-blue-100">Hasil Konversi</h2>
+        <p class="mt-2 text-sm text-blue-200">Kalau sukses, link hasil dari API akan muncul di bawah ini.</p>
+        <div id="result-box" class="mt-4 hidden rounded-lg border border-emerald-400/35 bg-emerald-500/10 p-4">
+          <p class="text-xs uppercase tracking-[0.18em] text-emerald-300">Result</p>
+          <a id="result-link" href="#" target="_blank" class="mt-2 block break-all text-sm font-semibold text-emerald-200 underline"></a>
+          <button id="copy-btn" type="button" class="mt-3 rounded-md border border-emerald-300/50 px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/20">
+            Copy Link
+          </button>
+        </div>
+
+        <div class="mt-4 rounded-lg border border-blue-400/20 bg-slate-900/50 p-4 text-xs text-blue-200">
+          <p class="font-semibold text-blue-100">Catatan:</p>
+          <ul class="mt-2 list-inside list-disc space-y-1">
+            <li>Aplikasi ini tidak membatasi ukuran file dari sisi backend lokal.</li>
+            <li>Jika gagal, biasanya karena URL PDF tidak bisa diakses publik.</li>
+            <li>Jika provider API punya batas internal, itu di luar kontrol aplikasi ini.</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('converter-form');
+    const feedback = document.getElementById('feedback');
+    const resultBox = document.getElementById('result-box');
+    const resultLink = document.getElementById('result-link');
+    const copyBtn = document.getElementById('copy-btn');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function showFeedback(type, message) {
+      feedback.textContent = message;
+      feedback.classList.remove('hidden');
+      if (type === 'success') {
+        feedback.className = 'mt-4 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200';
+      } else {
+        feedback.className = 'mt-4 rounded-lg border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200';
+      }
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    function pickResultUrl(payload) {
+      if (!payload || typeof payload !== 'object') return '';
+      const candidates = [
+        payload.url,
+        payload.result,
+        payload.download,
+        payload.output,
+        payload.archive,
+        payload.zip,
+        payload.data && payload.data.url,
+        payload.data && payload.data.result,
+        payload.data && payload.data.download,
+        payload.upstream && payload.upstream.url,
+        payload.upstream && payload.upstream.data && payload.upstream.data.url
+      ];
+      const valid = candidates.find((value) => typeof value === 'string' && /^https?:\/\//i.test(value));
+      return valid || '';
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      feedback.classList.add('hidden');
+      resultBox.classList.add('hidden');
+
+      const pdfUrl = document.getElementById('pdf-url').value.trim();
+      const filename = document.getElementById('output-name').value.trim();
+      const to = document.getElementById('format-to').value.trim().toLowerCase();
+
+      if (!pdfUrl || !filename) {
+        showFeedback('error', 'URL PDF dan nama output wajib diisi.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Converting...';
+
+      try {
+        const response = await fetch('/api/pdf-to-jpg', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: pdfUrl, filename, to })
+        });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.message || 'Konversi gagal.');
+        }
+
+        const url = pickResultUrl(payload);
+        if (!url) {
+          showFeedback('success', 'Konversi sukses, tapi URL hasil tidak ditemukan di response API.');
+          return;
+        }
+
+        resultLink.textContent = url;
+        resultLink.href = url;
+        resultBox.classList.remove('hidden');
+        showFeedback('success', payload.message || 'Konversi PDF ke JPG berhasil.');
+      } catch (error) {
+        showFeedback('error', error.message || 'Terjadi error saat convert.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Convert Sekarang';
+      }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      const text = resultLink.textContent || '';
+      if (!text) return;
+      const ok = await copyText(text);
+      showFeedback(ok ? 'success' : 'error', ok ? 'Link hasil berhasil disalin.' : 'Gagal menyalin link hasil.');
+    });
+  </script>
+</body>
+</html>

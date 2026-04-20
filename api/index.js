@@ -36,6 +36,12 @@ const TOOL_ACCESS_PIN = String(
   process.env.ADMIN_PIN ||
   '050507'
 ).trim();
+const PDF_CONVERTER_ENDPOINT = String(process.env.PDF_CONVERTER_ENDPOINT || 'https://api.neoxr.eu/api/pdf-converter').trim();
+const PDF_CONVERTER_API_KEY = String(
+  process.env.PDF_CONVERTER_API_KEY ||
+  process.env.NEOXR_APIKEY ||
+  'yokheimoet'
+).trim();
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
@@ -91,6 +97,11 @@ function ensureToolAccess(req, res, next) {
   return res.redirect(`${TOOL_PREFIX}`);
 }
 
+function ensureToolApiAccess(req, res, next) {
+  if (req.session?.toolAccessGranted) return next();
+  return res.status(401).json({ message: 'Akses admin diperlukan.' });
+}
+
 function sendToolView(res, fileName) {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -125,6 +136,10 @@ app.get('/file-vault', (_req, res) => res.status(404).send(renderShortLinkErrorP
   'Endpoint ini tidak tersedia untuk publik.'
 )));
 app.get('/ip-calculator', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
+  'Halaman Tidak Ditemukan',
+  'Endpoint ini tidak tersedia untuk publik.'
+)));
+app.get('/pdf-to-jpg', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
   'Halaman Tidak Ditemukan',
   'Endpoint ini tidak tersedia untuk publik.'
 )));
@@ -208,6 +223,7 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
               <a class="tool" href="${TOOL_PREFIX}/file-vault">File Vault</a>
               <a class="tool" href="${TOOL_PREFIX}/short-link">Short Link</a>
               <a class="tool" href="${TOOL_PREFIX}/ip-calculator">IP Calculator</a>
+              <a class="tool" href="${TOOL_PREFIX}/pdf-to-jpg">PDF to JPG</a>
             </div>
             <div class="footer">
               <span class="hint">Akses privat aktif</span>
@@ -370,6 +386,7 @@ app.get(`${TOOL_PREFIX}/logout`, (req, res) => {
 app.get(`${TOOL_PREFIX}/short-link`, ensureToolAccess, (_req, res) => sendToolView(res, 'short-link.html'));
 app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolView(res, 'file-vault.html'));
 app.get(`${TOOL_PREFIX}/ip-calculator`, ensureToolAccess, (_req, res) => sendToolView(res, 'ip-calculator.html'));
+app.get(`${TOOL_PREFIX}/pdf-to-jpg`, ensureToolAccess, (_req, res) => sendToolView(res, 'pdf-to-jpg.html'));
 
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_STORAGE_DIR),
@@ -897,6 +914,80 @@ function isValidHttpUrl(urlValue) {
     return false;
   }
 }
+
+function collectImageLinks(payload, bucket, depth = 0) {
+  if (depth > 8 || payload == null) return;
+  if (typeof payload === 'string') {
+    if (/^https?:\/\/\S+/i.test(payload) && /\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(payload)) {
+      bucket.push(payload);
+    }
+    return;
+  }
+  if (Array.isArray(payload)) {
+    payload.forEach((item) => collectImageLinks(item, bucket, depth + 1));
+    return;
+  }
+  if (typeof payload === 'object') {
+    Object.values(payload).forEach((value) => collectImageLinks(value, bucket, depth + 1));
+  }
+}
+
+app.post('/api/pdf-to-jpg', ensureToolApiAccess, async (req, res) => {
+  const url = String(req.body?.url || '').trim();
+  const filenameRaw = String(req.body?.filename || '').trim();
+  const filename = filenameRaw || 'converted';
+  const toInput = String(req.body?.to || 'jpg').trim().toLowerCase();
+  const allowedTargets = new Set(['jpg', 'jpeg', 'png']);
+  const to = allowedTargets.has(toInput) ? toInput : 'jpg';
+
+  if (!url || !isValidHttpUrl(url)) {
+    return res.status(400).json({ message: 'URL PDF tidak valid. Gunakan http:// atau https://.' });
+  }
+  if (!PDF_CONVERTER_API_KEY) {
+    return res.status(500).json({ message: 'API key converter belum diatur di server.' });
+  }
+
+  const query = new URLSearchParams({
+    url,
+    filename,
+    to,
+    apikey: PDF_CONVERTER_API_KEY
+  });
+
+  try {
+    const upstreamResponse = await fetch(`${PDF_CONVERTER_ENDPOINT}?${query.toString()}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json, text/plain;q=0.9,*/*;q=0.8' }
+    });
+    const rawText = await upstreamResponse.text();
+
+    let payload = null;
+    try {
+      payload = rawText ? JSON.parse(rawText) : {};
+    } catch (_error) {
+      payload = { raw: rawText };
+    }
+
+    if (!upstreamResponse.ok) {
+      const upstreamMessage = payload?.message || payload?.msg || `Provider error (${upstreamResponse.status})`;
+      return res.status(502).json({ message: upstreamMessage, upstream: payload });
+    }
+
+    const imageLinks = [];
+    collectImageLinks(payload, imageLinks);
+    const uniqueImageLinks = [...new Set(imageLinks)];
+
+    return res.json({
+      message: uniqueImageLinks.length > 0
+        ? `Konversi PDF ke ${to.toUpperCase()} berhasil.`
+        : 'Konversi diproses. Cek detail respons provider.',
+      images: uniqueImageLinks,
+      upstream: payload
+    });
+  } catch (error) {
+    return res.status(502).json({ message: `Gagal menghubungi provider converter: ${error.message}` });
+  }
+});
 
 function sanitizeAlias(alias) {
   return alias.trim().toLowerCase();
