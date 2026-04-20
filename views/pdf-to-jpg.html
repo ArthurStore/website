@@ -67,7 +67,8 @@
           <p class="text-sm uppercase tracking-[0.25em] text-blue-300">/admin/pdf-to-jpg</p>
           <h1 class="mt-2 text-3xl font-bold text-blue-100 md:text-4xl">PDF to JPG Converter</h1>
           <p class="mt-3 max-w-3xl text-sm text-blue-200 md:text-base">
-            Masukkan URL PDF publik, lalu convert ke JPG lewat API converter. Tidak ada limit size dari sisi aplikasi ini.
+            Upload file PDF dari perangkat kamu. File disimpan temporary selama 24 jam lalu diproses otomatis ke API converter.
+            Tidak ada limit size dari sisi aplikasi ini.
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -83,12 +84,12 @@
     <section class="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
       <div class="glass rounded-2xl p-6 md:p-7">
         <h2 class="text-xl font-semibold text-blue-100">Konversi PDF ke JPG</h2>
-        <p class="mt-2 text-sm text-blue-200">Input URL PDF wajib bisa diakses publik tanpa login/auth.</p>
+        <p class="mt-2 text-sm text-blue-200">Upload 1 file PDF. Sistem akan membuat URL temporary otomatis (aktif 24 jam) lalu kirim ke API converter.</p>
 
         <form id="converter-form" class="mt-5 space-y-4">
           <div>
-            <label for="pdf-url" class="mb-2 block text-sm font-semibold text-blue-200">URL PDF</label>
-            <input id="pdf-url" class="input-style" type="url" required placeholder="https://contoh.com/file.pdf" />
+            <label for="pdf-file" class="mb-2 block text-sm font-semibold text-blue-200">Upload PDF</label>
+            <input id="pdf-file" class="input-style" type="file" accept=".pdf,application/pdf" required />
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
@@ -118,6 +119,8 @@
         <div id="result-box" class="mt-4 hidden rounded-lg border border-emerald-400/35 bg-emerald-500/10 p-4">
           <p class="text-xs uppercase tracking-[0.18em] text-emerald-300">Result</p>
           <a id="result-link" href="#" target="_blank" class="mt-2 block break-all text-sm font-semibold text-emerald-200 underline"></a>
+          <a id="archive-link" href="#" target="_blank" class="mt-2 hidden break-all text-sm font-semibold text-cyan-200 underline"></a>
+          <p id="temp-meta" class="mt-2 hidden text-xs text-blue-200"></p>
           <button id="copy-btn" type="button" class="mt-3 rounded-md border border-emerald-300/50 px-3 py-1.5 text-xs font-semibold text-emerald-100 hover:bg-emerald-400/20">
             Copy Link
           </button>
@@ -127,7 +130,7 @@
           <p class="font-semibold text-blue-100">Catatan:</p>
           <ul class="mt-2 list-inside list-disc space-y-1">
             <li>Aplikasi ini tidak membatasi ukuran file dari sisi backend lokal.</li>
-            <li>Jika gagal, biasanya karena URL PDF tidak bisa diakses publik.</li>
+            <li>File PDF akan punya URL temporary internal selama 24 jam untuk kebutuhan convert.</li>
             <li>Jika provider API punya batas internal, itu di luar kontrol aplikasi ini.</li>
           </ul>
         </div>
@@ -141,6 +144,8 @@
     const resultBox = document.getElementById('result-box');
     const resultLink = document.getElementById('result-link');
     const copyBtn = document.getElementById('copy-btn');
+    const archiveLink = document.getElementById('archive-link');
+    const tempMeta = document.getElementById('temp-meta');
     const submitBtn = document.getElementById('submit-btn');
 
     function showFeedback(type, message) {
@@ -186,12 +191,20 @@
       feedback.classList.add('hidden');
       resultBox.classList.add('hidden');
 
-      const pdfUrl = document.getElementById('pdf-url').value.trim();
+      const fileInput = document.getElementById('pdf-file');
+      const uploadedFile = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
       const filename = document.getElementById('output-name').value.trim();
       const to = document.getElementById('format-to').value.trim().toLowerCase();
 
-      if (!pdfUrl || !filename) {
-        showFeedback('error', 'URL PDF dan nama output wajib diisi.');
+      if (!uploadedFile || !filename) {
+        showFeedback('error', 'File PDF dan nama output wajib diisi.');
+        return;
+      }
+
+      const fileNameLower = String(uploadedFile.name || '').toLowerCase();
+      const mime = String(uploadedFile.type || '').toLowerCase();
+      if (!fileNameLower.endsWith('.pdf') && !mime.includes('pdf')) {
+        showFeedback('error', 'File harus berformat PDF.');
         return;
       }
 
@@ -199,14 +212,19 @@
       submitBtn.textContent = 'Converting...';
 
       try {
+        const formData = new FormData();
+        formData.append('pdf', uploadedFile, uploadedFile.name);
+        formData.append('filename', filename);
+        formData.append('to', to);
+
         const response = await fetch('/api/pdf-to-jpg', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: pdfUrl, filename, to })
+          body: formData
         });
         const payload = await response.json();
         if (!response.ok) {
-          throw new Error(payload.message || 'Konversi gagal.');
+          const details = [payload.message, payload.hint].filter(Boolean).join(' ');
+          throw new Error(details || 'Konversi gagal.');
         }
 
         const url = pickResultUrl(payload);
@@ -217,6 +235,28 @@
 
         resultLink.textContent = url;
         resultLink.href = url;
+        const archiveUrl = payload.archiveUrl && /^https?:\/\//i.test(payload.archiveUrl) ? payload.archiveUrl : '';
+        if (archiveUrl) {
+          archiveLink.textContent = `ZIP Result: ${archiveUrl}`;
+          archiveLink.href = archiveUrl;
+          archiveLink.classList.remove('hidden');
+        } else {
+          archiveLink.textContent = '';
+          archiveLink.href = '#';
+          archiveLink.classList.add('hidden');
+        }
+
+        const expiry = payload.uploadedPdf && payload.uploadedPdf.expiresAt
+          ? new Date(payload.uploadedPdf.expiresAt).toLocaleString('id-ID')
+          : '';
+        if (expiry) {
+          tempMeta.textContent = `File temporary aktif sampai: ${expiry}`;
+          tempMeta.classList.remove('hidden');
+        } else {
+          tempMeta.textContent = '';
+          tempMeta.classList.add('hidden');
+        }
+
         resultBox.classList.remove('hidden');
         showFeedback('success', payload.message || 'Konversi PDF ke JPG berhasil.');
       } catch (error) {

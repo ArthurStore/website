@@ -15,8 +15,12 @@ const PORT = process.env.PORT || 3000;
 const shortLinks = new Map();
 const fileVaultEntries = new Map();
 const fileVaultFolders = new Map();
+const pdfTempUploads = new Map();
 const MAX_HISTORY_PER_LINK = 20;
+const PDF_TEMP_TTL_MS = 24 * 60 * 60 * 1000;
+const PDF_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 const UPLOAD_STORAGE_DIR = process.env.UPLOAD_STORAGE_DIR || path.join(os.tmpdir(), 'Arthur.JS-file-vault');
+const PDF_TMP_UPLOAD_DIR = process.env.PDF_TMP_UPLOAD_DIR || path.join(os.tmpdir(), 'Arthur.JS-pdf-to-jpg-temp');
 const configuredStorageMb = Number(process.env.STORAGE_CAPACITY_MB || 0);
 const configuredMaxUploadMb = Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 0);
 const STORAGE_CAPACITY_BYTES = Number.isFinite(configuredStorageMb) && configuredStorageMb > 0
@@ -36,15 +40,25 @@ const TOOL_ACCESS_PIN = String(
   process.env.ADMIN_PIN ||
   '050507'
 ).trim();
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || '').trim().replace(/\/+$/, '');
 const PDF_CONVERTER_ENDPOINT = String(process.env.PDF_CONVERTER_ENDPOINT || 'https://api.neoxr.eu/api/pdf-converter').trim();
 const PDF_CONVERTER_API_KEY = String(
   process.env.PDF_CONVERTER_API_KEY ||
   process.env.NEOXR_APIKEY ||
   'yokheimoet'
 ).trim();
+const PDF_TMP_PUBLIC_BASE_URL = String(
+  process.env.PDF_TMP_PUBLIC_BASE_URL ||
+  process.env.TOOL_PUBLIC_BASE_URL ||
+  process.env.PUBLIC_BASE_URL ||
+  ''
+).trim().replace(/\/+$/, '');
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
+}
+if (!fs.existsSync(PDF_TMP_UPLOAD_DIR)) {
+  fs.mkdirSync(PDF_TMP_UPLOAD_DIR, { recursive: true });
 }
 
 app.enable("trust proxy");
@@ -406,6 +420,19 @@ const upload = multer({
   limits: uploadLimits
 });
 
+const pdfToJpgStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, PDF_TMP_UPLOAD_DIR),
+  filename: (_req, file, cb) => {
+    const randomSuffix = crypto.randomBytes(8).toString('hex');
+    const ext = path.extname(file.originalname || '').toLowerCase() || '.pdf';
+    cb(null, `${Date.now()}-${randomSuffix}${ext}`);
+  }
+});
+const pdfToJpgUpload = multer({
+  storage: pdfToJpgStorage,
+  limits: { files: 1 }
+});
+
 function getFileStatus(entry) {
   if (typeof entry.expiresAt === 'number' && Date.now() > entry.expiresAt) {
     return 'expired';
@@ -431,6 +458,23 @@ function buildFolderPublicUrl(req, folderId) {
 
 function buildFolderDownloadAllUrl(req, folderId) {
   return `${req.protocol}://${req.get('host')}/api/folders/${folderId}/download-all`;
+}
+
+function resolvePdfPublicBaseUrl(req) {
+  if (PDF_TMP_PUBLIC_BASE_URL) return PDF_TMP_PUBLIC_BASE_URL;
+  const forwardedHost = String(req.get('x-forwarded-host') || '').trim();
+  const host = forwardedHost || String(req.get('host') || '').trim();
+  if (!host) return '';
+  const forwardedProto = String(req.get('x-forwarded-proto') || '').trim();
+  const protocol = forwardedProto || req.protocol || 'https';
+  return `${protocol}://${host}`.replace(/\/+$/, '');
+}
+
+function buildPdfTempPublicUrl(req, token) {
+  const base = resolvePdfPublicBaseUrl(req);
+  if (!base) return '';
+  const safeToken = encodeURIComponent(String(token || '').trim());
+  return `${base}/api/pdf-to-jpg-upload/${safeToken}`;
 }
 
 function serializeUploadEntry(req, entry) {
@@ -516,6 +560,23 @@ function cleanupExpiredUploads() {
     }
   }
 }
+
+function cleanupExpiredPdfUploads() {
+  const now = Date.now();
+  for (const [token, entry] of pdfTempUploads.entries()) {
+    if (!entry || typeof entry.expiresAt !== 'number' || now <= entry.expiresAt) continue;
+    try {
+      if (entry.filePath && fs.existsSync(entry.filePath)) fs.unlinkSync(entry.filePath);
+    } catch (error) {
+      console.error('Gagal menghapus file PDF temporary:', error.message);
+    }
+    pdfTempUploads.delete(token);
+  }
+}
+
+setInterval(() => {
+  cleanupExpiredPdfUploads();
+}, PDF_CLEANUP_INTERVAL_MS).unref();
 
 function createUploadSummary() {
   const entries = Array.from(fileVaultEntries.values());
@@ -932,61 +993,161 @@ function collectImageLinks(payload, bucket, depth = 0) {
   }
 }
 
-app.post('/api/pdf-to-jpg', ensureToolApiAccess, async (req, res) => {
-  const url = String(req.body?.url || '').trim();
-  const filenameRaw = String(req.body?.filename || '').trim();
-  const filename = filenameRaw || 'converted';
-  const toInput = String(req.body?.to || 'jpg').trim().toLowerCase();
-  const allowedTargets = new Set(['jpg', 'jpeg', 'png']);
-  const to = allowedTargets.has(toInput) ? toInput : 'jpg';
-
-  if (!url || !isValidHttpUrl(url)) {
-    return res.status(400).json({ message: 'URL PDF tidak valid. Gunakan http:// atau https://.' });
+app.get('/api/pdf-to-jpg-upload/:token', (req, res) => {
+  cleanupExpiredPdfUploads();
+  const token = String(req.params.token || '').trim();
+  const entry = pdfTempUploads.get(token);
+  if (!entry) {
+    return res.status(404).json({ message: 'File PDF temporary tidak ditemukan atau sudah expired.' });
   }
+  if (!entry.filePath || !fs.existsSync(entry.filePath)) {
+    pdfTempUploads.delete(token);
+    return res.status(404).json({ message: 'File PDF temporary sudah tidak tersedia.' });
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Cache-Control', 'public, max-age=60');
+  return res.sendFile(entry.filePath);
+});
+
+async function convertPdfByUrl(url, filename, to) {
   if (!PDF_CONVERTER_API_KEY) {
-    return res.status(500).json({ message: 'API key converter belum diatur di server.' });
+    throw new Error('API key converter belum diatur di server.');
   }
-
   const query = new URLSearchParams({
     url,
     filename,
     to,
     apikey: PDF_CONVERTER_API_KEY
   });
-
+  const upstreamResponse = await fetch(`${PDF_CONVERTER_ENDPOINT}?${query.toString()}`, {
+    method: 'GET',
+    headers: { Accept: 'application/json, text/plain;q=0.9,*/*;q=0.8' }
+  });
+  const rawText = await upstreamResponse.text();
+  let payload = null;
   try {
-    const upstreamResponse = await fetch(`${PDF_CONVERTER_ENDPOINT}?${query.toString()}`, {
-      method: 'GET',
-      headers: { Accept: 'application/json, text/plain;q=0.9,*/*;q=0.8' }
-    });
-    const rawText = await upstreamResponse.text();
-
-    let payload = null;
-    try {
-      payload = rawText ? JSON.parse(rawText) : {};
-    } catch (_error) {
-      payload = { raw: rawText };
-    }
-
-    if (!upstreamResponse.ok) {
-      const upstreamMessage = payload?.message || payload?.msg || `Provider error (${upstreamResponse.status})`;
-      return res.status(502).json({ message: upstreamMessage, upstream: payload });
-    }
-
-    const imageLinks = [];
-    collectImageLinks(payload, imageLinks);
-    const uniqueImageLinks = [...new Set(imageLinks)];
-
-    return res.json({
-      message: uniqueImageLinks.length > 0
-        ? `Konversi PDF ke ${to.toUpperCase()} berhasil.`
-        : 'Konversi diproses. Cek detail respons provider.',
-      images: uniqueImageLinks,
-      upstream: payload
-    });
-  } catch (error) {
-    return res.status(502).json({ message: `Gagal menghubungi provider converter: ${error.message}` });
+    payload = rawText ? JSON.parse(rawText) : {};
+  } catch (_error) {
+    payload = { raw: rawText };
   }
+  if (!upstreamResponse.ok) {
+    const upstreamMessage = payload?.message || payload?.msg || `Provider error (${upstreamResponse.status})`;
+    const error = new Error(upstreamMessage);
+    error.statusCode = 502;
+    error.payload = payload;
+    throw error;
+  }
+  return payload;
+}
+
+app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
+  pdfToJpgUpload.single('pdf')(req, res, async (error) => {
+    cleanupExpiredPdfUploads();
+
+    if (error) {
+      return res.status(400).json({ message: 'Upload PDF gagal. Pastikan file valid.' });
+    }
+
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ message: 'File PDF wajib diupload.' });
+    }
+
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const mime = String(file.mimetype || '').toLowerCase();
+    const looksLikePdf = ext === '.pdf' || mime.includes('pdf');
+    if (!looksLikePdf) {
+      try {
+        if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      } catch (_error) {
+        // ignore cleanup error
+      }
+      return res.status(400).json({ message: 'File harus berformat PDF.' });
+    }
+
+    const toInput = String(req.body?.to || 'jpg').trim().toLowerCase();
+    const allowedTargets = new Set(['jpg', 'jpeg', 'png']);
+    const to = allowedTargets.has(toInput) ? toInput : 'jpg';
+    const filenameRaw = String(req.body?.filename || '').trim();
+    const baseNameFromFile = path.parse(file.originalname || 'converted').name || 'converted';
+    const safeFilename = (filenameRaw || baseNameFromFile || 'converted')
+      .replace(/[^a-zA-Z0-9._-]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80) || 'converted';
+
+    const token = crypto.randomBytes(18).toString('hex');
+    const createdAt = Date.now();
+    const expiresAt = createdAt + PDF_TEMP_TTL_MS;
+    pdfTempUploads.set(token, {
+      token,
+      filePath: file.path,
+      originalName: file.originalname,
+      sizeBytes: file.size || 0,
+      createdAt,
+      expiresAt
+    });
+
+    const tempPdfUrl = buildPdfTempPublicUrl(req, token);
+    if (!tempPdfUrl) {
+      return res.status(500).json({
+        message: 'Gagal membangun URL publik untuk file PDF temporary.',
+        hint: 'Set env PDF_TMP_PUBLIC_BASE_URL ke domain publik server (contoh: https://arthurg.my.id).'
+      });
+    }
+    if (/https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)(:\d+)?/i.test(tempPdfUrl)) {
+      return res.status(400).json({
+        message: 'Converter eksternal tidak bisa akses localhost.',
+        hint: 'Deploy ke domain publik atau set PDF_TMP_PUBLIC_BASE_URL (contoh: https://arthurg.my.id).',
+        uploadedPdf: {
+          token,
+          tempUrl: tempPdfUrl,
+          originalName: file.originalname,
+          sizeBytes: file.size || 0,
+          expiresAt
+        }
+      });
+    }
+
+    try {
+      const payload = await convertPdfByUrl(tempPdfUrl, safeFilename, to);
+      const imageLinks = [];
+      collectImageLinks(payload, imageLinks);
+      const uniqueImageLinks = [...new Set(imageLinks)];
+      const archiveUrl = payload?.data?.url && /^https?:\/\//i.test(payload.data.url)
+        ? payload.data.url
+        : '';
+
+      return res.json({
+        message: uniqueImageLinks.length > 0
+          ? `Konversi PDF ke ${to.toUpperCase()} berhasil.`
+          : 'Konversi diproses. Cek detail respons provider.',
+        images: uniqueImageLinks,
+        archiveUrl,
+        uploadedPdf: {
+          token,
+          tempUrl: tempPdfUrl,
+          originalName: file.originalname,
+          sizeBytes: file.size || 0,
+          expiresAt
+        },
+        upstream: payload
+      });
+    } catch (err) {
+      const statusCode = Number(err?.statusCode) || 502;
+      return res.status(statusCode).json({
+        message: err.message || 'Gagal menghubungi provider converter.',
+        uploadedPdf: {
+          token,
+          tempUrl: tempPdfUrl,
+          originalName: file.originalname,
+          sizeBytes: file.size || 0,
+          expiresAt
+        },
+        upstream: err?.payload || null
+      });
+    }
+  });
 });
 
 function sanitizeAlias(alias) {

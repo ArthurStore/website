@@ -93,6 +93,9 @@ Bagian penting yang harus kamu cek:
 - `PORT` (default `3000`)
 - `TOOL_ACCESS_PIN` (ganti dari default agar lebih aman)
   - kompatibel juga dengan `ADMIN_PIN` untuk versi lama, tapi disarankan pakai `TOOL_ACCESS_PIN`
+- `PDF_TMP_PUBLIC_BASE_URL` (wajib untuk tool PDF to JPG)
+  - isi domain publik server, contoh: `https://arthurg.my.id`
+  - dipakai untuk bikin URL PDF temporary (24 jam) yang bisa diakses API converter eksternal
 - `STORAGE_CAPACITY_MB`
   - isi `0` atau hapus untuk mode unlimited
   - isi angka > 0 kalau ingin dibatasi (contoh `10240`)
@@ -104,6 +107,7 @@ env_production: {
   NODE_ENV: "production",
   PORT: 3000,
   TOOL_ACCESS_PIN: "050507",
+  PDF_TMP_PUBLIC_BASE_URL: "https://arthurg.my.id",
   STORAGE_CAPACITY_MB: 0
 }
 ```
@@ -305,6 +309,7 @@ export NODE_ENV=production
 export PORT=3000
 export SESSION_SECRET='ganti-dengan-random-secret'
 export TOOL_ACCESS_PIN='050507'
+export PDF_TMP_PUBLIC_BASE_URL='https://arthurg.my.id'
 export EMAIL_USER='email-anda'
 export EMAIL_PASS='app-password-anda'
 export EMAIL_TO='email-tujuan'
