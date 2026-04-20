@@ -16,7 +16,7 @@ const shortLinks = new Map();
 const fileVaultEntries = new Map();
 const fileVaultFolders = new Map();
 const MAX_HISTORY_PER_LINK = 20;
-const UPLOAD_STORAGE_DIR = process.env.UPLOAD_STORAGE_DIR || path.join(os.tmpdir(), 'indragpt-file-vault');
+const UPLOAD_STORAGE_DIR = process.env.UPLOAD_STORAGE_DIR || path.join(os.tmpdir(), 'Arthur.JS-file-vault');
 const configuredStorageMb = Number(process.env.STORAGE_CAPACITY_MB || 0);
 const configuredMaxUploadMb = Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 0);
 const STORAGE_CAPACITY_BYTES = Number.isFinite(configuredStorageMb) && configuredStorageMb > 0
@@ -1139,7 +1139,7 @@ app.post('/contact', (req, res) => {
       address: process.env.EMAIL_USER || 'gag260608@gmail.com'
     },
     to: process.env.EMAIL_TO || 'gag260608@gmail.com',
-    subject: `Pesan IndraGPT > ${name}`,
+    subject: `Pesan Arthur.JS > ${name}`,
     html: `
       <html>
         <head>
@@ -1172,7 +1172,7 @@ app.post('/contact', (req, res) => {
         </head>
         <body>
           <div class="container">
-            <h1>Pesan Baru Dari IndraGPT</h1>
+            <h1>Pesan Baru Dari Arthur.JS</h1>
             <p><strong>Nama:</strong> ${name}</p>
             <p><strong>Email:</strong> ${email}</p>
             <div class="message">
@@ -1180,7 +1180,7 @@ app.post('/contact', (req, res) => {
               <p>${message}</p>
             </div>
             <div class="footer">
-              <p>Pesan ini dikirim dari IndraGPT</p>
+              <p>Pesan ini dikirim dari Arthur.JS</p>
             </div>
           </div>
         </body>

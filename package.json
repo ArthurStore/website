@@ -1,7 +1,7 @@
 {
-  "name": "indragpt-website",
+  "name": "Arthur.JS-website",
   "version": "1.0.0",
-  "description": "IndraGPT Portfolio Website",
+  "description": "Arthur.JS Portfolio Website",
   "main": "api/index.js",
   "scripts": {
     "start": "node api/index.js",
