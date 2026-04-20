@@ -383,7 +383,7 @@ function createUploadSummary() {
   const totalClicks = entries.reduce((acc, item) => acc + item.clickCount, 0);
   const totalDownloads = entries.reduce((acc, item) => acc + item.downloadCount, 0);
   const totalCapacity = isStorageLimitEnabled() ? STORAGE_CAPACITY_BYTES : null;
-  const remainingBytes = totalCapacity === null ? null : Math.max(0, totalCapacity - usedBytes);
+  const remainingBytes = totalCapacity === null ? usedBytes : Math.max(0, totalCapacity - usedBytes);
   const storagePercent = totalCapacity
     ? Number(((usedBytes / totalCapacity) * 100).toFixed(2))
     : 0;

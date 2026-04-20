@@ -55,22 +55,18 @@ pm2 -v
 
 ---
 
-## 3) Clone project ke VPS
+## 3) Clone project ke VPS (langkah yang direkomendasikan)
 
-Masuk ke folder yang diinginkan:
+Gunakan struktur folder tetap supaya mudah maintenance:
 
 ```bash
+mkdir -p /var/www
 cd /var/www
+git clone https://github.com/ArthurStore/website.git arthurg-website
+cd /var/www/arthurg-website
 ```
 
-Clone repo:
-
-```bash
-git clone https://github.com/ArthurStore/website.git
-cd website
-```
-
-Checkout branch terbaru (opsional, jika mau pakai branch tertentu):
+Jika kamu mau pakai branch terbaru dari agent ini:
 
 ```bash
 git checkout cursor/ui-polish-profesional-98aa
@@ -84,9 +80,42 @@ npm ci
 
 ---
 
-## 4) Jalankan app dengan PM2
+## 4) Konfigurasi yang perlu kamu ubah sebelum dijalankan
 
-Di folder project (`/var/www/website`), jalankan:
+Edit file PM2:
+
+```bash
+nano /var/www/arthurg-website/ecosystem.config.cjs
+```
+
+Bagian penting yang harus kamu cek:
+
+- `PORT` (default `3000`)
+- `ADMIN_PIN` (ganti dari default agar lebih aman)
+- `STORAGE_CAPACITY_MB`
+  - isi `0` atau hapus untuk mode unlimited
+  - isi angka > 0 kalau ingin dibatasi (contoh `10240`)
+
+Contoh minimal:
+
+```js
+env_production: {
+  NODE_ENV: "production",
+  PORT: 3000,
+  ADMIN_PIN: "050507",
+  STORAGE_CAPACITY_MB: 0
+}
+```
+
+Kalau ingin ganti URL admin:
+
+- `ADMIN_PREFIX: "/admin"` (default sudah `/admin`)
+
+---
+
+## 5) Jalankan app dengan PM2
+
+Di folder project (`/var/www/arthurg-website`), jalankan:
 
 ```bash
 pm2 start ecosystem.config.cjs
@@ -108,7 +137,7 @@ pm2 save
 
 ---
 
-## 5) Konfigurasi DNS domain `arthurg.my.id`
+## 6) Konfigurasi DNS domain `arthurg.my.id`
 
 Di panel DNS domain Anda, buat record:
 
@@ -135,7 +164,7 @@ Hasilnya harus IP VPS Anda.
 
 ---
 
-## 6) Konfigurasi Nginx reverse proxy
+## 7) Konfigurasi Nginx reverse proxy
 
 Buat file nginx:
 
@@ -189,7 +218,7 @@ Sampai sini website harus sudah bisa diakses via:
 
 ---
 
-## 7) Pasang SSL Let's Encrypt (HTTPS)
+## 8) Pasang SSL Let's Encrypt (HTTPS)
 
 Install certbot:
 
@@ -216,7 +245,7 @@ Sekarang domain aktif di:
 
 ---
 
-## 8) Perintah operasional harian
+## 9) Perintah operasional harian
 
 Cek app:
 
@@ -228,7 +257,7 @@ pm2 logs arthurg-website
 Restart app setelah update:
 
 ```bash
-cd /var/www/website
+cd /var/www/arthurg-website
 git pull
 npm ci
 pm2 restart arthurg-website
@@ -243,7 +272,7 @@ ss -tulpn | rg ':3000|:80|:443'
 
 ---
 
-## 9) Troubleshooting cepat
+## 10) Troubleshooting cepat
 
 Jika domain tidak kebuka:
 1. Pastikan DNS `arthurg.my.id` mengarah ke IP VPS yang benar.
@@ -264,7 +293,7 @@ Jika domain tidak kebuka:
 
 ---
 
-## 10) Catatan environment variable
+## 11) Catatan environment variable
 
 Aplikasi ini memakai email/captcha route. Supaya aman, set ENV di server (jangan hardcode kredensial):
 
@@ -274,6 +303,7 @@ Contoh (temporary session):
 export NODE_ENV=production
 export PORT=3000
 export SESSION_SECRET='ganti-dengan-random-secret'
+export ADMIN_PIN='050507'
 export EMAIL_USER='email-anda'
 export EMAIL_PASS='app-password-anda'
 export EMAIL_TO='email-tujuan'
@@ -288,7 +318,24 @@ pm2 save
 
 ---
 
-## 11) Opsional: jalankan sebagai user non-root (lebih aman)
+## 12) Cara akses admin tool setelah deploy
+
+Setelah semua aktif, akses:
+
+- Login admin: `https://arthurg.my.id/admin`
+- Masukkan `ADMIN_PIN`
+- Setelah login, pilih tool dari dashboard:
+  - File Vault
+  - Short Link
+  - IP Calculator
+
+Jika ingin logout:
+- Klik tombol `Logout` di dashboard/tool, atau buka:
+  - `https://arthurg.my.id/admin/logout`
+
+---
+
+## 13) Opsional: jalankan sebagai user non-root (lebih aman)
 
 Disarankan membuat user deploy agar aplikasi tidak berjalan sebagai root:
 

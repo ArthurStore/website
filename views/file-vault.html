@@ -265,6 +265,7 @@
     let entries = [];
 
     function formatBytes(bytes) {
+      if (bytes === null || bytes === undefined) return 'Unlimited';
       if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
       const units = ['B', 'KB', 'MB', 'GB', 'TB'];
       let value = bytes;
@@ -310,15 +311,16 @@
     }
 
     function updateSummary(summary) {
+      const unlimitedStorage = Boolean(summary.unlimitedStorage);
       statFiles.textContent = summary.totalFiles || 0;
       statUsed.textContent = formatBytes(summary.usedBytes || 0);
-      statRemaining.textContent = formatBytes(summary.remainingBytes || 0);
-      statCapacity.textContent = formatBytes(summary.totalCapacityBytes || 0);
+      statRemaining.textContent = unlimitedStorage ? 'Unlimited' : formatBytes(summary.remainingBytes || 0);
+      statCapacity.textContent = unlimitedStorage ? 'Unlimited' : formatBytes(summary.totalCapacityBytes || 0);
       statClicks.textContent = summary.totalClicks || 0;
       statDownloads.textContent = summary.totalDownloads || 0;
       const percent = Number(summary.storagePercent || 0);
       storageProgress.style.width = `${Math.min(100, percent)}%`;
-      storagePercent.textContent = `${percent}% terpakai`;
+      storagePercent.textContent = unlimitedStorage ? 'Mode unlimited aktif' : `${percent}% terpakai`;
     }
 
     function renderRows() {
