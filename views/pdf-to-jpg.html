@@ -152,6 +152,7 @@
     function showFeedback(type, message) {
       feedback.textContent = message;
       feedback.classList.remove('hidden');
+      playSound(type === 'success' ? 'success' : 'error');
       if (type === 'success') {
         feedback.className = 'mt-4 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200';
       } else {
@@ -228,6 +229,9 @@
           method: 'POST',
           body: formData
         });
+        if (response.status === 504) {
+          playSound('refresh');
+        }
         const rawText = await response.text();
         let payload = {};
         try {

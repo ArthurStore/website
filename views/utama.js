@@ -42,6 +42,8 @@ function createAmbientParticles() {
 const UI_SOUND_STATE_KEY = "arthur-ui-sound-enabled-v1";
 let sharedAudioCtx = null;
 let interactionUnlocked = false;
+let deferredIntroChime = false;
+let introReadyPlayed = false;
 
 function isReducedMotionEnabled() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -135,6 +137,100 @@ function playSuccessSound() {
   });
 }
 
+function playUploadAppleChime() {
+  playUiTone({
+    type: "sine",
+    frequency: 1040,
+    frequencyEnd: 1340,
+    duration: 0.08,
+    volume: 0.03
+  });
+  playUiTone({
+    type: "triangle",
+    frequency: 1380,
+    frequencyEnd: 1760,
+    duration: 0.13,
+    delay: 0.06,
+    volume: 0.035
+  });
+}
+
+function playDeleteSound() {
+  playUiTone({
+    type: "sawtooth",
+    frequency: 420,
+    frequencyEnd: 220,
+    duration: 0.17,
+    volume: 0.02
+  });
+}
+
+function playRefreshSound() {
+  playUiTone({
+    type: "triangle",
+    frequency: 620,
+    frequencyEnd: 760,
+    duration: 0.09,
+    volume: 0.018
+  });
+  playUiTone({
+    type: "triangle",
+    frequency: 760,
+    frequencyEnd: 920,
+    duration: 0.09,
+    delay: 0.07,
+    volume: 0.02
+  });
+}
+
+function playMenuToggleSound(isOpen) {
+  if (isOpen) {
+    playUiTone({
+      type: "triangle",
+      frequency: 460,
+      frequencyEnd: 780,
+      duration: 0.14,
+      volume: 0.02
+    });
+    return;
+  }
+  playUiTone({
+    type: "triangle",
+    frequency: 760,
+    frequencyEnd: 430,
+    duration: 0.13,
+    volume: 0.02
+  });
+}
+
+function playCallSound() {
+  playUiTone({
+    type: "sine",
+    frequency: 700,
+    frequencyEnd: 860,
+    duration: 0.14,
+    volume: 0.023
+  });
+  playUiTone({
+    type: "sine",
+    frequency: 900,
+    frequencyEnd: 1150,
+    duration: 0.16,
+    delay: 0.12,
+    volume: 0.024
+  });
+}
+
+function playCopySound() {
+  playUiTone({
+    type: "square",
+    frequency: 960,
+    frequencyEnd: 1220,
+    duration: 0.07,
+    volume: 0.016
+  });
+}
+
 function playReadyJrengSound() {
   playUiTone({
     type: "triangle",
@@ -168,6 +264,17 @@ function unlockAudioOnce() {
   if (!ctx) return;
   ctx.resume()
     .then(() => {
+      if (deferredIntroChime) {
+        deferredIntroChime = false;
+        playFirstLoadSound();
+        setTimeout(() => {
+          if (!introReadyPlayed) {
+            playReadyJrengSound();
+            introReadyPlayed = true;
+          }
+        }, 950);
+        return;
+      }
       playClickSound();
     })
     .catch(() => {
@@ -202,11 +309,28 @@ function attachGlobalClickSound() {
   document.addEventListener("pointerdown", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
+    const callTarget = target.closest("a[href*='wa.me'], a[href^='tel:'], .cta-secondary");
+    if (callTarget) {
+      unlockAudioOnce();
+      playCallSound();
+      return;
+    }
     const clickable = target.closest("button, a, input[type='submit'], input[type='button'], [role='button']");
     if (!clickable) return;
+    const actionType = String(clickable.getAttribute("data-action") || "").toLowerCase();
+    if (actionType === "copy" || actionType === "copy-folder") {
+      unlockAudioOnce();
+      playCopySound();
+      return;
+    }
     unlockAudioOnce();
     playClickSound();
   }, { passive: true });
+}
+
+function attachScrollWhiteMaskFix() {
+  if (!document.body) return;
+  document.body.classList.remove("fx-white-mask");
 }
 
 function createCursorTrail() {
@@ -357,6 +481,7 @@ function createFirstLoadExperience() {
   if (!isFirstLoad) return;
 
   document.body.classList.add("first-load-active");
+  introReadyPlayed = false;
   const introLayer = document.createElement("div");
   introLayer.className = "first-load-overlay";
   introLayer.setAttribute("aria-hidden", "true");
@@ -371,38 +496,25 @@ function createFirstLoadExperience() {
     introLayer.classList.add("is-visible");
   });
 
-  playFirstLoadSound();
+  const ctx = ensureAudioContext();
+  if (ctx && ctx.state === "running") {
+    playFirstLoadSound();
+  } else {
+    deferredIntroChime = true;
+  }
 
   window.setTimeout(() => {
     introLayer.classList.add("is-fading");
     document.body.classList.remove("first-load-active");
-    playReadyJrengSound();
-  }, 1450);
+    if (!introReadyPlayed) {
+      playReadyJrengSound();
+      introReadyPlayed = true;
+    }
+  }, 2850);
 
   window.setTimeout(() => {
     introLayer.remove();
-  }, 2500);
-}
-
-function attachFileVaultSuccessSound() {
-  if (!document.body || !window.location.pathname.startsWith("/admin/file-vault")) return;
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.type !== "childList" && mutation.type !== "characterData") return;
-      const feedback = document.getElementById("feedback");
-      if (!feedback || feedback.classList.contains("hidden")) return;
-      const text = String(feedback.textContent || "").toLowerCase();
-      if (!text) return;
-      if (text.includes("berhasil") || text.includes("sukses") || text.includes("direfresh")) {
-        playSuccessSound();
-      }
-    });
-  });
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    characterData: true
-  });
+  }, 4300);
 }
 
 window.ArthurSiteSoundFX = {
@@ -410,14 +522,47 @@ window.ArthurSiteSoundFX = {
   playClick: playClickSound,
   playSuccess: playSuccessSound,
   playReady: playReadyJrengSound,
+  playUpload: playUploadAppleChime,
+  playDelete: playDeleteSound,
+  playRefresh: playRefreshSound,
+  playCall: playCallSound,
+  playCopy: playCopySound,
   playByType(type) {
     const key = String(type || "").toLowerCase();
     if (key === "click") {
       playClickSound();
       return;
     }
-    if (key === "success" || key === "upload" || key === "saved") {
+    if (key === "copy") {
+      playCopySound();
+      return;
+    }
+    if (key === "success" || key === "saved") {
       playSuccessSound();
+      return;
+    }
+    if (key === "upload" || key === "upload-success" || key === "apple") {
+      playUploadAppleChime();
+      return;
+    }
+    if (key === "refresh" || key === "reload") {
+      playRefreshSound();
+      return;
+    }
+    if (key === "delete" || key === "remove") {
+      playDeleteSound();
+      return;
+    }
+    if (key === "call" || key === "contact" || key === "phone") {
+      playCallSound();
+      return;
+    }
+    if (key === "menu-open") {
+      playMenuToggleSound(true);
+      return;
+    }
+    if (key === "menu-close") {
+      playMenuToggleSound(false);
       return;
     }
     if (key === "ready" || key === "jreng") {
@@ -439,7 +584,7 @@ window.ArthurSiteSoundFX = {
 createFirstLoadExperience();
 createSoundToggle();
 attachGlobalClickSound();
-attachFileVaultSuccessSound();
+attachScrollWhiteMaskFix();
 createAmbientParticles();
 createCursorTrail();
 
@@ -487,12 +632,14 @@ const hamburgerBtn = document.getElementById("hamburger-btn");
       sidebarOverlay.classList.remove("active");
       mainContent.classList.remove("sidebar-open");
       hamburgerBtn.setAttribute("aria-expanded", "false");
+      playMenuToggleSound(false);
     } else {
       sidebar.classList.add("active");
       hamburgerBtn.classList.add("active");
       sidebarOverlay.classList.add("active");
       mainContent.classList.add("sidebar-open");
       hamburgerBtn.setAttribute("aria-expanded", "true");
+      playMenuToggleSound(true);
     }
   }
 
