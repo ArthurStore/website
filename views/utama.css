@@ -170,7 +170,9 @@ body {
       }
     }
 
-    .hero-rgb-title .rgb-accent {
+    .hero-rgb-title .rgb-title-main,
+    .hero-rgb-title .rgb-accent,
+    .section-rgb-title {
       display: inline-block;
       background-image: linear-gradient(
         110deg,
@@ -192,6 +194,17 @@ body {
         0 0 34px rgba(59, 130, 246, 0.45),
         0 0 54px rgba(14, 165, 233, 0.38);
       animation: rgbTextFlow 4.8s linear infinite;
+    }
+
+    .hero-rgb-title {
+      color: #dbeafe;
+    }
+
+    .section-rgb-title {
+      text-shadow:
+        0 0 8px rgba(147, 197, 253, 0.5),
+        0 0 18px rgba(56, 189, 248, 0.42),
+        0 0 30px rgba(59, 130, 246, 0.34);
     }
 
     #sidebar-overlay {
@@ -712,7 +725,9 @@ body {
         display: none !important;
       }
 
-      .hero-rgb-title .rgb-accent {
+      .hero-rgb-title .rgb-title-main,
+      .hero-rgb-title .rgb-accent,
+      .section-rgb-title {
         animation: none !important;
         color: #93c5fd;
         background-image: none;
