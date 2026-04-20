@@ -31,11 +31,36 @@ const TOOL_PREFIX = (() => {
   const normalized = raw.startsWith('/') ? raw : `/${raw}`;
   return normalized.replace(/\/+$/, '');
 })();
-const TOOL_ACCESS_KEY = String(process.env.TOOL_ACCESS_KEY || '').trim();
+const TOOL_ACCESS_KEY_FILE = process.env.TOOL_ACCESS_KEY_FILE || path.join(UPLOAD_STORAGE_DIR, '.tool-access.key');
+let TOOL_ACCESS_KEY = '';
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
 }
+
+function resolveToolAccessKey() {
+  const envKey = String(process.env.TOOL_ACCESS_KEY || '').trim();
+  if (envKey) return envKey;
+
+  try {
+    if (fs.existsSync(TOOL_ACCESS_KEY_FILE)) {
+      const fileKey = fs.readFileSync(TOOL_ACCESS_KEY_FILE, 'utf8').trim();
+      if (fileKey) return fileKey;
+    }
+  } catch (_error) {
+    // ignore read error and fallback to regenerate
+  }
+
+  const generatedKey = crypto.randomBytes(24).toString('hex');
+  try {
+    fs.writeFileSync(TOOL_ACCESS_KEY_FILE, generatedKey, { mode: 0o600 });
+  } catch (_error) {
+    // if write fails, use generated key in-memory for this boot
+  }
+  return generatedKey;
+}
+
+TOOL_ACCESS_KEY = resolveToolAccessKey();
 
 app.enable("trust proxy");
 app.set("json spaces", 2);
@@ -72,7 +97,7 @@ function ensureToolAccess(req, res, next) {
   if (!TOOL_ACCESS_KEY) return next();
   if (req.session?.toolAccessGranted) return next();
 
-  const candidate = String(req.query?.key || '').trim();
+  const candidate = String(req.query?.key || req.get('x-tool-key') || '').trim();
   if (candidate && candidate === TOOL_ACCESS_KEY) {
     req.session.toolAccessGranted = true;
     return next();
@@ -122,6 +147,19 @@ app.get('/ip-calculator', (_req, res) => res.status(404).send(renderShortLinkErr
   'Endpoint ini tidak tersedia untuk publik.'
 )));
 
+app.get(`${TOOL_PREFIX}/login`, (req, res) => {
+  const candidate = String(req.query?.key || '').trim();
+  if (!TOOL_ACCESS_KEY || (candidate && candidate === TOOL_ACCESS_KEY)) {
+    req.session.toolAccessGranted = true;
+    return res.redirect(`${TOOL_PREFIX}/file-vault`);
+  }
+
+  return res.status(404).send(renderShortLinkErrorPage(
+    'Halaman Tidak Ditemukan',
+    'URL yang kamu akses tidak tersedia.'
+  ));
+});
+
 app.get(`${TOOL_PREFIX}`, ensureToolAccess, (_req, res) => res.redirect(`${TOOL_PREFIX}/file-vault`));
 app.get(`${TOOL_PREFIX}/short-link`, ensureToolAccess, (_req, res) => sendToolView(res, 'short-link.html'));
 app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolView(res, 'file-vault.html'));
@@ -136,12 +174,13 @@ const uploadStorage = multer.diskStorage({
   }
 });
 
+const uploadLimits = { files: 200 };
+if (Number.isFinite(MAX_UPLOAD_FILE_SIZE_BYTES) && MAX_UPLOAD_FILE_SIZE_BYTES > 0) {
+  uploadLimits.fileSize = MAX_UPLOAD_FILE_SIZE_BYTES;
+}
 const upload = multer({
   storage: uploadStorage,
-  limits: {
-    fileSize: MAX_UPLOAD_FILE_SIZE_BYTES,
-    files: 200
-  }
+  limits: uploadLimits
 });
 
 function getFileStatus(entry) {
