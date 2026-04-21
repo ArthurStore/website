@@ -129,6 +129,7 @@
             <p class="text-xs font-semibold uppercase tracking-[0.15em] text-cyan-300">Realtime Log</p>
             <div class="flex items-center gap-2">
               <button id="quick-test-btn" type="button" class="rounded border border-emerald-300/40 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/20">Quick Test</button>
+              <button id="copy-log-btn" type="button" class="rounded border border-violet-300/40 px-2 py-1 text-[10px] font-semibold text-violet-200 hover:bg-violet-500/20">Copy Log</button>
               <button id="clear-log-btn" type="button" class="rounded border border-cyan-300/40 px-2 py-1 text-[10px] font-semibold text-cyan-200 hover:bg-cyan-500/20">Clear</button>
             </div>
           </div>
@@ -176,6 +177,7 @@
     const realtimeLog = document.getElementById('realtime-log');
     const clearLogBtn = document.getElementById('clear-log-btn');
     const quickTestBtn = document.getElementById('quick-test-btn');
+    const copyLogBtn = document.getElementById('copy-log-btn');
 
     function appendLog(message, payload) {
       const stamp = new Date().toLocaleTimeString('id-ID', { hour12: false });
@@ -400,6 +402,15 @@
 
     clearLogBtn.addEventListener('click', resetLog);
     quickTestBtn.addEventListener('click', runQuickTest);
+    copyLogBtn.addEventListener('click', async () => {
+      const text = realtimeLog.textContent || '';
+      if (!text.trim()) {
+        showFeedback('error', 'Log masih kosong.');
+        return;
+      }
+      const ok = await copyText(text);
+      showFeedback(ok ? 'success' : 'error', ok ? 'Realtime log berhasil disalin.' : 'Gagal menyalin realtime log.');
+    });
 
     copyBtn.addEventListener('click', async () => {
       const text = resultLink.textContent || '';

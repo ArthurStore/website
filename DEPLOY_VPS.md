@@ -105,9 +105,16 @@ Bagian penting yang harus kamu cek:
 - `PDF_CONVERTER_GITHUB_BRANCH` (opsional, default `main`)
 - `PDF_CONVERTER_GITHUB_BASE_PATH` (opsional, default `tmp/pdf-to-jpg`)
 - `PDF_CONVERTER_GITHUB_TOKEN` (opsional, tapi wajib kalau pakai fallback GitHub raw)
-  - gunakan token GitHub dengan scope `repo` (minimal write contents)
+  - gunakan token GitHub dengan permission **Contents: Read and write**
+  - untuk Fine-grained token, cukup akses repo target saja (lebih aman)
   - dipakai ketika provider menolak URL temporary dengan pesan:
     `Unsupported CDN provider ...`
+- `CATBOX_UPLOAD_ENDPOINT` (opsional, default `https://catbox.moe/user/api.php`)
+- `CATBOX_TIMEOUT_MS` (opsional, default `300000`)
+- `LITTERBOX_UPLOAD_ENDPOINT` (opsional, default `https://litterbox.catbox.moe/resources/internals/api.php`)
+- `LITTERBOX_RETENTION_HOURS` (opsional, default `72`)
+  - rentang valid `1-72`, contoh `72`
+  - aplikasi otomatis kirim format `72h` ke litterbox
 - `STORAGE_CAPACITY_MB`
   - isi `0` atau hapus untuk mode unlimited
   - isi angka > 0 kalau ingin dibatasi (contoh `10240`)
@@ -121,12 +128,53 @@ env_production: {
   TOOL_ACCESS_PIN: "050507",
   PDF_TMP_PUBLIC_BASE_URL: "https://arthurg.my.id",
   PDF_CONVERTER_TIMEOUT_MS: 300000,
+  CATBOX_UPLOAD_ENDPOINT: "https://catbox.moe/user/api.php",
+  CATBOX_TIMEOUT_MS: 300000,
+  LITTERBOX_UPLOAD_ENDPOINT: "https://litterbox.catbox.moe/resources/internals/api.php",
+  LITTERBOX_RETENTION_HOURS: 72,
   PDF_CONVERTER_GITHUB_REPO: "ArthurStore/imagae",
   PDF_CONVERTER_GITHUB_BRANCH: "main",
   PDF_CONVERTER_GITHUB_BASE_PATH: "tmp/pdf-to-jpg",
-  PDF_CONVERTER_GITHUB_TOKEN: "ghp_xxx_ganti_token_asli",
+  PDF_CONVERTER_GITHUB_TOKEN: "github_pat_xxx_ganti_token_asli",
   STORAGE_CAPACITY_MB: 0
 }
+```
+
+### Contoh file lengkap yang valid (hindari error koma)
+
+```js
+module.exports = {
+  apps: [
+    {
+      name: "arthurg-website",
+      script: "api/index.js",
+      cwd: __dirname,
+      exec_mode: "fork",
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "300M",
+      env_production: {
+        NODE_ENV: "production",
+        PORT: 3000,
+        STORAGE_CAPACITY_MB: 10240,
+        TOOL_ACCESS_PIN: "050507",
+        PDF_TMP_PUBLIC_BASE_URL: "https://arthurg.my.id",
+        PDF_CONVERTER_TIMEOUT_MS: 300000,
+        CATBOX_UPLOAD_ENDPOINT: "https://catbox.moe/user/api.php",
+        CATBOX_TIMEOUT_MS: 300000,
+        LITTERBOX_UPLOAD_ENDPOINT: "https://litterbox.catbox.moe/resources/internals/api.php",
+        LITTERBOX_RETENTION_HOURS: 72,
+        PDF_CONVERTER_ENDPOINT: "https://api.neoxr.eu/api/pdf-converter",
+        PDF_CONVERTER_API_KEY: "ganti_api_key_anda",
+        PDF_CONVERTER_GITHUB_REPO: "ArthurStore/imagae",
+        PDF_CONVERTER_GITHUB_BRANCH: "main",
+        PDF_CONVERTER_GITHUB_BASE_PATH: "tmp/pdf-to-jpg",
+        PDF_CONVERTER_GITHUB_TOKEN: "github_pat_xxx_ganti_token_asli"
+      }
+    }
+  ]
+};
 ```
 
 Kalau ingin ganti URL admin:
