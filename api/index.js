@@ -65,6 +65,16 @@ const PDF_TMP_PUBLIC_BASE_URL = String(
 ).trim().replace(/\/+$/, '');
 const CATBOX_UPLOAD_ENDPOINT = String(process.env.CATBOX_UPLOAD_ENDPOINT || 'https://catbox.moe/user/api.php').trim();
 const CATBOX_USER_HASH = String(process.env.CATBOX_USER_HASH || '').trim();
+const LITTERBOX_UPLOAD_ENDPOINT = String(
+  process.env.LITTERBOX_UPLOAD_ENDPOINT ||
+  'https://litterbox.catbox.moe/resources/internals/api.php'
+).trim();
+const configuredLitterboxHours = Number(process.env.LITTERBOX_RETENTION_HOURS || 72);
+const LITTERBOX_RETENTION_HOURS = Number.isFinite(configuredLitterboxHours) &&
+  configuredLitterboxHours >= 1 &&
+  configuredLitterboxHours <= 72
+  ? Math.floor(configuredLitterboxHours)
+  : 72;
 const configuredCatboxTimeoutMs = Number(process.env.CATBOX_TIMEOUT_MS || 300000);
 const CATBOX_TIMEOUT_MS = Number.isFinite(configuredCatboxTimeoutMs) &&
   configuredCatboxTimeoutMs >= 5000 &&
@@ -1384,8 +1394,64 @@ async function uploadPdfToGitHubRaw(localFilePath, originalName, token) {
   );
   return {
     url: githubUrl,
-    path: relativePath
+    path: relativePath,
+    sha: parsed?.content?.sha || null
   };
+}
+
+async function deletePdfFromGitHubRaw(filePath, sha, token) {
+  if (!isGithubRawFallbackConfigured()) return;
+  const safeSha = String(sha || '').trim();
+  const normalizedPath = normalizeGitHubPath(filePath);
+  if (!safeSha || !normalizedPath) return;
+  const encodedPath = encodeGitHubPath(normalizedPath);
+  const endpoint = `https://api.github.com/repos/${encodeURIComponent(PDF_CONVERTER_GITHUB_REPO)}/contents/${encodedPath}`;
+  const payload = {
+    message: `chore(pdf-to-jpg): cleanup temp upload ${Date.now()}`,
+    sha: safeSha,
+    branch: PDF_CONVERTER_GITHUB_BRANCH
+  };
+  const response = await fetch(endpoint, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+      'User-Agent': 'arthur-bot-pdf-to-jpg-fallback'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) {
+    const rawText = await response.text();
+    let parsed = {};
+    try {
+      parsed = rawText ? JSON.parse(rawText) : {};
+    } catch (_error) {
+      parsed = { raw: rawText };
+    }
+    const cleanupError = new Error(parsed?.message || `GitHub cleanup gagal (${response.status})`);
+    cleanupError.statusCode = 502;
+    cleanupError.payload = parsed;
+    throw cleanupError;
+  }
+}
+
+async function cleanupGitHubFallbackUpload(githubFallback, pushTrace) {
+  if (!githubFallback?.path || !githubFallback?.sha || !PDF_CONVERTER_GITHUB_TOKEN) return;
+  try {
+    await deletePdfFromGitHubRaw(githubFallback.path, githubFallback.sha, PDF_CONVERTER_GITHUB_TOKEN);
+    if (typeof pushTrace === 'function') {
+      pushTrace('github-fallback-cleanup-success', { path: githubFallback.path });
+    }
+  } catch (cleanupError) {
+    if (typeof pushTrace === 'function') {
+      pushTrace('github-fallback-cleanup-failed', {
+        path: githubFallback.path,
+        message: cleanupError?.message || 'Cleanup upload GitHub gagal.',
+        statusCode: Number(cleanupError?.statusCode) || null
+      });
+    }
+  }
 }
 
 app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
@@ -1471,16 +1537,16 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
         const catboxUpload = await uploadPdfToCatbox(file.path, file.originalname, file.mimetype);
         catboxDebug.uploaded = true;
         catboxDebug.url = catboxUpload.url;
-        pushTrace('catbox-upload-success', { url: catboxUpload.url });
+        pushTrace('catbox-upload-success', { url: catboxUpload.url, provider: catboxUpload.provider });
         converterSourceUrl = catboxUpload.url;
-        converterSourceType = 'catbox';
+        converterSourceType = catboxUpload.provider || 'catbox';
         pushTrace('converter-request-start', { sourceType: converterSourceType });
         payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
         pushTrace('converter-request-success', { sourceType: converterSourceType });
       } catch (primaryError) {
         if (!catboxDebug.uploaded) {
           catboxDebug.error = {
-            message: primaryError?.message || 'Upload ke Catbox gagal.',
+            message: primaryError?.message || 'Upload ke Catbox/Litterbox gagal.',
             statusCode: Number(primaryError?.statusCode) || null,
             upstream: primaryError?.payload || null
           };
@@ -1488,14 +1554,33 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
             message: catboxDebug.error.message,
             statusCode: catboxDebug.error.statusCode
           });
+          if (isGithubRawFallbackConfigured()) {
+            try {
+              pushTrace('github-fallback-start', { reason: 'source-upload-failed' });
+              githubFallback = await uploadPdfToGitHubRaw(file.path, file.originalname, PDF_CONVERTER_GITHUB_TOKEN);
+              pushTrace('github-fallback-upload-success', { url: githubFallback.url, path: githubFallback.path });
+              converterSourceUrl = githubFallback.url;
+              converterSourceType = 'github-raw';
+              payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
+              pushTrace('github-fallback-convert-success', {});
+            } catch (githubSourceError) {
+              pushTrace('github-fallback-failed', {
+                message: githubSourceError?.message || 'Fallback GitHub gagal.',
+                statusCode: Number(githubSourceError?.statusCode) || null
+              });
+              throw githubSourceError;
+            }
+          } else {
+            throw primaryError;
+          }
         } else {
           pushTrace('converter-request-failed', {
-            sourceType: 'catbox',
+            sourceType: converterSourceType || 'catbox',
             message: primaryError?.message || 'Request ke converter gagal.',
             statusCode: Number(primaryError?.statusCode) || null
           });
+          throw primaryError;
         }
-        throw primaryError;
       }
 
       if (payload && typeof payload === 'object' && payload.status === false && isUnsupportedCdnError(payload)) {
@@ -1512,6 +1597,7 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
       const archiveUrl = payload?.data?.url && /^https?:\/\//i.test(payload.data.url)
         ? payload.data.url
         : '';
+      await cleanupGitHubFallbackUpload(githubFallback, pushTrace);
 
       return res.json({
         message: uniqueImageLinks.length > 0
@@ -1577,6 +1663,7 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
           const archiveUrl = retriedPayload?.data?.url && /^https?:\/\//i.test(retriedPayload.data.url)
             ? retriedPayload.data.url
             : '';
+          await cleanupGitHubFallbackUpload(githubFallback, pushTrace);
 
           return res.json({
             message: uniqueImageLinks.length > 0
