@@ -65,12 +65,12 @@ const PDF_TMP_PUBLIC_BASE_URL = String(
 ).trim().replace(/\/+$/, '');
 const CATBOX_UPLOAD_ENDPOINT = String(process.env.CATBOX_UPLOAD_ENDPOINT || 'https://catbox.moe/user/api.php').trim();
 const CATBOX_USER_HASH = String(process.env.CATBOX_USER_HASH || '').trim();
-const configuredCatboxTimeoutMs = Number(process.env.CATBOX_TIMEOUT_MS || 120000);
+const configuredCatboxTimeoutMs = Number(process.env.CATBOX_TIMEOUT_MS || 300000);
 const CATBOX_TIMEOUT_MS = Number.isFinite(configuredCatboxTimeoutMs) &&
   configuredCatboxTimeoutMs >= 5000 &&
   configuredCatboxTimeoutMs <= 600000
   ? configuredCatboxTimeoutMs
-  : 120000;
+  : 300000;
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
