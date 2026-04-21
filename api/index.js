@@ -63,6 +63,14 @@ const PDF_TMP_PUBLIC_BASE_URL = String(
   process.env.PUBLIC_BASE_URL ||
   ''
 ).trim().replace(/\/+$/, '');
+const CATBOX_UPLOAD_ENDPOINT = String(process.env.CATBOX_UPLOAD_ENDPOINT || 'https://catbox.moe/user/api.php').trim();
+const CATBOX_USER_HASH = String(process.env.CATBOX_USER_HASH || '').trim();
+const configuredCatboxTimeoutMs = Number(process.env.CATBOX_TIMEOUT_MS || 120000);
+const CATBOX_TIMEOUT_MS = Number.isFinite(configuredCatboxTimeoutMs) &&
+  configuredCatboxTimeoutMs >= 5000 &&
+  configuredCatboxTimeoutMs <= 600000
+  ? configuredCatboxTimeoutMs
+  : 120000;
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
@@ -485,6 +493,62 @@ function buildPdfTempPublicUrl(req, token) {
   if (!base) return '';
   const safeToken = encodeURIComponent(String(token || '').trim());
   return `${base}/api/pdf-to-jpg-upload/${safeToken}`;
+}
+
+async function uploadPdfToCatbox(localFilePath, originalName, mimeType) {
+  if (!localFilePath || !fs.existsSync(localFilePath)) {
+    throw new Error('File PDF temporary tidak ditemukan untuk upload Catbox.');
+  }
+
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), CATBOX_TIMEOUT_MS);
+  try {
+    const payload = new FormData();
+    payload.append('reqtype', 'fileupload');
+    if (CATBOX_USER_HASH) payload.append('userhash', CATBOX_USER_HASH);
+
+    const fileBuffer = fs.readFileSync(localFilePath);
+    const safeOriginalName = (String(originalName || 'converted.pdf').trim() || 'converted.pdf')
+      .replace(/[^\w.\-]+/g, '-')
+      .replace(/-+/g, '-');
+    payload.append(
+      'fileToUpload',
+      new Blob([fileBuffer], { type: String(mimeType || 'application/pdf') || 'application/pdf' }),
+      safeOriginalName
+    );
+
+    const response = await fetch(CATBOX_UPLOAD_ENDPOINT, {
+      method: 'POST',
+      body: payload,
+      signal: timeoutController.signal
+    });
+    const rawText = String(await response.text() || '').trim();
+
+    if (!response.ok) {
+      const uploadError = new Error(`Catbox gagal merespons dengan benar (HTTP ${response.status}).`);
+      uploadError.statusCode = 502;
+      uploadError.payload = { status: response.status, body: rawText };
+      throw uploadError;
+    }
+
+    if (!rawText || /^error/i.test(rawText) || !/^https?:\/\//i.test(rawText)) {
+      const catboxError = new Error(rawText || 'Catbox tidak mengembalikan URL file.');
+      catboxError.statusCode = 502;
+      catboxError.payload = { body: rawText };
+      throw catboxError;
+    }
+
+    return { url: rawText };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const timeoutError = new Error(`Upload ke Catbox timeout ${Math.round(CATBOX_TIMEOUT_MS / 1000)} detik.`);
+      timeoutError.statusCode = 504;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function serializeUploadEntry(req, entry) {
@@ -1224,30 +1288,32 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
     });
 
     const tempPdfUrl = buildPdfTempPublicUrl(req, token);
-    if (!tempPdfUrl) {
-      return res.status(500).json({
-        message: 'Gagal membangun URL publik untuk file PDF temporary.',
-        hint: 'Set env PDF_TMP_PUBLIC_BASE_URL ke domain publik server (contoh: https://arthurg.my.id).'
-      });
-    }
-    if (/https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)(:\d+)?/i.test(tempPdfUrl)) {
-      return res.status(400).json({
-        message: 'Converter eksternal tidak bisa akses localhost.',
-        hint: 'Deploy ke domain publik atau set PDF_TMP_PUBLIC_BASE_URL (contoh: https://arthurg.my.id).',
-        uploadedPdf: {
-          token,
-          tempUrl: tempPdfUrl,
-          originalName: file.originalname,
-          sizeBytes: file.size || 0,
-          expiresAt
-        }
-      });
-    }
+    const tempPdfUrlUsable = Boolean(
+      tempPdfUrl &&
+      !/https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)(:\d+)?/i.test(tempPdfUrl)
+    );
 
     try {
-      let payload = await convertPdfByUrl(tempPdfUrl, safeFilename, to);
-      let converterSourceUrl = tempPdfUrl;
+      let payload = null;
+      let converterSourceUrl = '';
+      let converterSourceType = '';
+      let usedFallbackSource = false;
       let githubFallback = null;
+
+      try {
+        const catboxUpload = await uploadPdfToCatbox(file.path, file.originalname, file.mimetype);
+        converterSourceUrl = catboxUpload.url;
+        converterSourceType = 'catbox';
+        payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
+      } catch (primaryError) {
+        if (!tempPdfUrlUsable) {
+          throw primaryError;
+        }
+        converterSourceUrl = tempPdfUrl;
+        converterSourceType = 'server-temp-url';
+        usedFallbackSource = true;
+        payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
+      }
 
       if (payload && typeof payload === 'object' && payload.status === false && isUnsupportedCdnError(payload)) {
         // defensive path if provider responds status:false without throwing
@@ -1279,7 +1345,8 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
         },
         converterSource: {
           url: converterSourceUrl,
-          fallback: Boolean(githubFallback),
+          type: converterSourceType,
+          fallback: usedFallbackSource || Boolean(githubFallback),
           githubPath: githubFallback?.path || null
         },
         upstream: payload
@@ -1326,6 +1393,7 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
             },
             converterSource: {
               url: githubFallback.url,
+              type: 'github-raw',
               fallback: true,
               githubPath: githubFallback.path
             },
@@ -1350,9 +1418,9 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
 
       const statusCode = Number(err?.statusCode) || 502;
       const hint = statusCode === 504
-        ? 'Provider converter terlalu lama merespons (timeout). Coba lagi dengan file lebih kecil atau ulang beberapa saat lagi.'
+        ? 'Upload Catbox atau provider converter timeout. Coba lagi dengan file lebih kecil atau ulang beberapa saat lagi.'
         : statusCode === 502
-          ? 'Server sudah menerima file, tapi koneksi ke provider converter sedang bermasalah.'
+          ? 'Upload Catbox atau koneksi ke provider converter sedang bermasalah.'
           : undefined;
       return res.status(statusCode).json({
         message: err.message || 'Gagal menghubungi provider converter.',
