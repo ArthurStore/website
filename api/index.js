@@ -51,12 +51,12 @@ const PDF_CONVERTER_GITHUB_REPO = String(process.env.PDF_CONVERTER_GITHUB_REPO |
 const PDF_CONVERTER_GITHUB_BRANCH = String(process.env.PDF_CONVERTER_GITHUB_BRANCH || 'main').trim();
 const PDF_CONVERTER_GITHUB_TOKEN = String(process.env.PDF_CONVERTER_GITHUB_TOKEN || '').trim();
 const PDF_CONVERTER_GITHUB_BASE_PATH = String(process.env.PDF_CONVERTER_GITHUB_BASE_PATH || 'tmp/pdf-to-jpg').trim().replace(/^\/+|\/+$/g, '');
-const configuredPdfConverterTimeoutMs = Number(process.env.PDF_CONVERTER_TIMEOUT_MS || 28000);
+const configuredPdfConverterTimeoutMs = Number(process.env.PDF_CONVERTER_TIMEOUT_MS || 300000);
 const PDF_CONVERTER_TIMEOUT_MS = Number.isFinite(configuredPdfConverterTimeoutMs) &&
   configuredPdfConverterTimeoutMs >= 5000 &&
-  configuredPdfConverterTimeoutMs <= 180000
+  configuredPdfConverterTimeoutMs <= 600000
   ? configuredPdfConverterTimeoutMs
-  : 28000;
+  : 300000;
 const PDF_TMP_PUBLIC_BASE_URL = String(
   process.env.PDF_TMP_PUBLIC_BASE_URL ||
   process.env.TOOL_PUBLIC_BASE_URL ||
