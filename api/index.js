@@ -63,6 +63,21 @@ const PDF_TMP_PUBLIC_BASE_URL = String(
   process.env.PUBLIC_BASE_URL ||
   ''
 ).trim().replace(/\/+$/, '');
+const NEOXR_BASE_ENDPOINT = String(process.env.NEOXR_BASE_ENDPOINT || 'https://api.neoxr.eu/api')
+  .trim()
+  .replace(/\/+$/, '');
+const NEOXR_API_KEY = String(
+  process.env.NEOXR_APIKEY ||
+  process.env.PDF_CONVERTER_API_KEY ||
+  PDF_CONVERTER_API_KEY ||
+  'yokheimoet'
+).trim();
+const configuredNeoxrTimeoutMs = Number(process.env.NEOXR_TIMEOUT_MS || 30000);
+const NEOXR_TIMEOUT_MS = Number.isFinite(configuredNeoxrTimeoutMs) &&
+  configuredNeoxrTimeoutMs >= 3000 &&
+  configuredNeoxrTimeoutMs <= 120000
+  ? configuredNeoxrTimeoutMs
+  : 30000;
 const CATBOX_UPLOAD_ENDPOINT = String(process.env.CATBOX_UPLOAD_ENDPOINT || 'https://catbox.moe/user/api.php').trim();
 const CATBOX_USER_HASH = String(process.env.CATBOX_USER_HASH || '').trim();
 const LITTERBOX_UPLOAD_ENDPOINT = String(
@@ -173,6 +188,12 @@ app.get('/portofolio', (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(__dirname, '../views/portofolio.html'));
+});
+
+app.get('/public-tools', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-tools.html'));
 });
 
 app.get('/short-link', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
@@ -1202,6 +1223,171 @@ function isValidHttpUrl(urlValue) {
     return false;
   }
 }
+
+function isAllowedIbbImageUrl(urlValue) {
+  try {
+    const parsed = new URL(String(urlValue || '').trim());
+    const host = String(parsed.hostname || '').toLowerCase();
+    if (!host) return false;
+    return host === 'i.ibb.co' ||
+      host.endsWith('.i.ibb.co') ||
+      host === 'i.ibb.co.com' ||
+      host.endsWith('.i.ibb.co.com');
+  } catch (_error) {
+    return false;
+  }
+}
+
+function buildNeoxrUrl(endpoint, queryParams = {}) {
+  const cleanedEndpoint = String(endpoint || '').replace(/^\/+/, '').trim();
+  const searchParams = new URLSearchParams();
+  Object.entries(queryParams).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    const stringValue = String(value).trim();
+    if (!stringValue) return;
+    searchParams.set(key, stringValue);
+  });
+  searchParams.set('apikey', NEOXR_API_KEY);
+  return `${NEOXR_BASE_ENDPOINT}/${cleanedEndpoint}?${searchParams.toString()}`;
+}
+
+async function callNeoxrApi(endpoint, queryParams = {}) {
+  if (!NEOXR_API_KEY) {
+    const noKeyError = new Error('NeoXR API key belum tersedia di server.');
+    noKeyError.statusCode = 500;
+    throw noKeyError;
+  }
+
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), NEOXR_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(buildNeoxrUrl(endpoint, queryParams), {
+      method: 'GET',
+      headers: { Accept: 'application/json, text/plain;q=0.9,*/*;q=0.8' },
+      signal: timeoutController.signal
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const timeoutError = new Error(`Request ke NeoXR timeout ${Math.round(NEOXR_TIMEOUT_MS / 1000)} detik.`);
+      timeoutError.statusCode = 504;
+      throw timeoutError;
+    }
+    const networkError = new Error(`Gagal menghubungi NeoXR API: ${error.message}`);
+    networkError.statusCode = 502;
+    throw networkError;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  const rawText = await response.text();
+  let payload = {};
+  try {
+    payload = rawText ? JSON.parse(rawText) : {};
+  } catch (_error) {
+    payload = { raw: rawText };
+  }
+
+  if (!response.ok) {
+    const upstreamError = new Error(payload?.msg || payload?.message || `NeoXR API error (${response.status})`);
+    upstreamError.statusCode = 502;
+    upstreamError.payload = payload;
+    throw upstreamError;
+  }
+
+  return payload;
+}
+
+function normalizeWeatherSummary(payload) {
+  const data = payload?.data || {};
+  const result = Array.isArray(data?.result) ? data.result : [];
+  const current = result[0] || null;
+  return {
+    location: {
+      subdistrict: data?.subdistrict || null,
+      regency: data?.regency || null,
+      province: data?.province || null
+    },
+    current,
+    forecast: result.slice(0, 8)
+  };
+}
+
+app.get('/api/public/cuaca', async (req, res) => {
+  const subdistrict = String(req.query.subdistrict || 'batang').trim();
+  if (!subdistrict) {
+    return res.status(400).json({ message: 'Parameter subdistrict wajib diisi.' });
+  }
+
+  try {
+    const payload = await callNeoxrApi('cuaca', { subdistrict });
+    return res.json({
+      ...payload,
+      normalized: normalizeWeatherSummary(payload)
+    });
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal mengambil data cuaca.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/tempmail-read', async (req, res) => {
+  const email = String(req.query.email || '').trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ message: 'Parameter email tidak valid.' });
+  }
+
+  try {
+    const payload = await callNeoxrApi('tempmail-read', { email });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal membaca inbox tempmail.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/upscale', async (req, res) => {
+  const image = String(req.query.image || '').trim();
+  if (!image || !isValidHttpUrl(image)) {
+    return res.status(400).json({ message: 'Parameter image wajib URL http/https valid.' });
+  }
+  if (!isAllowedIbbImageUrl(image)) {
+    return res.status(400).json({
+      message: 'Fitur upscale public hanya menerima URL gambar dari host i.ibb.'
+    });
+  }
+
+  try {
+    const payload = await callNeoxrApi('upscale', { image });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal memproses upscale.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/remini', async (req, res) => {
+  const image = String(req.query.image || '').trim();
+  if (!image || !isValidHttpUrl(image)) {
+    return res.status(400).json({ message: 'Parameter image wajib URL http/https valid.' });
+  }
+
+  try {
+    const payload = await callNeoxrApi('remini', { image });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal memproses remini.',
+      upstream: error?.payload || null
+    });
+  }
+});
 
 function collectImageLinks(payload, bucket, depth = 0) {
   if (depth > 8 || payload == null) return;

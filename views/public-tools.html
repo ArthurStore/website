@@ -1,0 +1,167 @@
+<html class="scroll-smooth" lang="id">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>Public Tools - Cuaca, Tempmail, Upscale, Remini</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      font-family: "Poppins", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      color: #dbeafe;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(14, 165, 233, 0.18), transparent 35%),
+        radial-gradient(circle at 90% 12%, rgba(99, 102, 241, 0.24), transparent 36%),
+        linear-gradient(140deg, #020617 0%, #08142c 40%, #0b1f46 100%);
+    }
+    .glass {
+      background: rgba(7, 16, 36, 0.72);
+      border: 1px solid rgba(96, 165, 250, 0.28);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 36px rgba(2, 6, 23, 0.4);
+    }
+    .field {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(96, 165, 250, 0.34);
+      background: rgba(8, 20, 43, 0.9);
+      color: #e2e8f0;
+      padding: 10px 12px;
+    }
+    .field:focus {
+      outline: 2px solid rgba(147, 197, 253, 0.6);
+      outline-offset: 1px;
+    }
+    .btn-primary {
+      border: 1px solid rgba(147, 197, 253, 0.3);
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 45%, #0ea5e9 100%);
+      color: white;
+      font-weight: 700;
+      padding: 10px 14px;
+      transition: transform .2s ease, filter .2s ease;
+    }
+    .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .result-box {
+      margin-top: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      background: rgba(2, 6, 23, 0.56);
+      padding: 14px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    .weather-hero {
+      border-radius: 16px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 14px;
+      align-items: center;
+    }
+    .weather-sunny { background: linear-gradient(130deg, rgba(251, 191, 36, 0.35), rgba(56, 189, 248, 0.14)); }
+    .weather-cloudy { background: linear-gradient(130deg, rgba(148, 163, 184, 0.35), rgba(30, 64, 175, 0.18)); }
+    .weather-rainy { background: linear-gradient(130deg, rgba(14, 165, 233, 0.28), rgba(30, 41, 59, 0.34)); }
+    .weather-storm { background: linear-gradient(130deg, rgba(99, 102, 241, 0.34), rgba(17, 24, 39, 0.52)); }
+    .weather-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 2rem;
+      background: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 0 20px rgba(147, 197, 253, 0.32);
+    }
+    .forecast-grid {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .forecast-item {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.64);
+      padding: 10px;
+      font-size: 0.86rem;
+    }
+    .image-preview {
+      margin-top: 12px;
+      width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      border-radius: 12px;
+      border: 1px solid rgba(96, 165, 250, 0.32);
+      background: rgba(2, 6, 23, 0.75);
+    }
+  </style>
+ </head>
+ <body>
+  <main class="max-w-6xl mx-auto px-4 py-8 md:py-12 space-y-6">
+   <section class="glass p-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+     <div>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200">Public Tools Titik 3</h1>
+      <p class="text-blue-100 mt-2 text-sm md:text-base">
+       Satu halaman buat cek cuaca visual, baca tempmail, upscale gambar i.ibb, dan remini.
+      </p>
+     </div>
+     <a href="/" class="btn-primary inline-flex items-center gap-2 w-fit">
+      <i class="fas fa-arrow-left"></i>
+      <span>Kembali ke Beranda</span>
+     </a>
+    </div>
+   </section>
+
+   <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <article class="glass p-5">
+     <h2 class="text-2xl font-bold text-blue-300 mb-3"><i class="fas fa-cloud-sun mr-2"></i>Cek Cuaca Visual</h2>
+     <form id="weather-form" class="flex flex-col sm:flex-row gap-2">
+      <input class="field" id="subdistrict" name="subdistrict" placeholder="Contoh: batang" value="batang"/>
+      <button class="btn-primary" type="submit">Cek Cuaca</button>
+     </form>
+     <div id="weather-result" class="result-box text-blue-100">Klik "Cek Cuaca" untuk lihat hasil visual.</div>
+    </article>
+
+    <article class="glass p-5">
+     <h2 class="text-2xl font-bold text-blue-300 mb-3"><i class="fas fa-envelope-open-text mr-2"></i>Tempmail Read</h2>
+     <form id="tempmail-form" class="flex flex-col sm:flex-row gap-2">
+      <input class="field" id="tempmail-email" name="email" placeholder="email@guysmail.com" value="xupaxu2244@guysmail.com"/>
+      <button class="btn-primary" type="submit">Baca Inbox</button>
+     </form>
+     <div id="tempmail-result" class="result-box text-blue-100">Masukkan email tempmail lalu cek inbox.</div>
+    </article>
+
+    <article class="glass p-5">
+     <h2 class="text-2xl font-bold text-blue-300 mb-3"><i class="fas fa-search-plus mr-2"></i>Upscale (khusus i.ibb)</h2>
+     <form id="upscale-form" class="space-y-2">
+      <input class="field" id="upscale-image" name="image" placeholder="https://i.ibb.co/...jpg" value="https://i.ibb.co.com/07qwgVc/Text-Pro-me-168de347f591bf.jpg"/>
+      <button class="btn-primary" type="submit">Proses Upscale</button>
+     </form>
+     <div id="upscale-result" class="result-box text-blue-100">URL wajib host i.ibb sesuai request.</div>
+     <img id="upscale-preview" class="image-preview hidden" alt="Hasil upscale"/>
+    </article>
+
+    <article class="glass p-5">
+     <h2 class="text-2xl font-bold text-blue-300 mb-3"><i class="fas fa-magic mr-2"></i>Remini</h2>
+     <form id="remini-form" class="space-y-2">
+      <input class="field" id="remini-image" name="image" placeholder="https://telegra.ph/file/....jpg" value="https://telegra.ph/file/6e51933b965b7586bc096.jpg"/>
+      <button class="btn-primary" type="submit">Proses Remini</button>
+     </form>
+     <div id="remini-result" class="result-box text-blue-100">Masukkan URL gambar lalu proses remini.</div>
+     <img id="remini-preview" class="image-preview hidden" alt="Hasil remini"/>
+    </article>
+   </section>
+  </main>
+
+  <script defer src="/public-tools.js"></script>
+ </body>
+</html>
