@@ -65,12 +65,28 @@ const PDF_TMP_PUBLIC_BASE_URL = String(
 ).trim().replace(/\/+$/, '');
 const CATBOX_UPLOAD_ENDPOINT = String(process.env.CATBOX_UPLOAD_ENDPOINT || 'https://catbox.moe/user/api.php').trim();
 const CATBOX_USER_HASH = String(process.env.CATBOX_USER_HASH || '').trim();
+const LITTERBOX_UPLOAD_ENDPOINT = String(
+  process.env.LITTERBOX_UPLOAD_ENDPOINT ||
+  'https://litterbox.catbox.moe/resources/internals/api.php'
+).trim();
+const configuredLitterboxHours = Number(process.env.LITTERBOX_RETENTION_HOURS || 72);
+const LITTERBOX_RETENTION_HOURS = Number.isFinite(configuredLitterboxHours) &&
+  configuredLitterboxHours >= 1 &&
+  configuredLitterboxHours <= 72
+  ? Math.floor(configuredLitterboxHours)
+  : 72;
 const configuredCatboxTimeoutMs = Number(process.env.CATBOX_TIMEOUT_MS || 300000);
 const CATBOX_TIMEOUT_MS = Number.isFinite(configuredCatboxTimeoutMs) &&
   configuredCatboxTimeoutMs >= 5000 &&
   configuredCatboxTimeoutMs <= 600000
   ? configuredCatboxTimeoutMs
   : 300000;
+const configuredHealthcheckTimeoutMs = Number(process.env.PDF_CONVERTER_HEALTHCHECK_TIMEOUT_MS || 20000);
+const PDF_CONVERTER_HEALTHCHECK_TIMEOUT_MS = Number.isFinite(configuredHealthcheckTimeoutMs) &&
+  configuredHealthcheckTimeoutMs >= 2000 &&
+  configuredHealthcheckTimeoutMs <= 120000
+  ? configuredHealthcheckTimeoutMs
+  : 20000;
 
 if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
   fs.mkdirSync(UPLOAD_STORAGE_DIR, { recursive: true });
@@ -500,56 +516,210 @@ async function uploadPdfToCatbox(localFilePath, originalName, mimeType) {
     throw new Error('File PDF temporary tidak ditemukan untuk upload Catbox.');
   }
 
-  const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort(), CATBOX_TIMEOUT_MS);
-  try {
-    const payload = new FormData();
-    payload.append('reqtype', 'fileupload');
-    if (CATBOX_USER_HASH) payload.append('userhash', CATBOX_USER_HASH);
-
-    const fileBuffer = fs.readFileSync(localFilePath);
-    const safeOriginalName = (String(originalName || 'converted.pdf').trim() || 'converted.pdf')
-      .replace(/[^\w.\-]+/g, '-')
-      .replace(/-+/g, '-');
-    payload.append(
-      'fileToUpload',
-      new Blob([fileBuffer], { type: String(mimeType || 'application/pdf') || 'application/pdf' }),
-      safeOriginalName
-    );
-
-    const response = await fetch(CATBOX_UPLOAD_ENDPOINT, {
-      method: 'POST',
-      body: payload,
-      signal: timeoutController.signal
-    });
-    const rawText = String(await response.text() || '').trim();
-
-    if (!response.ok) {
-      const uploadError = new Error(`Catbox gagal merespons dengan benar (HTTP ${response.status}).`);
-      uploadError.statusCode = 502;
-      uploadError.payload = { status: response.status, body: rawText };
-      throw uploadError;
+  const fileBuffer = fs.readFileSync(localFilePath);
+  const safeOriginalName = (String(originalName || 'converted.pdf').trim() || 'converted.pdf')
+    .replace(/[^\w.\-]+/g, '-')
+    .replace(/-+/g, '-');
+  const safeMimeType = String(mimeType || 'application/pdf') || 'application/pdf';
+  const attempts = [
+    {
+      provider: 'catbox',
+      endpoint: CATBOX_UPLOAD_ENDPOINT,
+      useUserHash: true
+    },
+    {
+      provider: 'litterbox',
+      endpoint: LITTERBOX_UPLOAD_ENDPOINT,
+      useUserHash: false,
+      retentionHours: LITTERBOX_RETENTION_HOURS
     }
+  ];
+  let lastError = null;
 
-    if (!rawText || /^error/i.test(rawText) || !/^https?:\/\//i.test(rawText)) {
-      const catboxError = new Error(rawText || 'Catbox tidak mengembalikan URL file.');
-      catboxError.statusCode = 502;
-      catboxError.payload = { body: rawText };
-      throw catboxError;
-    }
+  for (let index = 0; index < attempts.length; index += 1) {
+    const attempt = attempts[index];
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), CATBOX_TIMEOUT_MS);
+    try {
+      const payload = new FormData();
+      payload.append('reqtype', 'fileupload');
+      if (attempt.useUserHash && CATBOX_USER_HASH) payload.append('userhash', CATBOX_USER_HASH);
+      if (attempt.provider === 'litterbox') payload.append('time', String(attempt.retentionHours || 72));
+      payload.append(
+        'fileToUpload',
+        new Blob([fileBuffer], { type: safeMimeType }),
+        safeOriginalName
+      );
 
-    return { url: rawText };
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      const timeoutError = new Error(`Upload ke Catbox timeout ${Math.round(CATBOX_TIMEOUT_MS / 1000)} detik.`);
-      timeoutError.statusCode = 504;
-      throw timeoutError;
+      const response = await fetch(attempt.endpoint, {
+        method: 'POST',
+        body: payload,
+        signal: timeoutController.signal
+      });
+      const rawText = String(await response.text() || '').trim();
+
+      if (!response.ok) {
+        const uploadError = new Error(`${attempt.provider} gagal merespons dengan benar (HTTP ${response.status}).`);
+        uploadError.statusCode = 502;
+        uploadError.payload = { status: response.status, body: rawText, endpoint: attempt.endpoint, provider: attempt.provider };
+        throw uploadError;
+      }
+
+      if (!rawText || /^error/i.test(rawText) || !/^https?:\/\//i.test(rawText)) {
+        const catboxError = new Error(rawText || `${attempt.provider} tidak mengembalikan URL file.`);
+        catboxError.statusCode = 502;
+        catboxError.payload = { body: rawText, endpoint: attempt.endpoint, provider: attempt.provider };
+        throw catboxError;
+      }
+
+      return {
+        url: rawText,
+        provider: attempt.provider,
+        endpoint: attempt.endpoint
+      };
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        const timeoutError = new Error(`Upload ke ${attempt.provider} timeout ${Math.round(CATBOX_TIMEOUT_MS / 1000)} detik.`);
+        timeoutError.statusCode = 504;
+        timeoutError.payload = { endpoint: attempt.endpoint, provider: attempt.provider };
+        throw timeoutError;
+      }
+      lastError = error;
+      const errorText = String(
+        error?.payload?.body ||
+        error?.message ||
+        ''
+      ).toLowerCase();
+      const shouldTryNextAttempt = attempt.provider === 'catbox' && (
+        errorText.includes('invalid uploader') ||
+        Number(error?.payload?.status) === 412
+      );
+      if (!shouldTryNextAttempt) {
+        throw error;
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  throw lastError || new Error('Upload ke Catbox/Litterbox gagal.');
 }
+
+async function runPdfConversionQuickTest(req) {
+  const startedAt = Date.now();
+  const report = {
+    requestId: crypto.randomBytes(4).toString('hex'),
+    startedAt,
+    catbox: { ok: false, url: '', error: null, elapsedMs: 0 },
+    converter: { ok: false, sourceType: '', message: '', elapsedMs: 0, statusCode: null, upstream: null },
+    summary: ''
+  };
+
+  const sampleBytes = Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 220 120] /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 39 >>\nstream\nBT /F1 18 Tf 20 65 Td (Quick test) Tj ET\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n');
+  const sampleName = `quick-test-${Date.now()}.pdf`;
+  const samplePath = path.join(PDF_TMP_UPLOAD_DIR, `${Date.now()}-${crypto.randomBytes(4).toString('hex')}-quick-test.pdf`);
+  fs.writeFileSync(samplePath, sampleBytes);
+
+  let token = '';
+  try {
+    const catboxStart = Date.now();
+    try {
+      const uploaded = await uploadPdfToCatbox(samplePath, sampleName, 'application/pdf');
+      report.catbox.ok = true;
+      report.catbox.url = uploaded.url;
+    } catch (catboxError) {
+      report.catbox.error = {
+        message: catboxError?.message || 'Catbox test gagal.',
+        statusCode: Number(catboxError?.statusCode) || null,
+        upstream: catboxError?.payload || null
+      };
+    } finally {
+      report.catbox.elapsedMs = Date.now() - catboxStart;
+    }
+
+    const converterStart = Date.now();
+    let sourceType = '';
+    let sourceUrl = '';
+    if (report.catbox.ok && report.catbox.url) {
+      sourceType = 'catbox';
+      sourceUrl = report.catbox.url;
+    } else {
+      token = crypto.randomBytes(18).toString('hex');
+      const createdAt = Date.now();
+      const expiresAt = createdAt + PDF_TEMP_TTL_MS;
+      pdfTempUploads.set(token, {
+        token,
+        filePath: samplePath,
+        originalName: sampleName,
+        sizeBytes: sampleBytes.length,
+        createdAt,
+        expiresAt
+      });
+      sourceType = 'server-temp-url';
+      sourceUrl = buildPdfTempPublicUrl(req, token);
+      if (!sourceUrl) {
+        throw new Error('Quick test gagal: URL public temporary tidak dapat dibuat.');
+      }
+    }
+
+    report.converter.sourceType = sourceType;
+    try {
+      const payload = await convertPdfByUrl(sourceUrl, 'quick-test', 'jpg', {
+        timeoutMs: PDF_CONVERTER_HEALTHCHECK_TIMEOUT_MS
+      });
+      report.converter.ok = true;
+      report.converter.message = payload?.message || payload?.msg || 'Converter merespons sukses.';
+      report.converter.upstream = payload;
+    } catch (converterError) {
+      report.converter.message = converterError?.message || 'Converter test gagal.';
+      report.converter.statusCode = Number(converterError?.statusCode) || null;
+      report.converter.upstream = converterError?.payload || null;
+    } finally {
+      report.converter.elapsedMs = Date.now() - converterStart;
+    }
+  } finally {
+    if (token && pdfTempUploads.has(token)) {
+      const tempEntry = pdfTempUploads.get(token);
+      try {
+        if (tempEntry?.filePath && fs.existsSync(tempEntry.filePath)) fs.unlinkSync(tempEntry.filePath);
+      } catch (_error) {
+        // ignore cleanup error
+      }
+      pdfTempUploads.delete(token);
+    } else {
+      try {
+        if (samplePath && fs.existsSync(samplePath)) fs.unlinkSync(samplePath);
+      } catch (_error) {
+        // ignore cleanup error
+      }
+    }
+  }
+
+  const totalMs = Date.now() - startedAt;
+  if (report.converter.ok) {
+    report.summary = `Quick test sukses (${report.converter.sourceType}) dalam ${totalMs}ms.`;
+  } else if (report.catbox.ok) {
+    report.summary = `Catbox sukses, namun converter gagal (${report.converter.message || 'unknown error'}).`;
+  } else {
+    report.summary = `Catbox gagal dan converter fallback gagal (${report.converter.message || report.catbox.error?.message || 'unknown error'}).`;
+  }
+  report.totalElapsedMs = totalMs;
+  return report;
+}
+
+app.get('/api/pdf-to-jpg/quick-test', ensureToolApiAccess, async (req, res) => {
+  try {
+    const report = await runPdfConversionQuickTest(req);
+    const statusCode = report.converter?.ok ? 200 : 502;
+    return res.status(statusCode).json(report);
+  } catch (error) {
+    return res.status(500).json({
+      message: error?.message || 'Quick test gagal dijalankan.',
+      hint: 'Pastikan server bisa akses internet ke Catbox/Litterbox dan provider converter.',
+      upstream: error?.payload || null
+    });
+  }
+});
 
 function serializeUploadEntry(req, entry) {
   const folder = entry.folderId ? fileVaultFolders.get(entry.folderId) : null;
@@ -1083,10 +1253,16 @@ app.get('/api/pdf-to-jpg-upload/:token', (req, res) => {
   return res.sendFile(entry.filePath);
 });
 
-async function convertPdfByUrl(url, filename, to) {
+async function convertPdfByUrl(url, filename, to, options = {}) {
   if (!PDF_CONVERTER_API_KEY) {
     throw new Error('API key converter belum diatur di server.');
   }
+  const requestedTimeoutMs = Number(options?.timeoutMs);
+  const timeoutMs = Number.isFinite(requestedTimeoutMs) &&
+    requestedTimeoutMs >= 2000 &&
+    requestedTimeoutMs <= 600000
+    ? requestedTimeoutMs
+    : PDF_CONVERTER_TIMEOUT_MS;
   const query = new URLSearchParams({
     url,
     filename,
@@ -1094,7 +1270,7 @@ async function convertPdfByUrl(url, filename, to) {
     apikey: PDF_CONVERTER_API_KEY
   });
   const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort(), PDF_CONVERTER_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
   let upstreamResponse;
   try {
     upstreamResponse = await fetch(`${PDF_CONVERTER_ENDPOINT}?${query.toString()}`, {
@@ -1104,7 +1280,7 @@ async function convertPdfByUrl(url, filename, to) {
     });
   } catch (error) {
     if (error?.name === 'AbortError') {
-      const timeoutError = new Error(`Timeout ${Math.round(PDF_CONVERTER_TIMEOUT_MS / 1000)} detik dari provider converter.`);
+      const timeoutError = new Error(`Timeout ${Math.round(timeoutMs / 1000)} detik dari provider converter.`);
       timeoutError.statusCode = 504;
       throw timeoutError;
     }

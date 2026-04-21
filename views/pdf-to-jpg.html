@@ -16,10 +16,12 @@
       overflow-x: clip;
       overscroll-behavior-x: none;
       background-color: #020617;
+      min-height: 100%;
     }
     body {
       font-family: Arial, sans-serif;
       min-height: 100vh;
+      min-height: 100dvh;
       color: #dbeafe;
       overflow-x: clip;
       background:
@@ -27,6 +29,8 @@
         radial-gradient(circle at 84% 10%, rgba(14, 165, 233, 0.2), transparent 36%),
         linear-gradient(145deg, #020617 0%, #0b1733 54%, #07152d 100%);
       background-size: 140% 140%, 140% 140%, 240% 240%;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
       animation: converterBgShift 18s ease-in-out infinite;
     }
     .glass {
@@ -69,7 +73,7 @@
   </style>
 </head>
 <body class="px-4 py-8 md:px-8 md:py-10">
-  <main class="mx-auto max-w-6xl space-y-6 overflow-x-hidden">
+  <main class="mx-auto max-w-6xl space-y-6 overflow-x-hidden pb-8">
     <header class="glass rounded-2xl p-6 md:p-8">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -121,9 +125,12 @@
 
         <div id="feedback" class="mt-4 hidden rounded-lg border px-4 py-3 text-sm"></div>
         <div class="mt-4 rounded-lg border border-cyan-400/30 bg-slate-950/60 p-3">
-          <div class="mb-2 flex items-center justify-between">
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
             <p class="text-xs font-semibold uppercase tracking-[0.15em] text-cyan-300">Realtime Log</p>
-            <button id="clear-log-btn" type="button" class="rounded border border-cyan-300/40 px-2 py-1 text-[10px] font-semibold text-cyan-200 hover:bg-cyan-500/20">Clear</button>
+            <div class="flex items-center gap-2">
+              <button id="quick-test-btn" type="button" class="rounded border border-emerald-300/40 px-2 py-1 text-[10px] font-semibold text-emerald-200 hover:bg-emerald-500/20">Quick Test</button>
+              <button id="clear-log-btn" type="button" class="rounded border border-cyan-300/40 px-2 py-1 text-[10px] font-semibold text-cyan-200 hover:bg-cyan-500/20">Clear</button>
+            </div>
           </div>
           <pre id="realtime-log" class="max-h-48 overflow-y-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed text-cyan-100"></pre>
         </div>
@@ -168,6 +175,7 @@
     const submitBtn = document.getElementById('submit-btn');
     const realtimeLog = document.getElementById('realtime-log');
     const clearLogBtn = document.getElementById('clear-log-btn');
+    const quickTestBtn = document.getElementById('quick-test-btn');
 
     function appendLog(message, payload) {
       const stamp = new Date().toLocaleTimeString('id-ID', { hour12: false });
@@ -180,6 +188,28 @@
 
     function resetLog() {
       realtimeLog.textContent = '';
+    }
+
+    async function runQuickTest() {
+      quickTestBtn.disabled = true;
+      quickTestBtn.textContent = 'Testing...';
+      appendLog('Menjalankan quick test koneksi...');
+      try {
+        const response = await fetch('/api/pdf-to-jpg/quick-test');
+        const payload = await response.json();
+        appendLog(`Quick test HTTP ${response.status}`);
+        appendLog('Quick test payload', payload);
+        if (!response.ok) {
+          throw new Error(payload.summary || payload.message || 'Quick test gagal.');
+        }
+        showFeedback('success', payload.summary || 'Quick test sukses.');
+      } catch (error) {
+        appendLog('Quick test error', error.message || error);
+        showFeedback('error', error.message || 'Quick test gagal.');
+      } finally {
+        quickTestBtn.disabled = false;
+        quickTestBtn.textContent = 'Quick Test';
+      }
     }
 
     function showFeedback(type, message) {
@@ -368,6 +398,7 @@
     });
 
     clearLogBtn.addEventListener('click', resetLog);
+    quickTestBtn.addEventListener('click', runQuickTest);
 
     copyBtn.addEventListener('click', async () => {
       const text = resultLink.textContent || '';
