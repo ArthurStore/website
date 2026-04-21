@@ -1,0 +1,123 @@
+<html class="scroll-smooth" lang="id">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>Public Remini - Upload Foto Biar Lebih Tajam</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Poppins", sans-serif;
+      color: #dbeafe;
+      background:
+        radial-gradient(circle at 88% 10%, rgba(167, 139, 250, 0.26), transparent 34%),
+        radial-gradient(circle at 10% 76%, rgba(45, 212, 191, 0.18), transparent 44%),
+        linear-gradient(140deg, #090618 0%, #201052 45%, #0f172a 100%);
+    }
+    .glass {
+      border: 1px solid rgba(196, 181, 253, 0.34);
+      border-radius: 20px;
+      background: rgba(23, 18, 52, 0.7);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 22px 36px rgba(2, 6, 23, 0.44);
+    }
+    .btn {
+      border: 1px solid rgba(196, 181, 253, 0.38);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 50%, #14b8a6 100%);
+      transition: transform .2s ease, filter .2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .dropzone {
+      position: relative;
+      border: 2px dashed rgba(196, 181, 253, 0.45);
+      border-radius: 18px;
+      padding: 30px 20px;
+      text-align: center;
+      background: rgba(17, 24, 39, 0.55);
+    }
+    .dropzone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .preview {
+      width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      border-radius: 14px;
+      border: 1px solid rgba(196, 181, 253, 0.34);
+      background: rgba(2, 6, 23, 0.8);
+    }
+    .result {
+      border: 1px solid rgba(196, 181, 253, 0.3);
+      background: rgba(2, 6, 23, 0.62);
+      border-radius: 14px;
+      padding: 12px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      font-size: .86rem;
+    }
+  </style>
+ </head>
+ <body>
+  <main class="max-w-6xl mx-auto px-4 py-8 md:py-12 space-y-6">
+   <section class="glass p-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+     <div>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-purple-200">✨ Public Remini</h1>
+      <p class="text-purple-100 mt-2">Upload foto → server upload ke i.bb → request ke API Remini 🔧🖼️</p>
+     </div>
+     <div class="flex gap-2 flex-wrap">
+      <a class="btn" href="/public"><i class="fas fa-th-large"></i>Hub Public</a>
+      <a class="btn" href="/"><i class="fas fa-home"></i>Beranda</a>
+     </div>
+    </div>
+   </section>
+
+   <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+    <article class="glass p-6 space-y-4">
+     <h2 class="text-2xl font-bold text-purple-200"><i class="fas fa-upload mr-2"></i>Upload Foto</h2>
+     <label class="dropzone">
+      <input id="remini-file" accept="image/*" type="file"/>
+      <p class="text-lg font-semibold text-purple-100">📷 Drop / pilih file di sini</p>
+      <p class="text-sm text-purple-200 mt-2">Format: JPG/PNG/WEBP • max sesuai limit server</p>
+     </label>
+     <button class="btn w-full" id="remini-submit" type="button"><i class="fas fa-magic"></i>Proses Remini</button>
+     <div class="result text-purple-100" id="remini-result">Menunggu file dipilih.</div>
+    </article>
+
+    <article class="glass p-6 space-y-4">
+     <h2 class="text-2xl font-bold text-purple-200"><i class="fas fa-image mr-2"></i>Preview Foto</h2>
+     <div class="grid grid-cols-1 gap-4">
+      <div>
+       <p class="text-sm text-purple-200 mb-2">Sebelum</p>
+       <img id="remini-before" class="preview hidden" alt="Foto sebelum remini"/>
+      </div>
+      <div>
+       <p class="text-sm text-purple-200 mb-2">Sesudah</p>
+       <img id="remini-after" class="preview hidden" alt="Foto sesudah remini"/>
+      </div>
+     </div>
+    </article>
+   </section>
+  </main>
+
+  <script defer src="/public-remini.js"></script>
+ </body>
+</html>

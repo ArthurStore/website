@@ -17,32 +17,35 @@ function toPrettyJson(payload) {
 
 function extractImageUrl(payload) {
   if (!payload) return "";
-  const direct = payload?.data?.url || payload?.url || payload?.data?.downloadUrl || "";
-  if (typeof direct === "string" && /^https?:\/\//i.test(direct)) {
-    return direct;
-  }
-  return "";
+  const candidates = [
+    payload?.data?.url,
+    payload?.url,
+    payload?.data?.downloadUrl,
+    payload?.uploadedImage?.url
+  ];
+  const match = candidates.find((item) => typeof item === "string" && /^https?:\/\//i.test(item));
+  return match || "";
 }
 
 function weatherVisualMeta(weatherText) {
   const raw = String(weatherText || "").toLowerCase();
   if (raw.includes("hujan") || raw.includes("rain")) {
-    return { mode: "weather-rainy", icon: "fas fa-cloud-showers-heavy", label: "Cuaca Hujan" };
+    return { mode: "weather-rainy", icon: "fas fa-cloud-showers-heavy", emoji: "🌧️", label: "Cuaca Hujan" };
   }
   if (raw.includes("badai") || raw.includes("petir") || raw.includes("storm")) {
-    return { mode: "weather-storm", icon: "fas fa-bolt", label: "Cuaca Badai" };
+    return { mode: "weather-storm", icon: "fas fa-bolt", emoji: "⛈️", label: "Cuaca Badai" };
   }
   if (raw.includes("berawan") || raw.includes("cloud")) {
-    return { mode: "weather-cloudy", icon: "fas fa-cloud-sun", label: "Cuaca Berawan" };
+    return { mode: "weather-cloudy", icon: "fas fa-cloud-sun", emoji: "⛅", label: "Cuaca Berawan" };
   }
   if (raw.includes("cerah") || raw.includes("sun")) {
-    return { mode: "weather-sunny", icon: "fas fa-sun", label: "Cuaca Cerah" };
+    return { mode: "weather-sunny", icon: "fas fa-sun", emoji: "☀️", label: "Cuaca Cerah" };
   }
-  return { mode: "weather-cloudy", icon: "fas fa-smog", label: "Cuaca" };
+  return { mode: "weather-cloudy", icon: "fas fa-smog", emoji: "🌫️", label: "Cuaca" };
 }
 
-async function requestJson(url) {
-  const response = await fetch(url, { method: "GET", headers: { Accept: "application/json" } });
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, options);
   let payload = {};
   try {
     payload = await response.json();
@@ -57,144 +60,165 @@ async function requestJson(url) {
   return payload;
 }
 
-function renderWeatherResult(payload) {
-  const wrapper = document.getElementById("weather-result");
-  const normalized = payload?.normalized || {};
-  const current = normalized?.current || null;
-  const forecast = Array.isArray(normalized?.forecast) ? normalized.forecast : [];
-  const location = normalized?.location || {};
+function bindWeatherPage() {
+  const form = document.getElementById("weather-form");
+  const result = document.getElementById("weather-result");
+  const skyline = document.getElementById("weather-skyline");
+  if (!form || !result) return false;
 
-  if (!current) {
-    wrapper.textContent = toPrettyJson(payload);
-    return;
-  }
-
-  const visual = weatherVisualMeta(current.weather);
-  const locationText = [
-    location?.subdistrict,
-    location?.regency,
-    location?.province
-  ].filter(Boolean).join(", ");
-
-  const forecastHtml = forecast.map((item) => {
-    const meta = weatherVisualMeta(item?.weather);
-    return `
-      <div class="forecast-item">
-        <div class="flex items-center justify-between gap-2">
-          <strong>${escapeHtml(String(item?.time || "-"))}</strong>
-          <i class="${meta.icon}" aria-label="${escapeHtml(meta.label)}"></i>
-        </div>
-        <div class="mt-1">${escapeHtml(String(item?.weather || "-"))}</div>
-        <div class="text-blue-300 mt-1">${escapeHtml(String(item?.temperature ?? "-"))}°C • Angin ${escapeHtml(String(item?.wind || "-"))}</div>
-      </div>
-    `;
-  }).join("");
-
-  wrapper.innerHTML = `
-    <div class="weather-hero ${visual.mode}">
-      <div class="weather-icon" aria-hidden="true"><i class="${visual.icon}"></i></div>
-      <div>
-        <h3 class="text-xl font-bold text-white">${escapeHtml(String(current?.weather || "Kondisi Tidak Diketahui"))}</h3>
-        <p class="text-blue-100">${escapeHtml(locationText || "Lokasi tidak diketahui")}</p>
-        <p class="text-blue-100 mt-1">Suhu: <strong>${escapeHtml(String(current?.temperature ?? "-"))}°C</strong> • Angin: ${escapeHtml(String(current?.wind || "-"))}</p>
-      </div>
-    </div>
-    <div class="forecast-grid">${forecastHtml}</div>
-  `;
-}
-
-function setResultText(targetId, text) {
-  const target = document.getElementById(targetId);
-  target.textContent = text;
-}
-
-function setResultJson(targetId, payload) {
-  const target = document.getElementById(targetId);
-  target.textContent = toPrettyJson(payload);
-}
-
-function setPreview(imageId, url) {
-  const preview = document.getElementById(imageId);
-  if (!url) {
-    preview.classList.add("hidden");
-    preview.removeAttribute("src");
-    return;
-  }
-  preview.src = url;
-  preview.classList.remove("hidden");
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  const weatherForm = document.getElementById("weather-form");
-  const tempmailForm = document.getElementById("tempmail-form");
-  const upscaleForm = document.getElementById("upscale-form");
-  const reminiForm = document.getElementById("remini-form");
-
-  weatherForm?.addEventListener("submit", async (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const subdistrict = String(document.getElementById("subdistrict")?.value || "").trim();
     if (!subdistrict) {
-      setResultText("weather-result", "Isi subdistrict dulu.");
+      result.textContent = "Isi subdistrict dulu ya.";
       return;
     }
-    setResultText("weather-result", "Mengambil data cuaca...");
+    result.textContent = "Lagi cek cuaca...";
     try {
       const payload = await requestJson(`/api/public/cuaca?subdistrict=${encodeURIComponent(subdistrict)}`);
-      renderWeatherResult(payload);
+      const normalized = payload?.normalized || {};
+      const current = normalized?.current || null;
+      const forecast = Array.isArray(normalized?.forecast) ? normalized.forecast : [];
+      const location = normalized?.location || {};
+      if (!current) {
+        result.textContent = toPrettyJson(payload);
+        return;
+      }
+
+      const visual = weatherVisualMeta(current.weather);
+      if (skyline) {
+        skyline.textContent = visual.emoji;
+      }
+      const locationText = [
+        location?.subdistrict,
+        location?.regency,
+        location?.province
+      ].filter(Boolean).join(", ");
+
+      const cards = forecast.map((item) => {
+        const itemVisual = weatherVisualMeta(item?.weather);
+        return `
+          <article class="rounded-xl border border-slate-600/40 bg-slate-900/60 p-3">
+            <div class="flex justify-between gap-2 items-center">
+              <strong>${escapeHtml(String(item?.time || "-"))}</strong>
+              <span>${itemVisual.emoji}</span>
+            </div>
+            <p class="mt-1">${escapeHtml(String(item?.weather || "-"))}</p>
+            <p class="text-sky-300 text-sm mt-1">${escapeHtml(String(item?.temperature ?? "-"))}°C • Angin ${escapeHtml(String(item?.wind || "-"))}</p>
+          </article>
+        `;
+      }).join("");
+
+      result.innerHTML = `
+        <div class="rounded-2xl p-4 ${visual.mode}">
+          <div class="flex gap-3 items-center">
+            <div class="w-16 h-16 rounded-full grid place-items-center bg-white/20 text-2xl">${visual.emoji}</div>
+            <div>
+              <h3 class="text-xl font-bold">${escapeHtml(String(current?.weather || "Cuaca"))}</h3>
+              <p class="text-slate-100">${escapeHtml(locationText || "Lokasi tidak diketahui")}</p>
+              <p class="text-slate-100 text-sm mt-1">Suhu <strong>${escapeHtml(String(current?.temperature ?? "-"))}°C</strong> • Angin ${escapeHtml(String(current?.wind || "-"))}</p>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">${cards}</div>
+      `;
     } catch (error) {
-      setResultJson("weather-result", error?.payload || { message: error?.message || "Gagal cek cuaca." });
+      result.textContent = toPrettyJson(error?.payload || { message: error?.message || "Gagal cek cuaca." });
     }
   });
 
-  tempmailForm?.addEventListener("submit", async (event) => {
+  return true;
+}
+
+function bindTempmailPage() {
+  const form = document.getElementById("tempmail-form");
+  const result = document.getElementById("tempmail-result");
+  if (!form || !result) return false;
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const email = String(document.getElementById("tempmail-email")?.value || "").trim();
     if (!email) {
-      setResultText("tempmail-result", "Isi email tempmail dulu.");
+      result.textContent = "Isi email tempmail dulu.";
       return;
     }
-    setResultText("tempmail-result", "Membaca inbox tempmail...");
+    result.textContent = "Lagi baca inbox...";
     try {
       const payload = await requestJson(`/api/public/tempmail-read?email=${encodeURIComponent(email)}`);
-      setResultJson("tempmail-result", payload);
+      result.textContent = toPrettyJson(payload);
     } catch (error) {
-      setResultJson("tempmail-result", error?.payload || { message: error?.message || "Gagal baca tempmail." });
+      result.textContent = toPrettyJson(error?.payload || { message: error?.message || "Gagal baca tempmail." });
     }
   });
 
-  upscaleForm?.addEventListener("submit", async (event) => {
+  return true;
+}
+
+function bindImageUploadPage(config) {
+  const form = document.getElementById(config.formId);
+  const result = document.getElementById(config.resultId);
+  const preview = document.getElementById(config.previewId);
+  if (!form || !result || !preview) return false;
+
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const image = String(document.getElementById("upscale-image")?.value || "").trim();
-    if (!image) {
-      setResultText("upscale-result", "Isi URL gambar dulu.");
+    const input = document.getElementById(config.fileId);
+    const file = input?.files?.[0];
+    if (!file) {
+      result.textContent = "Pilih file gambar dulu.";
+      preview.classList.add("hidden");
       return;
     }
-    setResultText("upscale-result", "Memproses upscale...");
-    setPreview("upscale-preview", "");
+    result.textContent = "Lagi upload ke i.bb lalu proses API...";
+    preview.classList.add("hidden");
+    preview.removeAttribute("src");
+
+    const payload = new FormData();
+    payload.append("image", file);
+
     try {
-      const payload = await requestJson(`/api/public/upscale?image=${encodeURIComponent(image)}`);
-      setResultJson("upscale-result", payload);
-      setPreview("upscale-preview", extractImageUrl(payload));
+      const responsePayload = await requestJson(config.endpoint, {
+        method: "POST",
+        body: payload
+      });
+      result.textContent = toPrettyJson(responsePayload);
+      const previewUrl = extractImageUrl(responsePayload);
+      if (previewUrl) {
+        preview.src = previewUrl;
+        preview.classList.remove("hidden");
+      }
     } catch (error) {
-      setResultJson("upscale-result", error?.payload || { message: error?.message || "Gagal upscale." });
+      result.textContent = toPrettyJson(error?.payload || { message: error?.message || "Proses gagal." });
     }
   });
 
-  reminiForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const image = String(document.getElementById("remini-image")?.value || "").trim();
-    if (!image) {
-      setResultText("remini-result", "Isi URL gambar dulu.");
-      return;
+  return true;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const bound = [
+    bindWeatherPage(),
+    bindTempmailPage(),
+    bindImageUploadPage({
+      formId: "upscale-form",
+      fileId: "upscale-image-file",
+      resultId: "upscale-result",
+      previewId: "upscale-preview",
+      endpoint: "/api/public/upscale"
+    }),
+    bindImageUploadPage({
+      formId: "remini-form",
+      fileId: "remini-image-file",
+      resultId: "remini-result",
+      previewId: "remini-preview",
+      endpoint: "/api/public/remini"
+    })
+  ];
+
+  if (!bound.some(Boolean)) {
+    const homeHint = document.getElementById("public-home-hint");
+    if (homeHint) {
+      homeHint.textContent = "Pilih salah satu fitur public dari menu kartu di atas ya ⚡";
     }
-    setResultText("remini-result", "Memproses remini...");
-    setPreview("remini-preview", "");
-    try {
-      const payload = await requestJson(`/api/public/remini?image=${encodeURIComponent(image)}`);
-      setResultJson("remini-result", payload);
-      setPreview("remini-preview", extractImageUrl(payload));
-    } catch (error) {
-      setResultJson("remini-result", error?.payload || { message: error?.message || "Gagal remini." });
-    }
-  });
+  }
 });

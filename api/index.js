@@ -72,12 +72,22 @@ const NEOXR_API_KEY = String(
   PDF_CONVERTER_API_KEY ||
   'yokheimoet'
 ).trim();
+const IMGBB_API_KEY = String(
+  process.env.IMGBB_API_KEY ||
+  process.env.IBB_API_KEY ||
+  ''
+).trim();
 const configuredNeoxrTimeoutMs = Number(process.env.NEOXR_TIMEOUT_MS || 30000);
 const NEOXR_TIMEOUT_MS = Number.isFinite(configuredNeoxrTimeoutMs) &&
   configuredNeoxrTimeoutMs >= 3000 &&
   configuredNeoxrTimeoutMs <= 120000
   ? configuredNeoxrTimeoutMs
   : 30000;
+const configuredPublicImageUploadMb = Number(process.env.PUBLIC_IMAGE_UPLOAD_MAX_MB || 10);
+const PUBLIC_IMAGE_UPLOAD_MAX_BYTES = Number.isFinite(configuredPublicImageUploadMb) &&
+  configuredPublicImageUploadMb > 0
+  ? Math.floor(configuredPublicImageUploadMb * 1024 * 1024)
+  : 10 * 1024 * 1024;
 const CATBOX_UPLOAD_ENDPOINT = String(process.env.CATBOX_UPLOAD_ENDPOINT || 'https://catbox.moe/user/api.php').trim();
 const CATBOX_USER_HASH = String(process.env.CATBOX_USER_HASH || '').trim();
 const LITTERBOX_UPLOAD_ENDPOINT = String(
@@ -190,10 +200,31 @@ app.get('/portofolio', (req, res) => {
     res.sendFile(path.join(__dirname, '../views/portofolio.html'));
 });
 
-app.get('/public-tools', (_req, res) => {
+app.get('/public', (_req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   return res.sendFile(path.join(__dirname, '../views/public-tools.html'));
+});
+app.get('/public-tools', (_req, res) => res.redirect('/public'));
+app.get('/public/cuaca', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-cuaca.html'));
+});
+app.get('/public/tempmail', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-tempmail.html'));
+});
+app.get('/public/upscale', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-upscale.html'));
+});
+app.get('/public/remini', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-remini.html'));
 });
 
 app.get('/short-link', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
@@ -1238,6 +1269,86 @@ function isAllowedIbbImageUrl(urlValue) {
   }
 }
 
+async function uploadImageBufferToImgbb(fileBuffer, originalName = 'image-upload') {
+  if (!IMGBB_API_KEY) {
+    const keyError = new Error('IMGBB_API_KEY belum diatur di server.');
+    keyError.statusCode = 500;
+    throw keyError;
+  }
+
+  const payload = new FormData();
+  const safeName = String(originalName || 'image-upload')
+    .trim()
+    .replace(/[^\w.\-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80) || 'image-upload';
+  payload.append('name', safeName);
+  payload.append('image', Buffer.from(fileBuffer).toString('base64'));
+
+  let response;
+  try {
+    response = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`, {
+      method: 'POST',
+      body: payload
+    });
+  } catch (error) {
+    const networkError = new Error(`Gagal upload ke i.bb: ${error.message}`);
+    networkError.statusCode = 502;
+    throw networkError;
+  }
+
+  const rawText = await response.text();
+  let parsed = {};
+  try {
+    parsed = rawText ? JSON.parse(rawText) : {};
+  } catch (_error) {
+    parsed = { raw: rawText };
+  }
+
+  if (!response.ok || parsed?.success === false) {
+    const uploadError = new Error(parsed?.error?.message || parsed?.message || `Upload i.bb gagal (${response.status})`);
+    uploadError.statusCode = 502;
+    uploadError.payload = parsed;
+    throw uploadError;
+  }
+
+  const imageUrl = String(
+    parsed?.data?.url ||
+    parsed?.data?.display_url ||
+    parsed?.data?.image?.url ||
+    ''
+  ).trim();
+  if (!imageUrl || !isValidHttpUrl(imageUrl)) {
+    const invalidUrlError = new Error('i.bb tidak mengembalikan URL gambar valid.');
+    invalidUrlError.statusCode = 502;
+    invalidUrlError.payload = parsed;
+    throw invalidUrlError;
+  }
+
+  return {
+    url: imageUrl,
+    deleteUrl: parsed?.data?.delete_url || null,
+    raw: parsed
+  };
+}
+
+const publicImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    files: 1,
+    fileSize: PUBLIC_IMAGE_UPLOAD_MAX_BYTES
+  },
+  fileFilter: (_req, file, cb) => {
+    const mime = String(file?.mimetype || '').toLowerCase();
+    if (mime.startsWith('image/')) {
+      cb(null, true);
+      return;
+    }
+    cb(new Error('File harus berupa gambar (image/*).'));
+  }
+});
+
 function buildNeoxrUrl(endpoint, queryParams = {}) {
   const cleanedEndpoint = String(endpoint || '').replace(/^\/+/, '').trim();
   const searchParams = new URLSearchParams();
@@ -1350,43 +1461,84 @@ app.get('/api/public/tempmail-read', async (req, res) => {
   }
 });
 
-app.get('/api/public/upscale', async (req, res) => {
-  const image = String(req.query.image || '').trim();
-  if (!image || !isValidHttpUrl(image)) {
-    return res.status(400).json({ message: 'Parameter image wajib URL http/https valid.' });
-  }
-  if (!isAllowedIbbImageUrl(image)) {
-    return res.status(400).json({
-      message: 'Fitur upscale public hanya menerima URL gambar dari host i.ibb.'
-    });
-  }
-
-  try {
-    const payload = await callNeoxrApi('upscale', { image });
-    return res.json(payload);
-  } catch (error) {
-    return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal memproses upscale.',
-      upstream: error?.payload || null
-    });
-  }
+app.get('/api/public/upscale', (_req, res) => {
+  return res.status(405).json({
+    message: 'Gunakan POST /api/public/upscale dengan upload file image (form-data).'
+  });
 });
 
-app.get('/api/public/remini', async (req, res) => {
-  const image = String(req.query.image || '').trim();
-  if (!image || !isValidHttpUrl(image)) {
-    return res.status(400).json({ message: 'Parameter image wajib URL http/https valid.' });
-  }
+app.post('/api/public/upscale', (req, res) => {
+  publicImageUpload.single('image')(req, res, async (error) => {
+    if (error) {
+      return res.status(400).json({
+        message: error?.message || 'Upload gambar gagal.',
+        hint: `Maks ukuran upload ${Math.round(PUBLIC_IMAGE_UPLOAD_MAX_BYTES / 1024 / 1024)}MB.`
+      });
+    }
+    if (!req.file?.buffer) {
+      return res.status(400).json({ message: 'File image wajib diupload (field: image).' });
+    }
 
-  try {
-    const payload = await callNeoxrApi('remini', { image });
-    return res.json(payload);
-  } catch (error) {
-    return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal memproses remini.',
-      upstream: error?.payload || null
-    });
-  }
+    try {
+      const uploaded = await uploadImageBufferToImgbb(req.file.buffer, req.file.originalname);
+      if (!isAllowedIbbImageUrl(uploaded.url)) {
+        return res.status(502).json({
+          message: 'Upload ke i.bb gagal diverifikasi, URL bukan domain i.ibb.',
+          uploadedImage: uploaded
+        });
+      }
+      const payload = await callNeoxrApi('upscale', { image: uploaded.url });
+      return res.json({
+        ...payload,
+        uploadedImage: {
+          url: uploaded.url,
+          deleteUrl: uploaded.deleteUrl
+        }
+      });
+    } catch (requestError) {
+      return res.status(Number(requestError?.statusCode) || 502).json({
+        message: requestError?.message || 'Gagal memproses upscale.',
+        upstream: requestError?.payload || null
+      });
+    }
+  });
+});
+
+app.get('/api/public/remini', (_req, res) => {
+  return res.status(405).json({
+    message: 'Gunakan POST /api/public/remini dengan upload file image (form-data).'
+  });
+});
+
+app.post('/api/public/remini', (req, res) => {
+  publicImageUpload.single('image')(req, res, async (error) => {
+    if (error) {
+      return res.status(400).json({
+        message: error?.message || 'Upload gambar gagal.',
+        hint: `Maks ukuran upload ${Math.round(PUBLIC_IMAGE_UPLOAD_MAX_BYTES / 1024 / 1024)}MB.`
+      });
+    }
+    if (!req.file?.buffer) {
+      return res.status(400).json({ message: 'File image wajib diupload (field: image).' });
+    }
+
+    try {
+      const uploaded = await uploadImageBufferToImgbb(req.file.buffer, req.file.originalname);
+      const payload = await callNeoxrApi('remini', { image: uploaded.url });
+      return res.json({
+        ...payload,
+        uploadedImage: {
+          url: uploaded.url,
+          deleteUrl: uploaded.deleteUrl
+        }
+      });
+    } catch (requestError) {
+      return res.status(Number(requestError?.statusCode) || 502).json({
+        message: requestError?.message || 'Gagal memproses remini.',
+        upstream: requestError?.payload || null
+      });
+    }
+  });
 });
 
 function collectImageLinks(payload, bucket, depth = 0) {

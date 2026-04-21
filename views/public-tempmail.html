@@ -1,0 +1,101 @@
+<html class="scroll-smooth" lang="id">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>Public Tempmail Read</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&amp;display=swap" rel="stylesheet"/>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Poppins", sans-serif;
+      color: #dbeafe;
+      background:
+        radial-gradient(circle at 12% 15%, rgba(59, 130, 246, 0.25), transparent 35%),
+        radial-gradient(circle at 88% 10%, rgba(14, 165, 233, 0.24), transparent 36%),
+        linear-gradient(140deg, #020617 0%, #08142c 45%, #0a1c3f 100%);
+    }
+    .glass {
+      background: rgba(7, 16, 36, 0.75);
+      border: 1px solid rgba(96, 165, 250, 0.28);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 36px rgba(2, 6, 23, 0.4);
+    }
+    .field {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(96, 165, 250, 0.34);
+      background: rgba(8, 20, 43, 0.9);
+      color: #e2e8f0;
+      padding: 11px 12px;
+    }
+    .btn-primary {
+      border: 1px solid rgba(147, 197, 253, 0.3);
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 45%, #0ea5e9 100%);
+      color: white;
+      font-weight: 700;
+      padding: 10px 14px;
+      transition: transform .2s ease, filter .2s ease;
+    }
+    .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .result-box {
+      margin-top: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      background: rgba(2, 6, 23, 0.56);
+      padding: 14px;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+    .emoji-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(125, 211, 252, 0.38);
+      background: rgba(30, 64, 175, 0.28);
+      font-size: 0.86rem;
+      margin: 3px;
+    }
+  </style>
+ </head>
+ <body>
+  <main class="max-w-5xl mx-auto px-4 py-8 md:py-10 space-y-6">
+   <section class="glass p-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+     <div>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200">📩 Tempmail Read</h1>
+      <p class="text-blue-100 mt-2">
+       Cek inbox email sementara dengan cepat. Cocok buat OTP, verifikasi, dan testing.
+      </p>
+     </div>
+     <a href="/public" class="btn-primary w-fit">⬅️ Kembali</a>
+    </div>
+    <div class="mt-4">
+     <span class="emoji-badge">📬 Inbox</span>
+     <span class="emoji-badge">🔐 OTP</span>
+     <span class="emoji-badge">⚡ Cepat</span>
+     <span class="emoji-badge">🧪 Testing</span>
+    </div>
+   </section>
+
+   <section class="glass p-6">
+    <h2 class="text-xl font-bold text-blue-200">Form Email</h2>
+    <form id="tempmail-form" class="mt-3 flex flex-col sm:flex-row gap-2">
+     <input class="field" id="tempmail-email" name="email" placeholder="email@guysmail.com" value="xupaxu2244@guysmail.com"/>
+     <button class="btn-primary" type="submit">Baca Inbox 🚀</button>
+    </form>
+    <div id="tempmail-result" class="result-box text-blue-100 mt-4">Masukkan email tempmail lalu baca inbox.</div>
+   </section>
+  </main>
+
+  <script defer src="/public-tempmail.js"></script>
+ </body>
+</html>
