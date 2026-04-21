@@ -27,11 +27,16 @@ function setPreview(target, source) {
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("upscale-form");
   const fileInput = document.getElementById("image-file");
+  const fileInfoNode = document.getElementById("upscale-file-info");
   const resultNode = document.getElementById("upscale-result");
 
   fileInput?.addEventListener("change", () => {
     const file = fileInput.files?.[0];
-    if (!file) return;
+    if (!file) {
+      if (fileInfoNode) fileInfoNode.textContent = "Belum ada file dipilih.";
+      return;
+    }
+    if (fileInfoNode) fileInfoNode.textContent = `File dipilih: ${file.name}`;
     setPreview("origin-preview", URL.createObjectURL(file));
   });
 
@@ -43,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    resultNode.textContent = "Uploading ke i.bb lalu upscale...";
+    resultNode.textContent = "Memproses gambar...";
     setPreview("result-preview", "");
     const formData = new FormData();
     formData.append("image", file);

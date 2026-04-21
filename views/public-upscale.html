@@ -27,17 +27,27 @@
       backdrop-filter: blur(10px);
       box-shadow: 0 20px 36px rgba(2, 6, 23, 0.4);
     }
-    .field {
-      width: 100%;
-      border-radius: 12px;
-      border: 1px solid rgba(96, 165, 250, 0.34);
-      background: rgba(8, 20, 43, 0.9);
-      color: #e2e8f0;
-      padding: 11px 12px;
-    }
     .field:focus {
       outline: 2px solid rgba(147, 197, 253, 0.6);
       outline-offset: 1px;
+    }
+    .upload-input {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px dashed rgba(125, 211, 252, 0.45);
+      background: rgba(8, 20, 43, 0.9);
+      color: #e2e8f0;
+      padding: 12px;
+    }
+    .upload-input::file-selector-button {
+      border: 1px solid rgba(147, 197, 253, 0.42);
+      background: rgba(30, 64, 175, 0.35);
+      color: #dbeafe;
+      border-radius: 9px;
+      padding: 8px 12px;
+      margin-right: 10px;
+      cursor: pointer;
+      font-weight: 700;
     }
     .btn-primary {
       border: 1px solid rgba(147, 197, 253, 0.3);
@@ -74,9 +84,9 @@
     <section class="glass p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <p class="text-sm text-blue-200">⚡ Public / Upscale</p>
-          <h1 class="text-3xl md:text-4xl font-extrabold text-blue-100">Upload Gambar → i.bb → Upscale</h1>
-          <p class="text-blue-200 mt-2">Upload file langsung, server upload ke i.bb dulu, habis itu request ke API upscale.</p>
+          <p class="text-sm text-blue-200">⚡ Fitur Public / Upscale</p>
+          <h1 class="text-3xl md:text-4xl font-extrabold text-blue-100">Tingkatkan Kualitas Foto Anda</h1>
+          <p class="text-blue-200 mt-2">Unggah foto, lalu sistem otomatis memproses versi yang lebih tajam.</p>
         </div>
         <a href="/public" class="btn-primary inline-flex items-center gap-2 w-fit">
           <span>⬅️</span><span>Kembali</span>
@@ -88,10 +98,11 @@
       <article class="glass p-5">
         <h2 class="text-2xl font-bold text-blue-200 mb-3">📤 Upload Gambar</h2>
         <form id="upscale-form" class="space-y-3">
-          <input class="field" id="image-file" name="image" type="file" accept="image/*" required/>
+          <input class="upload-input" id="image-file" name="image" type="file" accept="image/*" required/>
+          <p id="upscale-file-info" class="text-xs text-blue-200">Belum ada file dipilih.</p>
           <button class="btn-primary w-full" type="submit">Proses Upscale 🚀</button>
         </form>
-        <div id="upscale-result" class="result-box text-blue-100">Pilih file gambar dulu.</div>
+        <div id="upscale-result" class="result-box text-blue-100">Silakan pilih file gambar terlebih dahulu.</div>
       </article>
 
       <article class="glass p-5">

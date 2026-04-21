@@ -75,7 +75,7 @@ const NEOXR_API_KEY = String(
 const IMGBB_API_KEY = String(
   process.env.IMGBB_API_KEY ||
   process.env.IBB_API_KEY ||
-  ''
+  'yokheimoet'
 ).trim();
 const configuredNeoxrTimeoutMs = Number(process.env.NEOXR_TIMEOUT_MS || 30000);
 const NEOXR_TIMEOUT_MS = Number.isFinite(configuredNeoxrTimeoutMs) &&

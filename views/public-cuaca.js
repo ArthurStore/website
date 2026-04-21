@@ -18,18 +18,18 @@ function toPrettyJson(payload) {
 function weatherVisualMeta(weatherText) {
   const raw = String(weatherText || "").toLowerCase();
   if (raw.includes("hujan") || raw.includes("rain")) {
-    return { mode: "weather-rainy", icon: "fas fa-cloud-showers-heavy", label: "Cuaca Hujan" };
+    return { mode: "weather-rainy", icon: "fas fa-cloud-showers-heavy", label: "Cuaca Hujan", emoji: "🌧️" };
   }
   if (raw.includes("badai") || raw.includes("petir") || raw.includes("storm")) {
-    return { mode: "weather-storm", icon: "fas fa-bolt", label: "Cuaca Badai" };
+    return { mode: "weather-storm", icon: "fas fa-bolt", label: "Cuaca Badai", emoji: "⛈️" };
   }
   if (raw.includes("berawan") || raw.includes("cloud")) {
-    return { mode: "weather-cloudy", icon: "fas fa-cloud-sun", label: "Cuaca Berawan" };
+    return { mode: "weather-cloudy", icon: "fas fa-cloud-sun", label: "Cuaca Berawan", emoji: "⛅" };
   }
   if (raw.includes("cerah") || raw.includes("sun")) {
-    return { mode: "weather-sunny", icon: "fas fa-sun", label: "Cuaca Cerah" };
+    return { mode: "weather-sunny", icon: "fas fa-sun", label: "Cuaca Cerah", emoji: "☀️" };
   }
-  return { mode: "weather-cloudy", icon: "fas fa-smog", label: "Cuaca" };
+  return { mode: "weather-cloudy", icon: "fas fa-smog", label: "Cuaca", emoji: "🌤️" };
 }
 
 async function requestJson(url) {
@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="forecast-item">
             <div class="flex items-center justify-between gap-2">
               <strong>${escapeHtml(String(item?.time || "-"))}</strong>
-              <i class="${itemVisual.icon}" aria-label="${escapeHtml(itemVisual.label)}"></i>
+              <span>${itemVisual.emoji}</span>
             </div>
             <div class="mt-1">${escapeHtml(String(item?.weather || "-"))}</div>
             <div class="text-blue-300 mt-1">${escapeHtml(String(item?.temperature ?? "-"))}°C • Angin ${escapeHtml(String(item?.wind || "-"))}</div>
@@ -96,7 +96,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       resultNode.innerHTML = `
         <div class="weather-hero ${visual.mode}">
-          <div class="weather-icon" aria-hidden="true"><i class="${visual.icon}"></i></div>
+          <div class="weather-icon" aria-hidden="true">
+            <span class="weather-emoji">${visual.emoji}</span>
+            <i class="${visual.icon} weather-icon-fallback"></i>
+          </div>
           <div>
             <h3 class="text-xl font-bold text-white">${escapeHtml(String(current?.weather || "Kondisi Tidak Diketahui"))}</h3>
             <p class="text-blue-100">${escapeHtml(locationText || "Lokasi tidak diketahui")}</p>

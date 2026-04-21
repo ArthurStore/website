@@ -80,8 +80,8 @@
    <section class="glass p-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
      <div>
-      <h1 class="text-3xl md:text-4xl font-extrabold text-purple-200">✨ Public Remini</h1>
-      <p class="text-purple-100 mt-2">Upload foto → server upload ke i.bb → request ke API Remini 🔧🖼️</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-purple-200">✨ Perjelas Foto (Remini)</h1>
+      <p class="text-purple-100 mt-2">Upload foto, lalu sistem akan memproses peningkatan kualitas otomatis.</p>
      </div>
      <div class="flex gap-2 flex-wrap">
       <a class="btn" href="/public"><i class="fas fa-th-large"></i>Hub Public</a>
@@ -92,14 +92,15 @@
 
    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
     <article class="glass p-6 space-y-4">
-     <h2 class="text-2xl font-bold text-purple-200"><i class="fas fa-upload mr-2"></i>Upload Foto</h2>
+     <h2 class="text-2xl font-bold text-purple-200"><i class="fas fa-upload mr-2"></i>Pilih Foto</h2>
      <label class="dropzone">
       <input id="remini-file" accept="image/*" type="file"/>
-      <p class="text-lg font-semibold text-purple-100">📷 Drop / pilih file di sini</p>
-      <p class="text-sm text-purple-200 mt-2">Format: JPG/PNG/WEBP • max sesuai limit server</p>
+      <p class="text-lg font-semibold text-purple-100">📷 Klik di sini untuk pilih file foto</p>
+      <p class="text-sm text-purple-200 mt-2">Format: JPG / PNG / WEBP • ukuran mengikuti batas server</p>
      </label>
+     <p id="remini-file-name" class="text-sm text-purple-200">Belum ada file dipilih.</p>
      <button class="btn w-full" id="remini-submit" type="button"><i class="fas fa-magic"></i>Proses Remini</button>
-     <div class="result text-purple-100" id="remini-result">Menunggu file dipilih.</div>
+     <div class="result text-purple-100" id="remini-result">Silakan pilih file foto terlebih dahulu.</div>
     </article>
 
     <article class="glass p-6 space-y-4">

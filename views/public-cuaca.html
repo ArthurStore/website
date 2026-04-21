@@ -64,7 +64,24 @@
       gap: 12px;
       align-items: center;
     }
-    .weather-sunny { background: linear-gradient(130deg, rgba(251, 191, 36, 0.37), rgba(14, 165, 233, 0.16)); }
+    .weather-sunny {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(130deg, rgba(251, 191, 36, 0.37), rgba(14, 165, 233, 0.16));
+    }
+    .weather-sunny::after {
+      content: "";
+      position: absolute;
+      width: 110px;
+      height: 110px;
+      border-radius: 999px;
+      right: -20px;
+      bottom: -30px;
+      background: radial-gradient(circle, rgba(253, 224, 71, 0.95), rgba(245, 158, 11, 0.35) 58%, rgba(245, 158, 11, 0) 72%);
+      animation: sunRiseGlow 3.8s ease-in-out infinite alternate;
+      box-shadow: 0 0 24px rgba(251, 191, 36, 0.35);
+      pointer-events: none;
+    }
     .weather-cloudy { background: linear-gradient(130deg, rgba(148, 163, 184, 0.35), rgba(30, 64, 175, 0.2)); }
     .weather-rainy { background: linear-gradient(130deg, rgba(14, 165, 233, 0.3), rgba(30, 41, 59, 0.38)); }
     .weather-storm { background: linear-gradient(130deg, rgba(99, 102, 241, 0.34), rgba(17, 24, 39, 0.52)); }
@@ -91,6 +108,16 @@
       padding: 10px;
       font-size: 0.86rem;
     }
+    @keyframes sunRiseGlow {
+      0% {
+        transform: translateY(12px) scale(0.92);
+        opacity: 0.82;
+      }
+      100% {
+        transform: translateY(-8px) scale(1.08);
+        opacity: 1;
+      }
+    }
   </style>
  </head>
  <body>
@@ -98,8 +125,8 @@
    <section class="glass p-6">
     <div class="flex flex-col lg:flex-row gap-5 items-start lg:items-center lg:justify-between">
      <div>
-      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200">☀️ Public Cuaca Visual</h1>
-      <p class="text-blue-100 mt-2 max-w-2xl">Isi nama subdistrict lalu lihat cuaca tampil visual. Kalo cerah, aura matahari ikut nongol biar mantep 😎</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200">☀️ Cek Cuaca</h1>
+      <p class="text-blue-100 mt-2 max-w-2xl">Masukkan nama wilayah untuk melihat cuaca saat ini dan prakiraan jam berikutnya.</p>
      </div>
      <div class="flex flex-wrap gap-2">
       <a href="/public" class="btn inline-flex items-center gap-2"><i class="fas fa-th-large"></i><span>Hub Public</span></a>
@@ -113,7 +140,7 @@
      <h2 class="text-xl font-bold text-blue-300 mb-3"><i class="fas fa-map-marker-alt mr-2"></i>Cari Lokasi</h2>
      <form id="weather-form" class="space-y-3">
       <input class="field" id="subdistrict" name="subdistrict" placeholder="Contoh: batang" value="batang"/>
-      <button class="btn w-full" type="submit">Cek Cuaca Sekarang</button>
+      <button class="btn w-full" type="submit">Lihat Cuaca</button>
      </form>
      <div class="mt-4 text-sm text-blue-200">
       <p>🌤️ Cerah → icon matahari</p>
@@ -124,7 +151,7 @@
     </article>
     <article class="glass p-5 lg:col-span-2">
      <h2 class="text-xl font-bold text-blue-300 mb-3"><i class="fas fa-cloud-sun mr-2"></i>Panel Cuaca</h2>
-     <div id="weather-result" class="result-box text-blue-100">Klik "Cek Cuaca Sekarang" biar data turun dari langit ☁️</div>
+     <div id="weather-result" class="result-box text-blue-100">Tekan "Lihat Cuaca" untuk memuat data wilayah kamu.</div>
     </article>
    </section>
   </main>

@@ -28,10 +28,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("remini-file");
   const submitButton = document.getElementById("remini-submit");
   const resultNode = document.getElementById("remini-result");
+  const fileNameNode = document.getElementById("remini-file-name");
 
   fileInput?.addEventListener("change", () => {
     const file = fileInput.files?.[0];
-    if (!file) return;
+    if (!file) {
+      if (fileNameNode) fileNameNode.textContent = "Belum ada file dipilih.";
+      return;
+    }
+    if (fileNameNode) fileNameNode.textContent = `Foto dipilih: ${file.name}`;
     setPreview("remini-before", URL.createObjectURL(file));
   });
 
@@ -41,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
       resultNode.textContent = "Pilih file foto dulu.";
       return;
     }
-    resultNode.textContent = "Uploading ke i.bb lalu proses remini...";
+    resultNode.textContent = "Memproses foto, mohon tunggu sebentar...";
     setPreview("remini-after", "");
 
     const formData = new FormData();
