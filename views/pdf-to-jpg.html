@@ -97,7 +97,7 @@
     <section class="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
       <div class="glass rounded-2xl p-6 md:p-7">
         <h2 class="text-xl font-semibold text-blue-100">Konversi PDF ke JPG</h2>
-        <p class="mt-2 text-sm text-blue-200">Upload 1 file PDF. Sistem akan membuat URL temporary otomatis (aktif 24 jam) lalu kirim ke API converter.</p>
+        <p class="mt-2 text-sm text-blue-200">Upload 1 file PDF. Sistem akan upload source ke Catbox/Litterbox dulu, lalu URL source itu dipakai untuk API converter (bukan URL temporary server).</p>
 
         <form id="converter-form" class="mt-5 space-y-4">
           <div>
@@ -154,7 +154,7 @@
           <p class="font-semibold text-blue-100">Catatan:</p>
           <ul class="mt-2 list-inside list-disc space-y-1">
             <li>Aplikasi ini tidak membatasi ukuran file dari sisi backend lokal.</li>
-            <li>File PDF akan punya URL temporary internal selama 24 jam untuk kebutuhan convert.</li>
+            <li>File temporary internal hanya untuk debug/log, bukan source utama ke converter.</li>
             <li>Jika provider API punya batas internal, itu di luar kontrol aplikasi ini.</li>
           </ul>
         </div>
@@ -343,8 +343,9 @@
 
         const converterSource = payload.converterSource || {};
         appendLog('Sumber converter', converterSource);
-        if (converterSource.type === 'catbox' && converterSource.url) {
-          catboxLink.textContent = `Catbox Source: ${converterSource.url}`;
+        if ((converterSource.type === 'catbox' || converterSource.type === 'litterbox') && converterSource.url) {
+          const sourceLabel = converterSource.type === 'litterbox' ? 'Litterbox Source' : 'Catbox Source';
+          catboxLink.textContent = `${sourceLabel}: ${converterSource.url}`;
           catboxLink.href = converterSource.url;
           catboxLink.classList.remove('hidden');
           appendLog('Upload Catbox berhasil', converterSource.url);

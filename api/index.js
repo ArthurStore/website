@@ -65,16 +65,6 @@ const PDF_TMP_PUBLIC_BASE_URL = String(
 ).trim().replace(/\/+$/, '');
 const CATBOX_UPLOAD_ENDPOINT = String(process.env.CATBOX_UPLOAD_ENDPOINT || 'https://catbox.moe/user/api.php').trim();
 const CATBOX_USER_HASH = String(process.env.CATBOX_USER_HASH || '').trim();
-const LITTERBOX_UPLOAD_ENDPOINT = String(
-  process.env.LITTERBOX_UPLOAD_ENDPOINT ||
-  'https://litterbox.catbox.moe/resources/internals/api.php'
-).trim();
-const configuredLitterboxHours = Number(process.env.LITTERBOX_RETENTION_HOURS || 72);
-const LITTERBOX_RETENTION_HOURS = Number.isFinite(configuredLitterboxHours) &&
-  configuredLitterboxHours >= 1 &&
-  configuredLitterboxHours <= 72
-  ? Math.floor(configuredLitterboxHours)
-  : 72;
 const configuredCatboxTimeoutMs = Number(process.env.CATBOX_TIMEOUT_MS || 300000);
 const CATBOX_TIMEOUT_MS = Number.isFinite(configuredCatboxTimeoutMs) &&
   configuredCatboxTimeoutMs >= 5000 &&
@@ -544,7 +534,7 @@ async function uploadPdfToCatbox(localFilePath, originalName, mimeType) {
       const payload = new FormData();
       payload.append('reqtype', 'fileupload');
       if (attempt.useUserHash && CATBOX_USER_HASH) payload.append('userhash', CATBOX_USER_HASH);
-      if (attempt.provider === 'litterbox') payload.append('time', String(attempt.retentionHours || 72));
+      if (attempt.provider === 'litterbox') payload.append('time', `${String(attempt.retentionHours || 72)}h`);
       payload.append(
         'fileToUpload',
         new Blob([fileBuffer], { type: safeMimeType }),
@@ -637,45 +627,28 @@ async function runPdfConversionQuickTest(req) {
       report.catbox.elapsedMs = Date.now() - catboxStart;
     }
 
-    const converterStart = Date.now();
-    let sourceType = '';
-    let sourceUrl = '';
     if (report.catbox.ok && report.catbox.url) {
-      sourceType = 'catbox';
-      sourceUrl = report.catbox.url;
-    } else {
-      token = crypto.randomBytes(18).toString('hex');
-      const createdAt = Date.now();
-      const expiresAt = createdAt + PDF_TEMP_TTL_MS;
-      pdfTempUploads.set(token, {
-        token,
-        filePath: samplePath,
-        originalName: sampleName,
-        sizeBytes: sampleBytes.length,
-        createdAt,
-        expiresAt
-      });
-      sourceType = 'server-temp-url';
-      sourceUrl = buildPdfTempPublicUrl(req, token);
-      if (!sourceUrl) {
-        throw new Error('Quick test gagal: URL public temporary tidak dapat dibuat.');
+      const converterStart = Date.now();
+      report.converter.sourceType = 'catbox';
+      try {
+        const payload = await convertPdfByUrl(report.catbox.url, 'quick-test', 'jpg', {
+          timeoutMs: PDF_CONVERTER_HEALTHCHECK_TIMEOUT_MS
+        });
+        report.converter.ok = true;
+        report.converter.message = payload?.message || payload?.msg || 'Converter merespons sukses.';
+        report.converter.upstream = payload;
+      } catch (converterError) {
+        report.converter.message = converterError?.message || 'Converter test gagal.';
+        report.converter.statusCode = Number(converterError?.statusCode) || null;
+        report.converter.upstream = converterError?.payload || null;
+      } finally {
+        report.converter.elapsedMs = Date.now() - converterStart;
       }
-    }
-
-    report.converter.sourceType = sourceType;
-    try {
-      const payload = await convertPdfByUrl(sourceUrl, 'quick-test', 'jpg', {
-        timeoutMs: PDF_CONVERTER_HEALTHCHECK_TIMEOUT_MS
-      });
-      report.converter.ok = true;
-      report.converter.message = payload?.message || payload?.msg || 'Converter merespons sukses.';
-      report.converter.upstream = payload;
-    } catch (converterError) {
-      report.converter.message = converterError?.message || 'Converter test gagal.';
-      report.converter.statusCode = Number(converterError?.statusCode) || null;
-      report.converter.upstream = converterError?.payload || null;
-    } finally {
-      report.converter.elapsedMs = Date.now() - converterStart;
+    } else {
+      report.converter.ok = false;
+      report.converter.sourceType = 'catbox';
+      report.converter.message = 'Quick test dihentikan karena upload Catbox/Litterbox gagal.';
+      report.converter.statusCode = 502;
     }
   } finally {
     if (token && pdfTempUploads.has(token)) {
@@ -1486,16 +1459,11 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
     });
 
     const tempPdfUrl = buildPdfTempPublicUrl(req, token);
-    const tempPdfUrlUsable = Boolean(
-      tempPdfUrl &&
-      !/https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|::1)(:\d+)?/i.test(tempPdfUrl)
-    );
 
     try {
       let payload = null;
       let converterSourceUrl = '';
       let converterSourceType = '';
-      let usedFallbackSource = false;
       let githubFallback = null;
 
       try {
@@ -1527,15 +1495,7 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
             statusCode: Number(primaryError?.statusCode) || null
           });
         }
-        if (!tempPdfUrlUsable) {
-          throw primaryError;
-        }
-        converterSourceUrl = tempPdfUrl;
-        converterSourceType = 'server-temp-url';
-        usedFallbackSource = true;
-        pushTrace('fallback-server-temp-start', { url: tempPdfUrl });
-        payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
-        pushTrace('fallback-server-temp-success', {});
+        throw primaryError;
       }
 
       if (payload && typeof payload === 'object' && payload.status === false && isUnsupportedCdnError(payload)) {
@@ -1569,7 +1529,7 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
         converterSource: {
           url: converterSourceUrl,
           type: converterSourceType,
-          fallback: usedFallbackSource || Boolean(githubFallback),
+          fallback: Boolean(githubFallback),
           githubPath: githubFallback?.path || null
         },
         catbox: catboxDebug,
@@ -1672,9 +1632,9 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
 
       const statusCode = Number(err?.statusCode) || 502;
       const hint = statusCode === 504
-        ? 'Upload Catbox atau provider converter timeout. Coba lagi dengan file lebih kecil atau ulang beberapa saat lagi.'
+        ? 'Upload Catbox/Litterbox atau provider converter timeout. Coba lagi dengan file lebih kecil atau ulang beberapa saat lagi.'
         : statusCode === 502
-          ? 'Upload Catbox atau koneksi ke provider converter sedang bermasalah.'
+          ? 'Upload source Catbox/Litterbox gagal atau provider converter sedang bermasalah.'
           : undefined;
       return res.status(statusCode).json({
         message: err.message || 'Gagal menghubungi provider converter.',
