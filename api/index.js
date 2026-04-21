@@ -1274,6 +1274,28 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '')
       .slice(0, 80) || 'converted';
+    const requestId = crypto.randomBytes(4).toString('hex');
+    const debugTraces = [];
+    const pushTrace = (step, details = {}) => {
+      const entry = { at: Date.now(), step, ...details };
+      debugTraces.push(entry);
+      try {
+        console.log(`[pdf-to-jpg:${requestId}] ${step} ${JSON.stringify(details)}`);
+      } catch (_error) {
+        console.log(`[pdf-to-jpg:${requestId}] ${step}`);
+      }
+    };
+    const catboxDebug = {
+      uploaded: false,
+      url: null,
+      error: null
+    };
+    pushTrace('request-received', {
+      fileName: file.originalname,
+      sizeBytes: file.size || 0,
+      mime: file.mimetype || 'application/pdf',
+      targetFormat: to
+    });
 
     const token = crypto.randomBytes(18).toString('hex');
     const createdAt = Date.now();
@@ -1301,18 +1323,43 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
       let githubFallback = null;
 
       try {
+        pushTrace('catbox-upload-start', { endpoint: CATBOX_UPLOAD_ENDPOINT });
         const catboxUpload = await uploadPdfToCatbox(file.path, file.originalname, file.mimetype);
+        catboxDebug.uploaded = true;
+        catboxDebug.url = catboxUpload.url;
+        pushTrace('catbox-upload-success', { url: catboxUpload.url });
         converterSourceUrl = catboxUpload.url;
         converterSourceType = 'catbox';
+        pushTrace('converter-request-start', { sourceType: converterSourceType });
         payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
+        pushTrace('converter-request-success', { sourceType: converterSourceType });
       } catch (primaryError) {
+        if (!catboxDebug.uploaded) {
+          catboxDebug.error = {
+            message: primaryError?.message || 'Upload ke Catbox gagal.',
+            statusCode: Number(primaryError?.statusCode) || null,
+            upstream: primaryError?.payload || null
+          };
+          pushTrace('catbox-upload-failed', {
+            message: catboxDebug.error.message,
+            statusCode: catboxDebug.error.statusCode
+          });
+        } else {
+          pushTrace('converter-request-failed', {
+            sourceType: 'catbox',
+            message: primaryError?.message || 'Request ke converter gagal.',
+            statusCode: Number(primaryError?.statusCode) || null
+          });
+        }
         if (!tempPdfUrlUsable) {
           throw primaryError;
         }
         converterSourceUrl = tempPdfUrl;
         converterSourceType = 'server-temp-url';
         usedFallbackSource = true;
+        pushTrace('fallback-server-temp-start', { url: tempPdfUrl });
         payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
+        pushTrace('fallback-server-temp-success', {});
       }
 
       if (payload && typeof payload === 'object' && payload.status === false && isUnsupportedCdnError(payload)) {
@@ -1349,9 +1396,18 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
           fallback: usedFallbackSource || Boolean(githubFallback),
           githubPath: githubFallback?.path || null
         },
+        catbox: catboxDebug,
+        debug: {
+          requestId,
+          traces: debugTraces
+        },
         upstream: payload
       });
     } catch (err) {
+      pushTrace('request-error', {
+        message: err?.message || 'Unknown error',
+        statusCode: Number(err?.statusCode) || null
+      });
       if (isUnsupportedCdnError(err)) {
         if (!isGithubRawFallbackConfigured()) {
           return res.status(502).json({
@@ -1364,13 +1420,21 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
               sizeBytes: file.size || 0,
               expiresAt
             },
+            catbox: catboxDebug,
+            debug: {
+              requestId,
+              traces: debugTraces
+            },
             upstream: err?.payload || null
           });
         }
 
         try {
+          pushTrace('github-fallback-start', {});
           const githubFallback = await uploadPdfToGitHubRaw(file.path, file.originalname, PDF_CONVERTER_GITHUB_TOKEN);
+          pushTrace('github-fallback-upload-success', { url: githubFallback.url, path: githubFallback.path });
           const retriedPayload = await convertPdfByUrl(githubFallback.url, safeFilename, to);
+          pushTrace('github-fallback-convert-success', {});
           const imageLinks = [];
           collectImageLinks(retriedPayload, imageLinks);
           const uniqueImageLinks = [...new Set(imageLinks)];
@@ -1397,9 +1461,18 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
               fallback: true,
               githubPath: githubFallback.path
             },
+            catbox: catboxDebug,
+            debug: {
+              requestId,
+              traces: debugTraces
+            },
             upstream: retriedPayload
           });
         } catch (retryError) {
+          pushTrace('github-fallback-failed', {
+            message: retryError?.message || 'Fallback GitHub gagal.',
+            statusCode: Number(retryError?.statusCode) || null
+          });
           const retryStatus = Number(retryError?.statusCode) || 502;
           return res.status(retryStatus).json({
             message: retryError.message || 'Fallback GitHub raw gagal.',
@@ -1410,6 +1483,11 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
               originalName: file.originalname,
               sizeBytes: file.size || 0,
               expiresAt
+            },
+            catbox: catboxDebug,
+            debug: {
+              requestId,
+              traces: debugTraces
             },
             upstream: retryError?.payload || err?.payload || null
           });
@@ -1431,6 +1509,11 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
           originalName: file.originalname,
           sizeBytes: file.size || 0,
           expiresAt
+        },
+        catbox: catboxDebug,
+        debug: {
+          requestId,
+          traces: debugTraces
         },
         upstream: err?.payload || null
       });
