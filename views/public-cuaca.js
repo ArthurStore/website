@@ -32,6 +32,43 @@ function weatherVisualMeta(weatherText) {
   return { mode: "weather-cloudy", icon: "fas fa-smog", label: "Cuaca", emoji: "🌤️" };
 }
 
+function weatherSceneDecor(mode) {
+  if (mode === "weather-sunny") {
+    return `
+      <div class="weather-fx weather-fx-sun" aria-hidden="true">
+        <span class="sun-ray-ring"></span>
+      </div>`;
+  }
+  if (mode === "weather-rainy") {
+    return `<div class="weather-fx weather-fx-rain" aria-hidden="true"></div>`;
+  }
+  if (mode === "weather-storm") {
+    return `
+      <div class="weather-fx weather-fx-rain weather-fx-storm" aria-hidden="true"></div>
+      <div class="lightning-flash" aria-hidden="true"></div>`;
+  }
+  if (mode === "weather-cloudy") {
+    return `
+      <div class="weather-fx weather-fx-clouds" aria-hidden="true">
+        <span class="cloud c1"></span>
+        <span class="cloud c2"></span>
+        <span class="cloud c3"></span>
+      </div>`;
+  }
+  return "";
+}
+
+function weatherIconClass(mode) {
+  const modes = {
+    "weather-sunny": "weather-icon-sunny",
+    "weather-rainy": "weather-icon-rainy",
+    "weather-storm": "weather-icon-storm",
+    "weather-cloudy": "weather-icon-cloudy"
+  };
+  const extra = modes[mode] || "weather-icon-cloudy";
+  return `weather-icon ${extra}`;
+}
+
 async function requestJson(url) {
   const response = await fetch(url, { method: "GET", headers: { Accept: "application/json" } });
   let payload = {};
@@ -86,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="forecast-item">
             <div class="flex items-center justify-between gap-2">
               <strong>${escapeHtml(String(item?.time || "-"))}</strong>
-              <span>${itemVisual.emoji}</span>
+              <span class="forecast-emoji" aria-hidden="true">${itemVisual.emoji}</span>
             </div>
             <div class="mt-1">${escapeHtml(String(item?.weather || "-"))}</div>
             <div class="text-blue-300 mt-1">${escapeHtml(String(item?.temperature ?? "-"))}°C • Angin ${escapeHtml(String(item?.wind || "-"))}</div>
@@ -96,14 +133,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       resultNode.innerHTML = `
         <div class="weather-hero ${visual.mode}">
-          <div class="weather-icon" aria-hidden="true">
-            <span class="weather-emoji">${visual.emoji}</span>
-            <i class="${visual.icon} weather-icon-fallback"></i>
-          </div>
-          <div>
-            <h3 class="text-xl font-bold text-white">${escapeHtml(String(current?.weather || "Kondisi Tidak Diketahui"))}</h3>
-            <p class="text-blue-100">${escapeHtml(locationText || "Lokasi tidak diketahui")}</p>
-            <p class="text-blue-100 mt-1">Suhu: <strong>${escapeHtml(String(current?.temperature ?? "-"))}°C</strong> • Angin: ${escapeHtml(String(current?.wind || "-"))}</p>
+          ${weatherSceneDecor(visual.mode)}
+          <div class="weather-hero-inner">
+            <div class="${weatherIconClass(visual.mode)}" aria-hidden="true">
+              <span class="weather-emoji-wrap">
+                <span class="weather-emoji">${visual.emoji}</span>
+              </span>
+              <i class="${visual.icon} weather-icon-fallback"></i>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-white">${escapeHtml(String(current?.weather || "Kondisi Tidak Diketahui"))}</h3>
+              <p class="text-blue-100">${escapeHtml(locationText || "Lokasi tidak diketahui")}</p>
+              <p class="text-blue-100 mt-1">Suhu: <strong>${escapeHtml(String(current?.temperature ?? "-"))}°C</strong> • Angin: ${escapeHtml(String(current?.wind || "-"))}</p>
+            </div>
           </div>
         </div>
         <div class="forecast-grid">${forecastHtml}</div>

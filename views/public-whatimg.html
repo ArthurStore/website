@@ -1,0 +1,76 @@
+<html class="scroll-smooth" lang="id">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>Tebak Gambar · Whatimg</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      color: #e0f2fe;
+      background:
+        radial-gradient(circle at 18% 16%, rgba(52, 211, 153, 0.14), transparent 42%),
+        radial-gradient(circle at 82% 12%, rgba(59, 130, 246, 0.18), transparent 40%),
+        linear-gradient(142deg, #020617 0%, #0f172a 48%, #052e16 100%);
+    }
+    h1, h2 { font-family: Outfit, "Plus Jakarta Sans", sans-serif; letter-spacing: -0.02em; }
+    .glass {
+      border-radius: 18px;
+      border: 1px solid rgba(52, 211, 153, 0.22);
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 36px rgba(2, 6, 23, 0.42);
+    }
+    .btn {
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-weight: 700;
+      border: 1px solid rgba(52, 211, 153, 0.35);
+      background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #2563eb 100%);
+      color: #fff;
+      cursor: pointer;
+      transition: transform .15s ease, filter .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <main class="max-w-3xl mx-auto px-4 py-8 md:py-12 space-y-6">
+    <section class="glass p-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold text-emerald-200">🎯 Tebak Gambar</h1>
+          <p class="text-emerald-100/90 mt-2 text-sm">Permainan tebak gambar lewat API NeoXR (<code class="text-cyan-300">whatimg</code>). Respons bisa berisi gambar atau teks petunjuk sesuai payload provider.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <a class="btn no-underline inline-flex items-center gap-2" href="/public"><i class="fas fa-th-large"></i>Hub</a>
+          <a class="btn no-underline inline-flex items-center gap-2" href="/"><i class="fas fa-home"></i>Beranda</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass p-6 space-y-4">
+      <h2 class="text-lg font-semibold text-emerald-200">Ambil soal</h2>
+      <p class="text-sm text-slate-300">Opsional: tambah parameter query jika dokumentasi NeoXR memerlukannya (contoh <code class="text-cyan-200">level=1</code>).</p>
+      <input id="extra-query" class="w-full rounded-xl border border-emerald-500/30 bg-slate-950/60 px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500" placeholder="contoh: level=1 (kosongkan jika tidak perlu)"/>
+      <button type="button" class="btn w-full md:w-auto" id="btn-fetch"><i class="fas fa-sync-alt mr-2"></i>Ambil / refresh soal</button>
+      <div id="img-slot" class="hidden rounded-xl border border-emerald-500/25 bg-slate-950/50 p-3 text-center"></div>
+      <pre id="out" class="rounded-xl border border-slate-600/40 bg-slate-950/70 p-4 text-slate-200">Tekan tombol di atas untuk memuat data dari API.</pre>
+    </section>
+  </main>
+  <script defer src="/public-whatimg.js"></script>
+</body>
+</html>

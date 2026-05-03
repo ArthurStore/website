@@ -26,9 +26,14 @@ function setPreview(targetId, source) {
 
 document.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("remini-file");
+  const browseButton = document.getElementById("remini-browse");
   const submitButton = document.getElementById("remini-submit");
   const resultNode = document.getElementById("remini-result");
   const fileNameNode = document.getElementById("remini-file-name");
+
+  browseButton?.addEventListener("click", () => {
+    fileInput?.click();
+  });
 
   fileInput?.addEventListener("change", () => {
     const file = fileInput.files?.[0];

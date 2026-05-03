@@ -6,10 +6,14 @@
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
   <style>
+    h1 {
+      font-family: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: -0.03em;
+    }
     body {
-      font-family: "Poppins", sans-serif;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
       margin: 0;
       min-height: 100vh;
       color: #dbeafe;
@@ -66,6 +70,51 @@
     .fx-mail::after { background: radial-gradient(circle, #93c5fd, transparent 70%); }
     .fx-up::after { background: radial-gradient(circle, #67e8f9, transparent 70%); }
     .fx-remini::after { background: radial-gradient(circle, #a5b4fc, transparent 70%); }
+    .fx-guess::after { background: radial-gradient(circle, #34d399, transparent 70%); }
+    .fx-ai::after { background: radial-gradient(circle, #c084fc, transparent 70%); }
+    .hub-menu-wrap { position: relative; }
+    .hub-menu-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid rgba(125, 211, 252, 0.45);
+      background: rgba(15, 23, 42, 0.85);
+      color: #e0f2fe;
+      font-size: 1.35rem;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 2px;
+    }
+    .hub-menu-btn:hover { border-color: rgba(147, 197, 253, 0.85); background: rgba(30, 58, 138, 0.55); }
+    .hub-menu-panel {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      min-width: 220px;
+      z-index: 40;
+      border-radius: 14px;
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      background: rgba(15, 23, 42, 0.96);
+      box-shadow: 0 16px 36px rgba(2, 6, 23, 0.55);
+      padding: 8px;
+    }
+    .hub-menu-panel.open { display: block; }
+    .hub-menu-panel a {
+      display: block;
+      padding: 10px 12px;
+      border-radius: 10px;
+      color: #dbeafe;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .hub-menu-panel a:hover { background: rgba(59, 130, 246, 0.25); }
+    .hub-head-actions { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
   </style>
  </head>
  <body>
@@ -78,7 +127,16 @@
        Pilih fitur yang kamu butuhkan. Semua halaman dibuat sederhana, jelas, dan siap dipakai langsung.
       </p>
      </div>
-     <a href="/" class="btn-go">⬅️ Kembali ke Beranda</a>
+     <div class="hub-head-actions">
+      <div class="hub-menu-wrap">
+       <button type="button" class="hub-menu-btn" id="hub-more-btn" aria-expanded="false" aria-haspopup="true" title="Menu lainnya">⋯</button>
+       <div class="hub-menu-panel" id="hub-more-panel" role="menu">
+        <a role="menuitem" href="/admin/bot-status">📊 Status VPS (admin)</a>
+        <a role="menuitem" href="/admin">🔐 Login admin</a>
+       </div>
+      </div>
+      <a href="/" class="btn-go">⬅️ Kembali ke Beranda</a>
+     </div>
     </div>
    </section>
 
@@ -118,7 +176,42 @@
       </p>
       <div class="mt-5"><a class="btn-go" href="/public/remini">Buka /public/remini</a></div>
     </article>
+
+    <article class="glass feature-card fx-guess p-6">
+      <div class="emoji">🎯</div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tebak Gambar</h2>
+      <p class="text-blue-100 mt-2">
+        Permainan tebak gambar via API NeoXR whatimg — ambil soal dan jawab sesuai petunjuk respons.
+      </p>
+      <div class="mt-5"><a class="btn-go" href="/public/whatimg">Buka /public/whatimg</a></div>
+    </article>
+
+    <article class="glass feature-card fx-ai p-6">
+      <div class="emoji">🤖</div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">AI Blackbox</h2>
+      <p class="text-blue-100 mt-2">
+        Chat ringkas dengan AI Blackbox NeoXR untuk pertanyaan teks (POST aman untuk prompt panjang).
+      </p>
+      <div class="mt-5"><a class="btn-go" href="/public/blackbox">Buka /public/blackbox</a></div>
+    </article>
    </section>
   </main>
+  <script>
+    (function () {
+      var btn = document.getElementById("hub-more-btn");
+      var panel = document.getElementById("hub-more-panel");
+      if (!btn || !panel) return;
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = panel.classList.toggle("open");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      document.addEventListener("click", function () {
+        panel.classList.remove("open");
+        btn.setAttribute("aria-expanded", "false");
+      });
+      panel.addEventListener("click", function (e) { e.stopPropagation(); });
+    })();
+  </script>
  </body>
 </html>

@@ -49,12 +49,23 @@
       padding: 30px 20px;
       text-align: center;
       background: rgba(17, 24, 39, 0.55);
+      min-height: 148px;
+      cursor: pointer;
     }
     .dropzone input[type=file] {
       position: absolute;
       inset: 0;
+      width: 100%;
+      height: 100%;
       opacity: 0;
       cursor: pointer;
+      z-index: 4;
+      font-size: 0;
+    }
+    .dropzone-inner {
+      position: relative;
+      z-index: 1;
+      pointer-events: none;
     }
     .preview {
       width: 100%;
@@ -93,11 +104,14 @@
    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
     <article class="glass p-6 space-y-4">
      <h2 class="text-2xl font-bold text-purple-200"><i class="fas fa-upload mr-2"></i>Pilih Foto</h2>
-     <label class="dropzone">
+     <label class="dropzone" for="remini-file">
       <input id="remini-file" accept="image/*" type="file"/>
-      <p class="text-lg font-semibold text-purple-100">📷 Klik di sini untuk pilih file foto</p>
-      <p class="text-sm text-purple-200 mt-2">Format: JPG / PNG / WEBP • ukuran mengikuti batas server</p>
+      <div class="dropzone-inner">
+       <p class="text-lg font-semibold text-purple-100">📷 Klik area ini atau tombol di bawah untuk pilih foto</p>
+       <p class="text-sm text-purple-200 mt-2">Format: JPG / PNG / WEBP • ukuran mengikuti batas server</p>
+      </div>
      </label>
+     <button type="button" class="btn w-full" id="remini-browse"><i class="fas fa-folder-open"></i>Pilih file dari perangkat</button>
      <p id="remini-file-name" class="text-sm text-purple-200">Belum ada file dipilih.</p>
      <button class="btn w-full" id="remini-submit" type="button"><i class="fas fa-magic"></i>Proses Remini</button>
      <div class="result text-purple-100" id="remini-result">Silakan pilih file foto terlebih dahulu.</div>

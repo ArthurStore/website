@@ -1,0 +1,74 @@
+<html class="scroll-smooth" lang="id">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>AI Blackbox · NeoXR</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      color: #e0e7ff;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(129, 140, 248, 0.18), transparent 40%),
+        radial-gradient(circle at 88% 14%, rgba(236, 72, 153, 0.12), transparent 42%),
+        linear-gradient(145deg, #020617 0%, #1e1b4b 46%, #020617 100%);
+    }
+    h1, h2 { font-family: Outfit, "Plus Jakarta Sans", sans-serif; letter-spacing: -0.02em; }
+    .glass {
+      border-radius: 18px;
+      border: 1px solid rgba(165, 180, 252, 0.28);
+      background: rgba(15, 23, 42, 0.74);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 36px rgba(2, 6, 23, 0.44);
+    }
+    .btn {
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-weight: 700;
+      border: 1px solid rgba(167, 139, 250, 0.45);
+      background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 45%, #db2777 100%);
+      color: #fff;
+      cursor: pointer;
+      transition: transform .15s ease, filter .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .btn:disabled { opacity: 0.55; pointer-events: none; }
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+    pre { white-space: pre-wrap; word-break: break-word; font-size: 0.82rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <main class="max-w-3xl mx-auto px-4 py-8 md:py-12 space-y-6">
+    <section class="glass p-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold text-indigo-200">🤖 AI Blackbox</h1>
+          <p class="text-indigo-100/85 mt-2 text-sm">Tanya AI lewat proxy NeoXR (<code class="text-fuchsia-300">blackbox</code>). Pertanyaan panjang memakai POST agar tidak terpotong URL.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <a class="btn no-underline inline-flex items-center gap-2" href="/public"><i class="fas fa-th-large"></i>Hub</a>
+          <a class="btn no-underline inline-flex items-center gap-2" href="/"><i class="fas fa-home"></i>Beranda</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass p-6 space-y-4">
+      <h2 class="text-lg font-semibold text-indigo-200">Pertanyaan</h2>
+      <textarea id="q-input" class="w-full rounded-xl border border-indigo-400/35 bg-slate-950/65 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500" placeholder="Contoh: Jelaskan apa itu REST API dalam 3 poin."></textarea>
+      <button type="button" class="btn" id="btn-send"><i class="fas fa-paper-plane mr-2"></i>Kirim ke Blackbox</button>
+      <pre id="out" class="rounded-xl border border-slate-600/40 bg-slate-950/75 p-4 text-slate-200">Isi pertanyaan lalu kirim.</pre>
+    </section>
+  </main>
+  <script defer src="/public-blackbox.js"></script>
+</body>
+</html>

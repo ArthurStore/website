@@ -13,7 +13,7 @@ function createAmbientParticles() {
   `;
   document.body.appendChild(particleContainer);
 
-  for (let i = 0; i < 14; i += 1) {
+  for (let i = 0; i < 8; i += 1) {
     const particle = document.createElement("span");
     const size = Math.random() * 2.8 + 1.2;
     const duration = Math.random() * 20 + 18;
@@ -609,6 +609,9 @@ forceWelcomeReadySoundOnce();
 createSoundToggle();
 attachGlobalClickSound();
 attachScrollWhiteMaskFix();
+document.addEventListener("visibilitychange", () => {
+  document.body.classList.toggle("fx-tab-hidden", document.hidden);
+});
 createAmbientParticles();
 createCursorTrail();
 
@@ -679,9 +682,20 @@ const hamburgerBtn = document.getElementById("hamburger-btn");
   });
 
   const animatedElements = document.querySelectorAll(".fade-in-slide");
+
+  function revealFadeElementsInViewport() {
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    animatedElements.forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < vh + 100 && r.bottom > -100) {
+        el.classList.add("visible");
+      }
+    });
+  }
+
   const options = {
-    threshold: 0.1,
-    rootMargin: "0px 0px -50px 0px",
+    threshold: 0.05,
+    rootMargin: "140px 0px 140px 0px"
   };
 
   const observer = new IntersectionObserver((entries) => {
@@ -692,7 +706,13 @@ const hamburgerBtn = document.getElementById("hamburger-btn");
     });
   }, options);
 
-  animatedElements.forEach((el) => observer.observe(el));
+  document.getElementById("home")?.classList.add("visible");
+  revealFadeElementsInViewport();
+
+  animatedElements.forEach((el) => {
+    if (el.classList.contains("visible")) return;
+    observer.observe(el);
+  });
 
   const modal = document.getElementById('image-modal');
   const modalImage = document.getElementById('modal-image');

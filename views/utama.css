@@ -1,5 +1,5 @@
 body {
-      font-family: "Poppins", sans-serif;
+      font-family: "Plus Jakarta Sans", "Poppins", ui-sans-serif, system-ui, sans-serif;
       background:
         radial-gradient(circle at 12% 16%, rgba(59, 130, 246, 0.28), transparent 34%),
         radial-gradient(circle at 88% 10%, rgba(56, 189, 248, 0.22), transparent 36%),
@@ -14,6 +14,14 @@ body {
       display: flex;
       flex-direction: column;
       position: relative;
+    }
+
+    body.fx-tab-hidden {
+      animation-play-state: paused !important;
+    }
+
+    body.fx-tab-hidden::before {
+      animation-play-state: paused !important;
     }
 
     html {
@@ -459,6 +467,11 @@ body {
     #sidebar ul li:first-child {
       margin-top: 2.5rem;
     }
+    h1, h2, h3, #sidebar ul li a {
+      font-family: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      letter-spacing: -0.02em;
+    }
+
     #sidebar ul li a {
       display: flex;
       align-items: center;
@@ -482,6 +495,72 @@ body {
     #sidebar ul li a:focus {
       background-color: rgba(59, 130, 246, 0.25);
       color: #bfdbfe;
+      outline: none;
+    }
+
+    .site-more-wrap {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 68;
+    }
+
+    .site-more-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 0.5rem;
+      border: 1px solid rgba(125, 211, 252, 0.45);
+      background: rgba(14, 30, 64, 0.85);
+      backdrop-filter: blur(12px);
+      color: #dbeafe;
+      font-size: 1.35rem;
+      font-weight: 800;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.45);
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .site-more-btn:hover,
+    .site-more-btn:focus-visible {
+      background: rgba(59, 130, 246, 0.78);
+      outline: none;
+    }
+
+    .site-more-panel {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      min-width: 208px;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(96, 165, 250, 0.38);
+      background: rgba(14, 30, 64, 0.96);
+      box-shadow: 0 14px 30px rgba(2, 6, 23, 0.55);
+      padding: 0.35rem;
+      backdrop-filter: blur(12px);
+    }
+
+    .site-more-panel[hidden] {
+      display: none !important;
+    }
+
+    .site-more-panel a {
+      display: block;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.45rem;
+      color: #dbeafe;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    .site-more-panel a:hover,
+    .site-more-panel a:focus-visible {
+      background: rgba(59, 130, 246, 0.28);
       outline: none;
     }
 
@@ -535,6 +614,7 @@ body {
       flex-grow: 1;
       position: relative;
       z-index: 1;
+      contain: inline-size;
     }
     @media (min-width: 768px) {
       main.sidebar-open {
@@ -930,6 +1010,11 @@ body {
         scroll-behavior: auto !important;
       }
 
+      .fade-in-slide {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+
       .cursor-glow,
       .cursor-dot {
         display: none !important;
@@ -946,4 +1031,8 @@ body {
       .first-load-overlay {
         display: none !important;
       }
+    }
+
+    #skills .skill-icon-glow {
+      filter: drop-shadow(0 0 11px rgba(96, 165, 250, 0.45));
     }

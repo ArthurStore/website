@@ -68,6 +68,10 @@
       0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
       50% { transform: translate3d(2%, -2%, 0) scale(1.04); }
     }
+    @media (prefers-reduced-motion: reduce) {
+      body { animation: none; }
+      body::before { animation: none; }
+    }
   </style>
 </head>
 <body class="px-4 py-8 md:px-8 md:py-10">
@@ -159,12 +163,27 @@
           </div>
 
           <button
+            id="upload-submit-btn"
             type="submit"
-            class="neon-btn inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold text-white"
+            class="neon-btn inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold text-white disabled:pointer-events-none disabled:opacity-55"
           >
             Upload Sekarang
           </button>
         </form>
+
+        <div id="upload-progress-wrap" class="mt-4 hidden" aria-live="polite">
+          <div class="mb-1 flex justify-between text-xs text-blue-300">
+            <span>Mengunggah file…</span>
+            <span id="upload-progress-pct">0%</span>
+          </div>
+          <div class="h-2.5 w-full overflow-hidden rounded-full border border-blue-500/25 bg-slate-900/80">
+            <div
+              id="upload-progress-bar"
+              class="h-full rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 transition-[width] duration-150 ease-out"
+              style="width: 0%"
+            ></div>
+          </div>
+        </div>
 
         <div id="feedback" class="mt-4 hidden rounded-lg border px-4 py-3 text-sm"></div>
       </div>
@@ -265,6 +284,10 @@
     const statDownloads = document.getElementById('stat-downloads');
     const storageProgress = document.getElementById('storage-progress');
     const storagePercent = document.getElementById('storage-percent');
+    const uploadSubmitBtn = document.getElementById('upload-submit-btn');
+    const uploadProgressWrap = document.getElementById('upload-progress-wrap');
+    const uploadProgressBar = document.getElementById('upload-progress-bar');
+    const uploadProgressPct = document.getElementById('upload-progress-pct');
 
     let entries = [];
     let folders = [];
@@ -414,6 +437,33 @@
       });
     }
 
+    function postFormDataWithProgress(url, formData, onProgress) {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.onload = () => {
+          let data = null;
+          try {
+            data = JSON.parse(xhr.responseText || '{}');
+          } catch (_err) {
+            data = { message: 'Respons server tidak valid.' };
+          }
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(data);
+            return;
+          }
+          reject(new Error(data?.message || `Upload gagal (HTTP ${xhr.status}).`));
+        };
+        xhr.onerror = () => reject(new Error('Koneksi terputus saat upload.'));
+        xhr.upload.onprogress = (event) => {
+          if (!event.lengthComputable || !onProgress) return;
+          const pct = Math.min(100, Math.round((event.loaded / event.total) * 100));
+          onProgress(pct);
+        };
+        xhr.send(formData);
+      });
+    }
+
     async function loadEntries() {
       try {
         const response = await fetch('/api/uploads');
@@ -452,13 +502,19 @@
       const expiresInDays = String(expiresInput.value || '').trim();
       if (expiresInDays) formData.append('expiresInDays', expiresInDays);
 
+      uploadSubmitBtn.disabled = true;
+      uploadProgressWrap.classList.remove('hidden');
+      uploadProgressBar.style.width = '0%';
+      uploadProgressPct.textContent = '0%';
+
       try {
-        const response = await fetch('/api/uploads', {
-          method: 'POST',
-          body: formData
+        const data = await postFormDataWithProgress('/api/uploads', formData, (pct) => {
+          uploadProgressBar.style.width = `${pct}%`;
+          uploadProgressPct.textContent = `${pct}%`;
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Upload gagal.');
+
+        uploadProgressBar.style.width = '100%';
+        uploadProgressPct.textContent = '100%';
 
         showFeedback('success', data.message || 'Upload berhasil.');
         if (window.ArthurSiteSoundFX?.playByType) {
@@ -468,6 +524,11 @@
         await loadEntries();
       } catch (error) {
         showFeedback('error', error.message);
+      } finally {
+        uploadSubmitBtn.disabled = false;
+        uploadProgressWrap.classList.add('hidden');
+        uploadProgressBar.style.width = '0%';
+        uploadProgressPct.textContent = '0%';
       }
     });
 

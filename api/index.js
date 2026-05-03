@@ -75,7 +75,7 @@ const NEOXR_API_KEY = String(
 const IMGBB_API_KEY = String(
   process.env.IMGBB_API_KEY ||
   process.env.IBB_API_KEY ||
-  'yokheimoet'
+  'd052a761e2b9f16bee42eeea229e8a02'
 ).trim();
 const configuredNeoxrTimeoutMs = Number(process.env.NEOXR_TIMEOUT_MS || 30000);
 const NEOXR_TIMEOUT_MS = Number.isFinite(configuredNeoxrTimeoutMs) &&
@@ -226,6 +226,16 @@ app.get('/public/remini', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   return res.sendFile(path.join(__dirname, '../views/public-remini.html'));
 });
+app.get('/public/whatimg', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-whatimg.html'));
+});
+app.get('/public/blackbox', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-blackbox.html'));
+});
 
 app.get('/short-link', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
   'Halaman Tidak Ditemukan',
@@ -324,6 +334,7 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
               <a class="tool" href="${TOOL_PREFIX}/short-link">Short Link</a>
               <a class="tool" href="${TOOL_PREFIX}/ip-calculator">IP Calculator</a>
               <a class="tool" href="${TOOL_PREFIX}/pdf-to-jpg">PDF to JPG</a>
+              <a class="tool" href="${TOOL_PREFIX}/bot-status">Status VPS</a>
             </div>
             <div class="footer">
               <span class="hint">Akses privat aktif</span>
@@ -487,6 +498,7 @@ app.get(`${TOOL_PREFIX}/short-link`, ensureToolAccess, (_req, res) => sendToolVi
 app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolView(res, 'file-vault.html'));
 app.get(`${TOOL_PREFIX}/ip-calculator`, ensureToolAccess, (_req, res) => sendToolView(res, 'ip-calculator.html'));
 app.get(`${TOOL_PREFIX}/pdf-to-jpg`, ensureToolAccess, (_req, res) => sendToolView(res, 'pdf-to-jpg.html'));
+app.get(`${TOOL_PREFIX}/bot-status`, ensureToolAccess, (_req, res) => sendToolView(res, 'bot-status.html'));
 
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_STORAGE_DIR),
@@ -693,8 +705,10 @@ async function runPdfConversionQuickTest(req) {
       const converterStart = Date.now();
       report.converter.sourceType = 'catbox';
       try {
-        const payload = await convertPdfByUrl(report.catbox.url, 'quick-test', 'jpg', {
-          timeoutMs: PDF_CONVERTER_HEALTHCHECK_TIMEOUT_MS
+        const payload = await convertPdfByUrlWithRetries(report.catbox.url, 'quick-test', 'jpg', {
+          timeoutMs: PDF_CONVERTER_HEALTHCHECK_TIMEOUT_MS,
+          maxAttempts: 3,
+          retryDelayMs: 2000
         });
         report.converter.ok = true;
         report.converter.message = payload?.message || payload?.msg || 'Converter merespons sukses.';
@@ -1409,6 +1423,115 @@ async function callNeoxrApi(endpoint, queryParams = {}) {
   return payload;
 }
 
+function neoxrQueryFromRequest(query = {}) {
+  const params = {};
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    const s = String(value).trim();
+    if (!s) return;
+    params[key] = s;
+  });
+  return params;
+}
+
+function aggregateCpuTimes() {
+  const cpus = os.cpus();
+  let idle = 0;
+  let total = 0;
+  for (const cpu of cpus) {
+    const t = cpu.times;
+    const sum =
+      (t.user || 0) +
+      (t.nice || 0) +
+      (t.sys || 0) +
+      (t.idle || 0) +
+      (t.irq || 0);
+    total += sum;
+    idle += t.idle || 0;
+  }
+  return { idle, total, cores: cpus.length };
+}
+
+async function sampleHostCpuPercent(sampleMs = 280) {
+  const a = aggregateCpuTimes();
+  await new Promise((r) => setTimeout(r, sampleMs));
+  const b = aggregateCpuTimes();
+  const idle = b.idle - a.idle;
+  const total = b.total - a.total;
+  if (total <= 0) return { percent: 0, cores: b.cores };
+  const pct = (1 - idle / total) * 100;
+  return {
+    percent: Math.round(Math.min(100, Math.max(0, pct)) * 10) / 10,
+    cores: b.cores
+  };
+}
+
+async function diskUsageForPath(targetPath) {
+  try {
+    let stats = null;
+    if (fs.promises.statfs) {
+      stats = await fs.promises.statfs(targetPath);
+    } else if (typeof fs.statfs === 'function') {
+      stats = await new Promise((resolve, reject) => {
+        fs.statfs(targetPath, (err, s) => (err ? reject(err) : resolve(s)));
+      });
+    }
+    if (!stats) return null;
+    const bsize = Number(stats.bsize) || 4096;
+    const blocks = Number(stats.blocks) || 0;
+    const bfree = Number(stats.bfree) || 0;
+    const totalBytes = blocks * bsize;
+    const freeBytes = bfree * bsize;
+    if (!Number.isFinite(totalBytes) || totalBytes <= 0) return null;
+    const usedBytes = Math.max(0, totalBytes - freeBytes);
+    return {
+      path: targetPath,
+      totalBytes: Math.floor(totalBytes),
+      freeBytes: Math.floor(freeBytes),
+      usedBytes: Math.floor(usedBytes),
+      usedPercent: Math.round((usedBytes / totalBytes) * 1000) / 10
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function collectServerStatsSnapshot() {
+  const sampleMs = 260;
+  const [cpu, disk] = await Promise.all([
+    sampleHostCpuPercent(sampleMs),
+    diskUsageForPath(process.cwd())
+  ]);
+  const totalMem = os.totalmem();
+  const freeMem = os.freemem();
+  const usedMem = totalMem - freeMem;
+  const memPercent = totalMem > 0 ? Math.round((usedMem / totalMem) * 1000) / 10 : 0;
+  const pm = process.memoryUsage();
+  return {
+    at: Date.now(),
+    hostname: os.hostname(),
+    platform: os.platform(),
+    release: os.release(),
+    uptimeHostSec: Math.floor(os.uptime()),
+    uptimeProcessSec: Math.floor(process.uptime()),
+    loadavg: os.loadavg(),
+    cpu,
+    memory: {
+      totalBytes: totalMem,
+      freeBytes: freeMem,
+      usedBytes: usedMem,
+      usedPercent: memPercent
+    },
+    processMemory: {
+      rss: pm.rss,
+      heapTotal: pm.heapTotal,
+      heapUsed: pm.heapUsed,
+      external: pm.external
+    },
+    disk
+  };
+}
+
 function normalizeWeatherSummary(payload) {
   const data = payload?.data || {};
   const result = Array.isArray(data?.result) ? data.result : [];
@@ -1423,6 +1546,61 @@ function normalizeWeatherSummary(payload) {
     forecast: result.slice(0, 8)
   };
 }
+
+app.get('/api/admin/server-stats', ensureToolApiAccess, async (_req, res) => {
+  try {
+    const snapshot = await collectServerStatsSnapshot();
+    return res.json(snapshot);
+  } catch (error) {
+    return res.status(500).json({
+      message: error?.message || 'Gagal membaca statistik server.'
+    });
+  }
+});
+
+app.get('/api/public/whatimg', async (req, res) => {
+  try {
+    const payload = await callNeoxrApi('whatimg', neoxrQueryFromRequest(req.query));
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal mengambil data tebak gambar (whatimg).',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/blackbox', async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  if (!q) {
+    return res.status(400).json({ message: 'Parameter q wajib diisi (pertanyaan untuk AI).' });
+  }
+  try {
+    const payload = await callNeoxrApi('blackbox', { q });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal menghubungi Blackbox AI.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.post('/api/public/blackbox', async (req, res) => {
+  const q = String(req.body?.q || req.body?.query || '').trim();
+  if (!q) {
+    return res.status(400).json({ message: 'Body JSON wajib berisi field "q" (teks pertanyaan).' });
+  }
+  try {
+    const payload = await callNeoxrApi('blackbox', { q });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal menghubungi Blackbox AI.',
+      upstream: error?.payload || null
+    });
+  }
+});
 
 app.get('/api/public/cuaca', async (req, res) => {
   const subdistrict = String(req.query.subdistrict || 'batang').trim();
@@ -1573,6 +1751,37 @@ app.get('/api/pdf-to-jpg-upload/:token', (req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=60');
   return res.sendFile(entry.filePath);
 });
+
+function delayPdfConverter(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+async function convertPdfByUrlWithRetries(url, filename, to, options = {}) {
+  const maxAttempts = Math.min(
+    5,
+    Math.max(1, Number(options?.maxAttempts ?? process.env.PDF_CONVERTER_RETRY_ATTEMPTS) || 3)
+  );
+  const retryDelayMs = Math.min(
+    10000,
+    Math.max(800, Number(options?.retryDelayMs ?? process.env.PDF_CONVERTER_RETRY_DELAY_MS) || 2200)
+  );
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      if (attempt > 1 && typeof options?.onRetry === 'function') {
+        options.onRetry({ attempt, maxAttempts, delayMs: retryDelayMs });
+      }
+      return await convertPdfByUrl(url, filename, to, options);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts) break;
+      await delayPdfConverter(retryDelayMs);
+    }
+  }
+  throw lastError;
+}
 
 async function convertPdfByUrl(url, filename, to, options = {}) {
   if (!PDF_CONVERTER_API_KEY) {
@@ -1879,7 +2088,11 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
         converterSourceUrl = catboxUpload.url;
         converterSourceType = catboxUpload.provider || 'catbox';
         pushTrace('converter-request-start', { sourceType: converterSourceType });
-        payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
+        payload = await convertPdfByUrlWithRetries(converterSourceUrl, safeFilename, to, {
+          onRetry: ({ attempt, maxAttempts }) => {
+            pushTrace('converter-retry', { attempt, maxAttempts, url: converterSourceUrl });
+          }
+        });
         pushTrace('converter-request-success', { sourceType: converterSourceType });
       } catch (primaryError) {
         if (!catboxDebug.uploaded) {
@@ -1899,7 +2112,7 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
               pushTrace('github-fallback-upload-success', { url: githubFallback.url, path: githubFallback.path });
               converterSourceUrl = githubFallback.url;
               converterSourceType = 'github-raw';
-              payload = await convertPdfByUrl(converterSourceUrl, safeFilename, to);
+              payload = await convertPdfByUrlWithRetries(converterSourceUrl, safeFilename, to);
               pushTrace('github-fallback-convert-success', {});
             } catch (githubSourceError) {
               pushTrace('github-fallback-failed', {
@@ -1917,7 +2130,40 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
             message: primaryError?.message || 'Request ke converter gagal.',
             statusCode: Number(primaryError?.statusCode) || null
           });
-          throw primaryError;
+          if (isGithubRawFallbackConfigured()) {
+            try {
+              pushTrace('github-fallback-start', {
+                reason: 'converter-failed-after-cdn-upload',
+                priorSource: converterSourceType,
+                priorUrl: converterSourceUrl
+              });
+              githubFallback = await uploadPdfToGitHubRaw(
+                file.path,
+                file.originalname,
+                PDF_CONVERTER_GITHUB_TOKEN
+              );
+              pushTrace('github-fallback-upload-success', {
+                url: githubFallback.url,
+                path: githubFallback.path
+              });
+              converterSourceUrl = githubFallback.url;
+              converterSourceType = 'github-raw';
+              payload = await convertPdfByUrlWithRetries(githubFallback.url, safeFilename, to, {
+                onRetry: ({ attempt, maxAttempts }) => {
+                  pushTrace('converter-retry-github-fallback', { attempt, maxAttempts });
+                }
+              });
+              pushTrace('github-fallback-convert-success', { afterConverterFail: true });
+            } catch (githubAfterFail) {
+              pushTrace('github-fallback-after-converter-fail-failed', {
+                message: githubAfterFail?.message || 'Fallback GitHub gagal.',
+                statusCode: Number(githubAfterFail?.statusCode) || null
+              });
+              throw primaryError;
+            }
+          } else {
+            throw primaryError;
+          }
         }
       }
 
@@ -1993,7 +2239,7 @@ app.post('/api/pdf-to-jpg', ensureToolApiAccess, (req, res) => {
           pushTrace('github-fallback-start', {});
           const githubFallback = await uploadPdfToGitHubRaw(file.path, file.originalname, PDF_CONVERTER_GITHUB_TOKEN);
           pushTrace('github-fallback-upload-success', { url: githubFallback.url, path: githubFallback.path });
-          const retriedPayload = await convertPdfByUrl(githubFallback.url, safeFilename, to);
+          const retriedPayload = await convertPdfByUrlWithRetries(githubFallback.url, safeFilename, to);
           pushTrace('github-fallback-convert-success', {});
           const imageLinks = [];
           collectImageLinks(retriedPayload, imageLinks);

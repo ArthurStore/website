@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Status VPS / Bot</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&amp;family=Plus+Jakarta+Sans:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      color: #e0f2fe;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(34, 211, 238, 0.12), transparent 40%),
+        radial-gradient(circle at 88% 12%, rgba(59, 130, 246, 0.14), transparent 38%),
+        linear-gradient(155deg, #020617 0%, #0c1428 50%, #071018 100%);
+    }
+    .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+    .meter {
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      overflow: hidden;
+    }
+    .meter > span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+    .m-cpu { background: linear-gradient(90deg, #22d3ee, #3b82f6); }
+    .m-mem { background: linear-gradient(90deg, #a855f7, #6366f1); }
+    .m-disk { background: linear-gradient(90deg, #34d399, #14b8a6); }
+    .glass {
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 16px;
+      box-shadow: 0 16px 40px rgba(2, 6, 23, 0.45);
+      backdrop-filter: blur(10px);
+    }
+  </style>
+</head>
+<body class="px-4 py-8 md:px-8 md:py-10">
+  <main class="mx-auto max-w-4xl space-y-6">
+    <header class="glass p-6 md:p-8">
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-[0.22em] text-cyan-400">Admin · Monitoring</p>
+          <h1 class="mt-2 text-2xl font-bold text-sky-100 md:text-3xl">Status VPS / Node</h1>
+          <p class="mt-2 max-w-xl text-sm text-sky-200/90">
+            Ringkasan CPU, RAM, dan disk proses Node ini (bukan full <code class="mono text-cyan-300">htop</code>, tapi cukup untuk cek beban secara berkala). Data diperbarui otomatis tiap beberapa detik setelah login admin.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a href="/admin" class="rounded-lg border border-cyan-400/40 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/15">Admin Home</a>
+          <a href="/public" class="rounded-lg border border-sky-400/40 px-4 py-2 text-sm font-semibold text-sky-100 hover:bg-sky-500/15">Fitur Public</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="glass p-6 md:p-7 space-y-5">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="text-lg font-semibold text-sky-100">Sumber daya</h2>
+        <p id="poll-status" class="text-xs text-sky-400">Menghubungkan…</p>
+      </div>
+
+      <div id="error-box" class="hidden rounded-lg border border-rose-500/40 bg-rose-950/40 px-4 py-3 text-sm text-rose-100"></div>
+
+      <div class="grid gap-5 md:grid-cols-2">
+        <div class="rounded-xl border border-sky-500/20 bg-slate-950/50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-wider text-sky-400">CPU (host)</p>
+          <p id="cpu-label" class="mono mt-2 text-2xl font-semibold text-white">—</p>
+          <div class="meter mt-3"><span id="cpu-bar" class="m-cpu" style="width: 0%"></span></div>
+          <p id="cpu-sub" class="mono mt-2 text-xs text-sky-300/80"></p>
+        </div>
+        <div class="rounded-xl border border-violet-500/20 bg-slate-950/50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-wider text-violet-300">Memori (host)</p>
+          <p id="mem-label" class="mono mt-2 text-2xl font-semibold text-white">—</p>
+          <div class="meter mt-3"><span id="mem-bar" class="m-mem" style="width: 0%"></span></div>
+          <p id="mem-sub" class="mono mt-2 text-xs text-violet-200/80"></p>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-emerald-500/20 bg-slate-950/50 p-4">
+        <p class="text-xs font-semibold uppercase tracking-wider text-emerald-300">Disk (cwd proses)</p>
+        <p id="disk-label" class="mono mt-2 text-2xl font-semibold text-white">—</p>
+        <div id="disk-meter-wrap" class="meter mt-3"><span id="disk-bar" class="m-disk" style="width: 0%"></span></div>
+        <p id="disk-sub" class="mono mt-2 text-xs text-emerald-200/80"></p>
+      </div>
+
+      <div class="rounded-xl border border-slate-600/40 bg-slate-950/40 p-4">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Proses Node (RSS)</p>
+        <p id="proc-label" class="mono mt-1 text-lg text-slate-100">—</p>
+        <p id="meta-line" class="mono mt-3 text-xs leading-relaxed text-slate-400"></p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function formatBytes(n) {
+      if (!Number.isFinite(n) || n < 0) return "—";
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      let v = n;
+      let i = 0;
+      while (v >= 1024 && i < units.length - 1) {
+        v /= 1024;
+        i += 1;
+      }
+      return `${v.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
+    }
+
+    function formatUptime(sec) {
+      const s = Math.max(0, Math.floor(sec || 0));
+      const d = Math.floor(s / 86400);
+      const h = Math.floor((s % 86400) / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      if (d > 0) return `${d} hari ${h} jam`;
+      if (h > 0) return `${h} jam ${m} menit`;
+      return `${m} menit`;
+    }
+
+    async function fetchStats() {
+      const res = await fetch("/api/admin/server-stats", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+      return data;
+    }
+
+    function renderPayload(data) {
+      const errBox = document.getElementById("error-box");
+      errBox.classList.add("hidden");
+
+      const cpuPct = data.cpu?.percent ?? 0;
+      document.getElementById("cpu-label").textContent = `${cpuPct}%`;
+      document.getElementById("cpu-bar").style.width = `${Math.min(100, cpuPct)}%`;
+      document.getElementById("cpu-sub").textContent =
+        `inti CPU: ${data.cpu?.cores ?? "—"} · load (1/5/15m): ${(data.loadavg || []).map((x) => x.toFixed(2)).join(", ")}`;
+
+      const memPct = data.memory?.usedPercent ?? 0;
+      document.getElementById("mem-label").textContent = `${memPct}%`;
+      document.getElementById("mem-bar").style.width = `${Math.min(100, memPct)}%`;
+      document.getElementById("mem-sub").textContent =
+        `${formatBytes(data.memory?.usedBytes)} / ${formatBytes(data.memory?.totalBytes)} terpakai`;
+
+      const disk = data.disk;
+      const diskWrap = document.getElementById("disk-meter-wrap");
+      if (disk && Number.isFinite(disk.usedPercent)) {
+        diskWrap.classList.remove("hidden");
+        document.getElementById("disk-label").textContent = `${disk.usedPercent}%`;
+        document.getElementById("disk-bar").style.width = `${Math.min(100, disk.usedPercent)}%`;
+        document.getElementById("disk-sub").textContent =
+          `${formatBytes(disk.usedBytes)} / ${formatBytes(disk.totalBytes)} · ${disk.path || ""}`;
+      } else {
+        diskWrap.classList.add("hidden");
+        document.getElementById("disk-label").textContent = "Tidak tersedia";
+        document.getElementById("disk-sub").textContent =
+          "Disk tidak bisa dibaca di OS/Node ini (mis. statfs tidak didukung).";
+      }
+
+      const rss = data.processMemory?.rss;
+      document.getElementById("proc-label").textContent = rss != null ? formatBytes(rss) : "—";
+
+      document.getElementById("meta-line").textContent = [
+        data.hostname ? `host: ${data.hostname}` : "",
+        data.platform ? `${data.platform} ${data.release || ""}`.trim() : "",
+        `uptime host: ${formatUptime(data.uptimeHostSec)}`,
+        `uptime proses: ${formatUptime(data.uptimeProcessSec)}`
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+      document.getElementById("poll-status").textContent =
+        `Terakhir update: ${new Date(data.at || Date.now()).toLocaleString("id-ID")} · auto-refresh 3s`;
+    }
+
+    async function tick() {
+      try {
+        const data = await fetchStats();
+        renderPayload(data);
+      } catch (e) {
+        const errBox = document.getElementById("error-box");
+        errBox.textContent =
+          e.message ||
+          "Gagal memuat statistik. Pastikan kamu sudah login admin (PIN) di tab ini.";
+        errBox.classList.remove("hidden");
+        document.getElementById("poll-status").textContent = "Gagal memuat (cek login admin)";
+      }
+    }
+
+    tick();
+    setInterval(tick, 3000);
+  </script>
+</body>
+</html>

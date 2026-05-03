@@ -6,13 +6,17 @@
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&amp;display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
   <style>
-    :root { color-scheme: dark; }
+    :root {
+      color-scheme: dark;
+      --font-body: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      --font-display: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+    }
     body {
       margin: 0;
-      font-family: "Poppins", sans-serif;
+      font-family: var(--font-body);
       min-height: 100vh;
       color: #dbeafe;
       background:
@@ -39,6 +43,13 @@
       outline: 2px solid rgba(147, 197, 253, 0.65);
       outline-offset: 1px;
     }
+    h1, h2, .btn {
+      font-family: var(--font-display);
+      letter-spacing: -0.02em;
+    }
+    h2 {
+      letter-spacing: -0.01em;
+    }
     .btn {
       border-radius: 10px;
       border: 1px solid rgba(147, 197, 253, 0.34);
@@ -57,16 +68,20 @@
       min-height: 220px;
     }
     .weather-hero {
+      position: relative;
+      overflow: hidden;
       border-radius: 16px;
       padding: 16px;
+    }
+    .weather-hero-inner {
+      position: relative;
+      z-index: 1;
       display: grid;
       grid-template-columns: 84px 1fr;
       gap: 12px;
       align-items: center;
     }
     .weather-sunny {
-      position: relative;
-      overflow: hidden;
       background: linear-gradient(130deg, rgba(251, 191, 36, 0.37), rgba(14, 165, 233, 0.16));
     }
     .weather-sunny::after {
@@ -81,19 +96,147 @@
       animation: sunRiseGlow 3.8s ease-in-out infinite alternate;
       box-shadow: 0 0 24px rgba(251, 191, 36, 0.35);
       pointer-events: none;
+      z-index: 0;
     }
-    .weather-cloudy { background: linear-gradient(130deg, rgba(148, 163, 184, 0.35), rgba(30, 64, 175, 0.2)); }
+    .weather-fx {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+      border-radius: 16px;
+    }
+    .weather-fx-sun .sun-ray-ring {
+      position: absolute;
+      left: 42px;
+      top: 50%;
+      width: 88px;
+      height: 88px;
+      margin: -44px 0 0 -44px;
+      border-radius: 50%;
+      background: repeating-conic-gradient(
+        from 0deg,
+        rgba(255, 251, 235, 0.55) 0deg 4deg,
+        transparent 4deg 16deg
+      );
+      animation: sunRaysSpin 24s linear infinite;
+      opacity: 0.65;
+      mask-image: radial-gradient(circle, black 42%, transparent 64%);
+    }
+    .weather-icon-fallback {
+      display: none !important;
+    }
+    .weather-emoji-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border-radius: inherit;
+    }
+    .weather-emoji {
+      display: block;
+      line-height: 1;
+      font-size: 1.45rem;
+      max-width: 1.35em;
+      max-height: 1.35em;
+      overflow: hidden;
+      transform-origin: center center;
+      will-change: transform;
+    }
+    .weather-icon-sunny .weather-emoji {
+      animation: sunEmojiPulse 2.6s ease-in-out infinite;
+      filter: drop-shadow(0 0 10px rgba(253, 224, 71, 0.75));
+    }
+    .weather-icon-rainy .weather-emoji {
+      animation: emojiRainDrop 1.85s ease-in-out infinite;
+      filter: drop-shadow(0 2px 6px rgba(56, 189, 248, 0.55));
+    }
+    .weather-icon-storm .weather-emoji {
+      animation: emojiStormShake 2.4s ease-in-out infinite;
+      filter: drop-shadow(0 0 12px rgba(167, 139, 250, 0.65));
+    }
+    .weather-icon-cloudy .weather-emoji {
+      animation: emojiCloudBob 4s ease-in-out infinite;
+      filter: drop-shadow(0 2px 8px rgba(226, 232, 240, 0.35));
+    }
+    .weather-fx-rain::before {
+      content: "";
+      position: absolute;
+      inset: -60% -10%;
+      background-image: repeating-linear-gradient(
+        -18deg,
+        transparent 0,
+        transparent 12px,
+        rgba(191, 219, 254, 0.22) 12px,
+        rgba(191, 219, 254, 0.22) 13px
+      );
+      animation: rainFallMove 0.75s linear infinite;
+      opacity: 0.65;
+    }
+    .weather-fx-storm.weather-fx-rain::before {
+      animation-duration: 0.55s;
+      opacity: 0.78;
+    }
+    .lightning-flash {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, transparent 30%, rgba(255, 255, 255, 0.22) 48%, transparent 52%);
+      opacity: 0;
+      animation: lightningStrike 4.5s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .weather-cloudy.weather-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background:
+        radial-gradient(ellipse 110% 75% at 18% 22%, rgba(255, 255, 255, 0.18), transparent 58%),
+        radial-gradient(ellipse 95% 65% at 78% 58%, rgba(186, 230, 253, 0.16), transparent 54%);
+      animation: cloudySkyShift 11s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .weather-fx-clouds .cloud {
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(248, 250, 252, 0.5);
+      box-shadow:
+        24px 8px 0 -6px rgba(241, 245, 249, 0.42),
+        -18px 6px 0 -8px rgba(226, 232, 240, 0.38);
+      filter: blur(0.35px);
+      animation: cloudDrift 12s ease-in-out infinite;
+    }
+    .weather-fx-clouds .c1 { width: 76px; height: 30px; left: 6%; top: 14%; animation-delay: 0s; }
+    .weather-fx-clouds .c2 { width: 104px; height: 38px; right: 4%; top: 38%; animation-delay: -3.5s; opacity: 0.92; }
+    .weather-fx-clouds .c3 { width: 64px; height: 26px; left: 36%; bottom: 12%; animation-delay: -6.5s; opacity: 0.88; }
+    .weather-cloudy { background: linear-gradient(125deg, rgba(148, 163, 184, 0.42), rgba(51, 65, 85, 0.35), rgba(30, 58, 138, 0.28)); }
     .weather-rainy { background: linear-gradient(130deg, rgba(14, 165, 233, 0.3), rgba(30, 41, 59, 0.38)); }
     .weather-storm { background: linear-gradient(130deg, rgba(99, 102, 241, 0.34), rgba(17, 24, 39, 0.52)); }
     .weather-icon {
       width: 72px;
       height: 72px;
+      min-width: 72px;
+      min-height: 72px;
       border-radius: 999px;
-      display: grid;
-      place-items: center;
-      font-size: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
       background: rgba(255, 255, 255, 0.18);
       box-shadow: 0 0 20px rgba(147, 197, 253, 0.35);
+      position: relative;
+      animation: weatherIconShellPulse 4.5s ease-in-out infinite;
+    }
+    .forecast-emoji {
+      display: inline-block;
+      font-size: 1.05rem;
+      line-height: 1;
+      vertical-align: middle;
+      animation: forecastEmojiWiggle 4s ease-in-out infinite;
     }
     .forecast-grid {
       margin-top: 12px;
@@ -107,6 +250,12 @@
       background: rgba(15, 23, 42, 0.66);
       padding: 10px;
       font-size: 0.86rem;
+      transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+    }
+    .forecast-item:hover {
+      border-color: rgba(125, 211, 252, 0.38);
+      box-shadow: 0 6px 18px rgba(2, 6, 23, 0.35);
+      transform: translateY(-2px);
     }
     @keyframes sunRiseGlow {
       0% {
@@ -117,6 +266,73 @@
         transform: translateY(-8px) scale(1.08);
         opacity: 1;
       }
+    }
+    @keyframes sunRaysSpin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes sunEmojiPulse {
+      0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      40% { transform: scale(1.08) rotate(-6deg); opacity: 0.98; }
+      70% { transform: scale(1.05) rotate(6deg); opacity: 1; }
+    }
+    @keyframes emojiRainDrop {
+      0%, 100% { transform: translateY(-1px) scale(1); }
+      35% { transform: translateY(4px) scale(1.06); }
+      55% { transform: translateY(1px) scale(0.98); }
+    }
+    @keyframes emojiStormShake {
+      0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+      15% { transform: translate(-2px, 1px) rotate(-8deg) scale(1.05); }
+      30% { transform: translate(3px, -1px) rotate(8deg) scale(1.02); }
+      45% { transform: translate(-1px, 2px) rotate(-5deg) scale(1.06); }
+      60% { transform: translate(2px, 0) rotate(6deg) scale(1); }
+    }
+    @keyframes emojiCloudBob {
+      0%, 100% { transform: translateX(0) translateY(0) scale(1); }
+      33% { transform: translateX(3px) translateY(-2px) scale(1.04); }
+      66% { transform: translateX(-3px) translateY(1px) scale(0.98); }
+    }
+    @keyframes weatherIconShellPulse {
+      0%, 100% { box-shadow: 0 0 16px rgba(147, 197, 253, 0.32); }
+      50% { box-shadow: 0 0 28px rgba(147, 197, 253, 0.55); }
+    }
+    @keyframes forecastEmojiWiggle {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(8deg) scale(1.05); }
+    }
+    @keyframes rainFallMove {
+      from { transform: translateY(-28px); }
+      to { transform: translateY(28px); }
+    }
+    @keyframes lightningStrike {
+      0%, 88%, 100% { opacity: 0; }
+      89% { opacity: 0.55; }
+      90% { opacity: 0.15; }
+      91% { opacity: 0.65; }
+      92% { opacity: 0; }
+    }
+    @keyframes cloudDrift {
+      0%, 100% { transform: translateX(0) translateY(0) scale(1); }
+      50% { transform: translateX(16px) translateY(-6px) scale(1.04); }
+    }
+    @keyframes cloudySkyShift {
+      0%, 100% { opacity: 0.72; transform: scale(1) translate3d(0, 0, 0); }
+      50% { opacity: 1; transform: scale(1.06) translate3d(2%, -1%, 0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .weather-fx-sun .sun-ray-ring,
+      .weather-fx-rain::before,
+      .lightning-flash,
+      .weather-fx-clouds .cloud,
+      .weather-sunny::after,
+      .weather-cloudy.weather-hero::before,
+      .weather-icon,
+      .weather-emoji,
+      .forecast-emoji {
+        animation: none !important;
+      }
+      .weather-fx-rain { opacity: 0.35; }
+      .forecast-item:hover { transform: none; }
     }
   </style>
  </head>
@@ -137,9 +353,12 @@
 
    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <article class="glass p-5 lg:col-span-1">
-     <h2 class="text-xl font-bold text-blue-300 mb-3"><i class="fas fa-map-marker-alt mr-2"></i>Cari Lokasi</h2>
+     <h2 class="text-xl font-bold text-blue-300 mb-2"><i class="fas fa-map-marker-alt mr-2"></i>Cari Lokasi</h2>
+     <p class="text-sm text-blue-100/90 mb-3 leading-relaxed">
+      Ketik nama <strong class="text-blue-50">kecamatan</strong> atau subdistrict yang kamu inginkan (wilayah Indonesia). Contoh: <em>batang</em>, <em>medan petisah</em>, atau nama kecamatan lain — sistem akan mencocokkan ke data cuaca NeoXR.
+     </p>
      <form id="weather-form" class="space-y-3">
-      <input class="field" id="subdistrict" name="subdistrict" placeholder="Contoh: batang" value="batang"/>
+      <input class="field" id="subdistrict" name="subdistrict" placeholder="Contoh: batang (nama kecamatan)" value="batang"/>
       <button class="btn w-full" type="submit">Lihat Cuaca</button>
      </form>
      <div class="mt-4 text-sm text-blue-200">

@@ -9,11 +9,21 @@
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com">
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&amp;display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="/utama.css">
  </head>
  <body>
+  <div class="site-more-wrap" id="site-more-wrap">
+   <button type="button" class="site-more-btn" id="site-more-btn" aria-expanded="false" aria-haspopup="true" aria-label="Menu lainnya">
+    ⋯
+   </button>
+   <div class="site-more-panel" id="site-more-panel" role="menu" hidden>
+    <a role="menuitem" href="/admin/bot-status">📊 Status VPS</a>
+    <a role="menuitem" href="/public">🌐 Fitur Public</a>
+    <a role="menuitem" href="/admin">🔐 Admin</a>
+   </div>
+  </div>
   <button aria-controls="sidebar" aria-expanded="false" aria-label="Toggle menu" id="hamburger-btn">
    <span>
    </span>
@@ -50,6 +60,15 @@
       </i>
       <span>
        Fitur Public
+      </span>
+     </a>
+    </li>
+    <li>
+     <a aria-label="Status VPS" href="/admin/bot-status" tabindex="0">
+      <i class="fas fa-server">
+      </i>
+      <span>
+       Status VPS
       </span>
      </a>
     </li>
@@ -182,56 +201,56 @@
     <div class="max-w-6xl mx-auto">
      <div class="grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
      <div class="flex flex-col items-center space-y-3 fade-in-slide delay-100">
-      <i class="fas fa-robot text-blue-400 text-6xl animate-pulse">
+      <i class="fas fa-robot text-blue-400 text-6xl skill-icon-glow">
       </i>
       <span class="text-blue-200 font-semibold">
        Balasan Otomatis
       </span>
      </div>
      <div class="flex flex-col items-center space-y-3 fade-in-slide delay-200">
-      <i class="fas fa-users text-blue-400 text-6xl animate-pulse">
+      <i class="fas fa-users text-blue-400 text-6xl skill-icon-glow">
       </i>
       <span class="text-blue-200 font-semibold">
        Manajemen Grup
       </span>
      </div>
      <div class="flex flex-col items-center space-y-3 fade-in-slide delay-300">
-      <i class="fas fa-cogs text-blue-400 text-6xl animate-pulse">
+      <i class="fas fa-cogs text-blue-400 text-6xl skill-icon-glow">
       </i>
       <span class="text-blue-200 font-semibold">
        Custom Commands
       </span>
      </div>
      <div class="flex flex-col items-center space-y-3 fade-in-slide delay-400">
-      <i class="fas fa-shield-alt text-blue-400 text-6xl animate-pulse">
+      <i class="fas fa-shield-alt text-blue-400 text-6xl skill-icon-glow">
       </i>
       <span class="text-blue-200 font-semibold">
        Keamanan Terjamin
       </span>
      </div>
      <div class="flex flex-col items-center space-y-3 fade-in-slide delay-500">
-      <i class="fas fa-sync-alt text-blue-400 text-6xl animate-pulse">
+      <i class="fas fa-sync-alt text-blue-400 text-6xl skill-icon-glow">
       </i>
       <span class="text-blue-200 font-semibold">
        Update Berkala
       </span>
      </div>
      <div class="flex flex-col items-center space-y-3 fade-in-slide delay-600">
-      <i class="fas fa-mobile-alt text-blue-400 text-6xl animate-pulse">
+      <i class="fas fa-mobile-alt text-blue-400 text-6xl skill-icon-glow">
       </i>
       <span class="text-blue-200 font-semibold">
        Mendukung Multi Device
       </span>
      </div>
      <div class="flex flex-col items-center space-y-3 fade-in-slide delay-700">
-      <i class="fas fa-headset text-blue-400 text-6xl animate-pulse">
+      <i class="fas fa-headset text-blue-400 text-6xl skill-icon-glow">
       </i>
       <span class="text-blue-200 font-semibold">
        Support 24/7
       </span>
      </div>
      <div class="flex flex-col items-center space-y-3 fade-in-slide delay-700">
-      <i class="fas fa-certificate text-blue-400 text-6xl animate-pulse">
+      <i class="fas fa-certificate text-blue-400 text-6xl skill-icon-glow">
       </i>
       <span class="text-blue-200 font-semibold">
        Garansi Kualitas
@@ -342,5 +361,25 @@
    </div>
   </div>
   <script defer src="/utama.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var btn = document.getElementById("site-more-btn");
+      var panel = document.getElementById("site-more-panel");
+      if (!btn || !panel) return;
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var open = panel.hidden;
+        panel.hidden = !open;
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      document.addEventListener("click", function () {
+        panel.hidden = true;
+        btn.setAttribute("aria-expanded", "false");
+      });
+      panel.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+    });
+  </script>
  </body>
 </html>
