@@ -108,7 +108,35 @@ document.addEventListener("DOMContentLoaded", () => {
       const location = normalized?.location || {};
 
       if (!current) {
-        resultNode.textContent = toPrettyJson(payload);
+        const suggestions = Array.isArray(payload?.suggestions) ? payload.suggestions : [];
+        const sugHtml = suggestions.length
+          ? `<div class="mt-3 text-sm text-blue-200">
+              <div class="font-semibold text-blue-100">Coba salah satu kecamatan ini:</div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                ${suggestions
+                  .slice(0, 10)
+                  .map((s) => `<button type="button" class="btn px-3 py-2 text-sm" data-suggest="${escapeHtml(s)}">${escapeHtml(s)}</button>`)
+                  .join("")}
+              </div>
+            </div>`
+          : "";
+
+        resultNode.innerHTML = `
+          <div class="rounded-xl border border-rose-400/25 bg-rose-950/20 p-4">
+            <div class="text-rose-100 font-bold">Lokasi tidak ditemukan</div>
+            <div class="text-blue-100 mt-1 text-sm leading-relaxed">Pastikan yang diketik adalah <strong>nama kecamatan</strong>. Kalau kamu mengetik nama kota (mis. Surabaya), pilih salah satu kecamatan yang populer di kota tersebut.</div>
+            ${sugHtml}
+          </div>
+        `;
+
+        resultNode.querySelectorAll("button[data-suggest]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const v = btn.getAttribute("data-suggest");
+            if (!v) return;
+            input.value = v;
+            form.requestSubmit();
+          });
+        });
         return;
       }
 
@@ -119,11 +147,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const forecastHtml = forecast.map((item) => {
         const itemVisual = weatherVisualMeta(item?.weather);
+        const forecastClass = `forecast-emoji ${itemVisual.mode ? `forecast-${itemVisual.mode}` : ""}`;
         return `
           <div class="forecast-item">
             <div class="flex items-center justify-between gap-2">
               <strong>${escapeHtml(String(item?.time || "-"))}</strong>
-              <span class="forecast-emoji" aria-hidden="true">${itemVisual.emoji}</span>
+              <span class="${forecastClass}" aria-hidden="true">${itemVisual.emoji}</span>
             </div>
             <div class="mt-1">${escapeHtml(String(item?.weather || "-"))}</div>
             <div class="text-blue-300 mt-1">${escapeHtml(String(item?.temperature ?? "-"))}°C • Angin ${escapeHtml(String(item?.wind || "-"))}</div>
@@ -151,7 +180,16 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="forecast-grid">${forecastHtml}</div>
       `;
     } catch (error) {
-      resultNode.textContent = toPrettyJson(error?.payload || { message: error?.message || "Gagal cek cuaca." });
+      const msg =
+        error?.payload?.message ||
+        error?.message ||
+        "Gagal cek cuaca.";
+      resultNode.innerHTML = `
+        <div class="rounded-xl border border-rose-400/25 bg-rose-950/20 p-4">
+          <div class="text-rose-100 font-bold">Tidak bisa memuat data</div>
+          <div class="text-blue-100 mt-1 text-sm leading-relaxed">${escapeHtml(msg)}</div>
+        </div>
+      `;
     }
   });
 });

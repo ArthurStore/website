@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Status VPS / Bot</title>
+  <title>Status Bot</title>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -51,14 +51,14 @@
     <header class="glass p-6 md:p-8">
       <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <p class="text-xs uppercase tracking-[0.22em] text-cyan-400">Admin · Monitoring</p>
-          <h1 class="mt-2 text-2xl font-bold text-sky-100 md:text-3xl">Status VPS / Node</h1>
+          <p class="text-xs uppercase tracking-[0.22em] text-cyan-400">Live · Node host</p>
+          <h1 class="mt-2 text-2xl font-bold text-sky-100 md:text-3xl">Status Bot</h1>
           <p class="mt-2 max-w-xl text-sm text-sky-200/90">
-            Ringkasan CPU, RAM, dan disk proses Node ini (bukan full <code class="mono text-cyan-300">htop</code>, tapi cukup untuk cek beban secara berkala). Data diperbarui otomatis tiap beberapa detik setelah login admin.
+            Snapshot CPU, RAM, dan disk untuk proses bot ini—cukup untuk monitoring cepat tanpa masuk panel admin. Data auto-refresh tiap beberapa detik.
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <a href="/admin" class="rounded-lg border border-cyan-400/40 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/15">Admin Home</a>
+          <a href="/" class="rounded-lg border border-cyan-400/40 px-4 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/15">Beranda</a>
           <a href="/public" class="rounded-lg border border-sky-400/40 px-4 py-2 text-sm font-semibold text-sky-100 hover:bg-sky-500/15">Fitur Public</a>
         </div>
       </div>
@@ -126,7 +126,7 @@
     }
 
     async function fetchStats() {
-      const res = await fetch("/api/admin/server-stats", {
+      const res = await fetch("/api/public/server-stats", {
         credentials: "same-origin",
         headers: { Accept: "application/json" }
       });
@@ -190,9 +190,9 @@
         const errBox = document.getElementById("error-box");
         errBox.textContent =
           e.message ||
-          "Gagal memuat statistik. Pastikan kamu sudah login admin (PIN) di tab ini.";
+          "Gagal memuat statistik server. Coba refresh halaman atau cek koneksi.";
         errBox.classList.remove("hidden");
-        document.getElementById("poll-status").textContent = "Gagal memuat (cek login admin)";
+        document.getElementById("poll-status").textContent = "Gagal memuat data";
       }
     }
 

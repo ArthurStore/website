@@ -7,6 +7,7 @@
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
   <style>
     h1 {
       font-family: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
@@ -54,6 +55,7 @@
       font-size: 2.2rem;
       line-height: 1;
     }
+    .emoji i { font-size: 2.1rem; vertical-align: middle; }
     .btn-go {
       display: inline-flex;
       align-items: center;
@@ -66,54 +68,28 @@
       text-decoration: none;
       font-weight: 700;
     }
+    .btn-outline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(15, 23, 42, 0.65);
+      color: #e2e8f0;
+      padding: 10px 14px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .btn-outline:hover { border-color: rgba(147, 197, 253, 0.65); color: #fff; }
     .fx-sun::after { background: radial-gradient(circle, #fde68a, transparent 70%); }
     .fx-mail::after { background: radial-gradient(circle, #93c5fd, transparent 70%); }
     .fx-up::after { background: radial-gradient(circle, #67e8f9, transparent 70%); }
     .fx-remini::after { background: radial-gradient(circle, #a5b4fc, transparent 70%); }
     .fx-guess::after { background: radial-gradient(circle, #34d399, transparent 70%); }
     .fx-ai::after { background: radial-gradient(circle, #c084fc, transparent 70%); }
-    .hub-menu-wrap { position: relative; }
-    .hub-menu-btn {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      border: 1px solid rgba(125, 211, 252, 0.45);
-      background: rgba(15, 23, 42, 0.85);
-      color: #e0f2fe;
-      font-size: 1.35rem;
-      font-weight: 800;
-      line-height: 1;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      letter-spacing: 2px;
-    }
-    .hub-menu-btn:hover { border-color: rgba(147, 197, 253, 0.85); background: rgba(30, 58, 138, 0.55); }
-    .hub-menu-panel {
-      display: none;
-      position: absolute;
-      right: 0;
-      top: calc(100% + 8px);
-      min-width: 220px;
-      z-index: 40;
-      border-radius: 14px;
-      border: 1px solid rgba(96, 165, 250, 0.35);
-      background: rgba(15, 23, 42, 0.96);
-      box-shadow: 0 16px 36px rgba(2, 6, 23, 0.55);
-      padding: 8px;
-    }
-    .hub-menu-panel.open { display: block; }
-    .hub-menu-panel a {
-      display: block;
-      padding: 10px 12px;
-      border-radius: 10px;
-      color: #dbeafe;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    .hub-menu-panel a:hover { background: rgba(59, 130, 246, 0.25); }
+    .fx-brat::after { background: radial-gradient(circle, #38bdf8, transparent 70%); }
+    .fx-bratvid::after { background: radial-gradient(circle, #fb7185, transparent 70%); }
     .hub-head-actions { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
   </style>
  </head>
@@ -122,96 +98,91 @@
    <section class="glass p-6 md:p-8">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
      <div>
-      <h1 class="text-3xl md:text-5xl font-extrabold text-blue-100">🌐 Fitur Public Arthur</h1>
-      <p class="text-blue-200 mt-2 max-w-2xl">
-       Pilih fitur yang kamu butuhkan. Semua halaman dibuat sederhana, jelas, dan siap dipakai langsung.
+      <h1 class="text-3xl md:text-5xl font-extrabold text-blue-100">Hub fitur public</h1>
+      <p class="text-blue-200 mt-2 max-w-2xl leading-relaxed">
+       Kumpulan tools ringan—bahasa campur ID &amp; EN—tanpa ribet install. Dari cuaca sampai AI text &amp; image enhance, semuanya lewat browser.
       </p>
      </div>
      <div class="hub-head-actions">
-      <div class="hub-menu-wrap">
-       <button type="button" class="hub-menu-btn" id="hub-more-btn" aria-expanded="false" aria-haspopup="true" title="Menu lainnya">⋯</button>
-       <div class="hub-menu-panel" id="hub-more-panel" role="menu">
-        <a role="menuitem" href="/admin/bot-status">📊 Status VPS (admin)</a>
-        <a role="menuitem" href="/admin">🔐 Login admin</a>
-       </div>
-      </div>
-      <a href="/" class="btn-go">⬅️ Kembali ke Beranda</a>
+      <a href="/bot-status" class="btn-outline"><i class="fas fa-server"></i>Status Bot</a>
+      <a href="/" class="btn-go"><i class="fas fa-home"></i>Beranda</a>
      </div>
     </div>
    </section>
 
    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <article class="glass feature-card fx-sun p-6">
-      <div class="emoji">☀️</div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Cuaca Visual</h2>
-      <p class="text-blue-100 mt-2">
-        Cek kondisi cuaca terkini dan prakiraan jam berikutnya dalam tampilan visual.
+      <div class="emoji"><i class="fas fa-cloud-sun text-amber-200"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Weather hub</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Real-time snapshot &amp; hourly outlook untuk wilayah Indonesia—visual, cepat, langsung dipakai planning outdoor atau commute.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/cuaca">Buka /public/cuaca</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/cuaca">Buka cuaca</a></div>
     </article>
 
     <article class="glass feature-card fx-mail p-6">
-      <div class="emoji">📮</div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tempmail Read</h2>
-      <p class="text-blue-100 mt-2">
-        Baca inbox email sementara untuk kebutuhan verifikasi atau pengujian.
+      <div class="emoji"><i class="fas fa-envelope-open-text text-sky-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tempmail reader</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Check disposable inbox untuk verifikasi akun atau QA flow—tanpa exposing email utama kamu.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/tempmail">Buka /public/tempmail</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/tempmail">Buka tempmail</a></div>
     </article>
 
     <article class="glass feature-card fx-up p-6">
-      <div class="emoji">🖼️✨</div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Upscale Upload File</h2>
-      <p class="text-blue-100 mt-2">
-        Upload gambar lalu tingkatkan kualitasnya secara otomatis.
+      <div class="emoji"><i class="fas fa-expand-arrows-alt text-cyan-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Image upscaler</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Upload still image, dapatkan versi yang lebih besar &amp; tajam—ideal untuk poster ringan atau asset sosmed sebelum editing lanjutan.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/upscale">Buka /public/upscale</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/upscale">Buka upscaler</a></div>
     </article>
 
     <article class="glass feature-card fx-remini p-6">
-      <div class="emoji">🪄📷</div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Remini Upload File</h2>
-      <p class="text-blue-100 mt-2">
-        Upload foto untuk mempertajam detail agar hasil terlihat lebih bersih.
+      <div class="emoji"><i class="fas fa-magic text-violet-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Remini-style online</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Enhance portrait &amp; foto blur menjadi lebih clarify—think “Remini vibe” lewat pipeline otomasi, lengkap preview before / after.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/remini">Buka /public/remini</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/remini">Buka enhancer</a></div>
     </article>
 
     <article class="glass feature-card fx-guess p-6">
-      <div class="emoji">🎯</div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tebak Gambar</h2>
-      <p class="text-blue-100 mt-2">
-        Permainan tebak gambar via API NeoXR whatimg — ambil soal dan jawab sesuai petunjuk respons.
+      <div class="emoji"><i class="fas fa-puzzle-piece text-emerald-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tebak gambar</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Puzzle gambar interaktif: ambil soal baru, tebak jawaban di kolom input—fun quick break.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/whatimg">Buka /public/whatimg</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/whatimg">Main sekarang</a></div>
     </article>
 
     <article class="glass feature-card fx-ai p-6">
-      <div class="emoji">🤖</div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">AI Blackbox</h2>
-      <p class="text-blue-100 mt-2">
-        Chat ringkas dengan AI Blackbox NeoXR untuk pertanyaan teks (POST aman untuk prompt panjang).
+      <div class="emoji"><i class="fas fa-brain text-fuchsia-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Blackbox AI</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Tanya apa saja via prompt panjang (POST aman)—output langsung teks jawaban, tanpa clutter metadata.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/blackbox">Buka /public/blackbox</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/blackbox">Chat AI</a></div>
+    </article>
+
+    <article class="glass feature-card fx-brat p-6">
+      <div class="emoji"><i class="fas fa-font text-sky-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Brat generator (image)</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+        Ubah teks jadi brat-style image. Cocok buat quick meme atau sticker draft.
+      </p>
+      <div class="mt-5"><a class="btn-go" href="/public/brat">Buat brat image</a></div>
+    </article>
+
+    <article class="glass feature-card fx-bratvid p-6">
+      <div class="emoji"><i class="fas fa-video text-rose-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Brat generator (video)</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+        Versi video (mp4) dari brat-style text. Ada preview dan tombol download.
+      </p>
+      <div class="mt-5"><a class="btn-go" href="/public/bratvid">Buat brat video</a></div>
     </article>
    </section>
   </main>
-  <script>
-    (function () {
-      var btn = document.getElementById("hub-more-btn");
-      var panel = document.getElementById("hub-more-panel");
-      if (!btn || !panel) return;
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        var open = panel.classList.toggle("open");
-        btn.setAttribute("aria-expanded", open ? "true" : "false");
-      });
-      document.addEventListener("click", function () {
-        panel.classList.remove("open");
-        btn.setAttribute("aria-expanded", "false");
-      });
-      panel.addEventListener("click", function (e) { e.stopPropagation(); });
-    })();
-  </script>
  </body>
 </html>

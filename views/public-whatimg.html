@@ -2,7 +2,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1" name="viewport"/>
-  <title>Tebak Gambar · Whatimg</title>
+  <title>Tebak Gambar · Mini game</title>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -39,11 +39,32 @@
       transition: transform .15s ease, filter .15s ease;
     }
     .btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
-    pre {
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 0.8rem;
-      line-height: 1.45;
+    .btn-ghost {
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-weight: 700;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.65);
+      color: #e2e8f0;
+      cursor: pointer;
+    }
+    .banner {
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 700;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(2, 6, 23, 0.55);
+      color: #e2e8f0;
+    }
+    .banner.success {
+      border-color: rgba(34, 197, 94, 0.35);
+      background: rgba(20, 83, 45, 0.35);
+      color: #dcfce7;
+    }
+    .banner.error {
+      border-color: rgba(248, 113, 113, 0.35);
+      background: rgba(127, 29, 29, 0.28);
+      color: #fee2e2;
     }
   </style>
 </head>
@@ -52,8 +73,8 @@
     <section class="glass p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-2xl md:text-3xl font-bold text-emerald-200">🎯 Tebak Gambar</h1>
-          <p class="text-emerald-100/90 mt-2 text-sm">Permainan tebak gambar lewat API NeoXR (<code class="text-cyan-300">whatimg</code>). Respons bisa berisi gambar atau teks petunjuk sesuai payload provider.</p>
+          <h1 class="text-2xl md:text-3xl font-bold text-emerald-200">Tebak gambar</h1>
+          <p class="text-emerald-100/90 mt-2 text-sm leading-relaxed">Arcade ringkas: load puzzle image, lalu submit jawabanmu—tanpa raw log supaya game tetap fair secara UX.</p>
         </div>
         <div class="flex gap-2 flex-wrap">
           <a class="btn no-underline inline-flex items-center gap-2" href="/public"><i class="fas fa-th-large"></i>Hub</a>
@@ -63,12 +84,21 @@
     </section>
 
     <section class="glass p-6 space-y-4">
-      <h2 class="text-lg font-semibold text-emerald-200">Ambil soal</h2>
-      <p class="text-sm text-slate-300">Opsional: tambah parameter query jika dokumentasi NeoXR memerlukannya (contoh <code class="text-cyan-200">level=1</code>).</p>
-      <input id="extra-query" class="w-full rounded-xl border border-emerald-500/30 bg-slate-950/60 px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500" placeholder="contoh: level=1 (kosongkan jika tidak perlu)"/>
-      <button type="button" class="btn w-full md:w-auto" id="btn-fetch"><i class="fas fa-sync-alt mr-2"></i>Ambil / refresh soal</button>
+      <h2 class="text-lg font-semibold text-emerald-200">Round baru</h2>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn w-full md:w-auto" id="btn-fetch"><i class="fas fa-sync-alt mr-2"></i>Ambil / refresh soal</button>
+        <button type="button" class="btn-ghost w-full md:w-auto" id="btn-giveup"><i class="fas fa-flag mr-2"></i>Menyerah</button>
+      </div>
+      <p id="hint-line" class="text-sm text-slate-300 min-h-[1.25rem]" aria-live="polite"></p>
+      <div id="game-banner" class="banner hidden" aria-live="polite"></div>
       <div id="img-slot" class="hidden rounded-xl border border-emerald-500/25 bg-slate-950/50 p-3 text-center"></div>
-      <pre id="out" class="rounded-xl border border-slate-600/40 bg-slate-950/70 p-4 text-slate-200">Tekan tombol di atas untuk memuat data dari API.</pre>
+
+      <div class="space-y-2 pt-2 border-t border-emerald-500/15">
+        <label class="text-sm font-semibold text-emerald-100/90" for="guess-input">Jawaban kamu</label>
+        <input id="guess-input" class="w-full rounded-xl border border-emerald-500/30 bg-slate-950/60 px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500" placeholder="Tulis tebakan (huruf kapital tidak wajib)"/>
+        <button type="button" class="btn-ghost w-full md:w-auto" id="btn-check"><i class="fas fa-check mr-2"></i>Cek jawaban</button>
+        <p id="guess-feedback" class="text-sm text-slate-200 min-h-[1.25rem] hidden" aria-live="polite"></p>
+      </div>
     </section>
   </main>
   <script defer src="/public-whatimg.js"></script>

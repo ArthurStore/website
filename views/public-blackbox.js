@@ -1,9 +1,16 @@
-function toPrettyJson(payload) {
-  try {
-    return JSON.stringify(payload, null, 2);
-  } catch (_error) {
-    return String(payload || "");
-  }
+function extractReply(payload) {
+  if (!payload || typeof payload !== "object") return "";
+  const d = payload.data;
+  if (typeof d === "string") return d.trim();
+  if (d != null && typeof d.message === "string") return d.message.trim();
+  if (typeof payload.message === "string") return payload.message.trim();
+  return "";
+}
+
+function pickErrorMessage(err) {
+  if (err == null || err === "") return "Terjadi kesalahan.";
+  if (typeof err === "string") return err;
+  return err.message || err.error || "Terjadi kesalahan.";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -14,11 +21,11 @@ document.addEventListener("DOMContentLoaded", () => {
   btn?.addEventListener("click", async () => {
     const q = String(input?.value || "").trim();
     if (!q) {
-      out.textContent = "Isi pertanyaan dulu.";
+      if (out) out.textContent = "Isi pertanyaan dulu.";
       return;
     }
     btn.disabled = true;
-    out.textContent = "Menunggu respons AI…";
+    if (out) out.textContent = "Menunggu respons…";
     try {
       const response = await fetch("/api/public/blackbox", {
         method: "POST",
@@ -26,9 +33,15 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ q })
       });
       const payload = await response.json();
-      out.textContent = toPrettyJson(payload);
+      if (!response.ok) throw payload;
+      const text = extractReply(payload);
+      if (out) {
+        out.textContent =
+          text ||
+          "Respons sukses tapi tidak ada teks yang bisa ditampilkan (cek struktur data upstream).";
+      }
     } catch (error) {
-      out.textContent = String(error?.message || error || "Request gagal.");
+      if (out) out.textContent = pickErrorMessage(error);
     } finally {
       btn.disabled = false;
     }

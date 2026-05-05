@@ -1,0 +1,126 @@
+<html class="scroll-smooth" lang="id">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <title>Brat generator · Image</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700&amp;family=Plus+Jakarta+Sans:wght@400;600&amp;display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      color: #dbeafe;
+      background:
+        radial-gradient(circle at 14% 16%, rgba(34, 211, 238, 0.16), transparent 42%),
+        radial-gradient(circle at 84% 18%, rgba(59, 130, 246, 0.18), transparent 42%),
+        linear-gradient(145deg, #020617 0%, #0b1733 50%, #06152e 100%);
+    }
+    h1, h2 { font-family: Outfit, "Plus Jakarta Sans", sans-serif; letter-spacing: -0.02em; }
+    .glass {
+      border-radius: 18px;
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      background: rgba(15, 23, 42, 0.74);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 36px rgba(2, 6, 23, 0.44);
+    }
+    .btn {
+      border-radius: 12px;
+      padding: 10px 16px;
+      font-weight: 800;
+      border: 1px solid rgba(125, 211, 252, 0.45);
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 45%, #0ea5e9 100%);
+      color: #fff;
+      cursor: pointer;
+      transition: transform .15s ease, filter .15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .btn:disabled { opacity: 0.55; pointer-events: none; }
+    .field {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(96, 165, 250, 0.35);
+      background: rgba(2, 6, 23, 0.7);
+      color: #e2e8f0;
+      padding: 12px 14px;
+      outline: none;
+    }
+    .field:focus { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35); }
+    .preview {
+      width: 100%;
+      max-height: 560px;
+      object-fit: contain;
+      border-radius: 14px;
+      border: 1px solid rgba(96, 165, 250, 0.32);
+      background: rgba(2, 6, 23, 0.75);
+    }
+    .status-strip {
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      background: rgba(2, 6, 23, 0.52);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+    }
+    .btn-dl {
+      margin-top: 10px;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 800;
+      border: 1px solid rgba(125, 211, 252, 0.45);
+      background: rgba(15, 23, 42, 0.65);
+      color: #e2e8f0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+    .btn-dl:hover { border-color: rgba(147, 197, 253, 0.7); color: #fff; }
+    .btn-dl.hidden { display: none; }
+  </style>
+ </head>
+ <body>
+  <main class="max-w-5xl mx-auto px-4 py-8 md:py-12 space-y-6">
+    <section class="glass p-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold text-blue-100">Brat generator</h1>
+          <p class="text-blue-200/90 mt-2 text-sm leading-relaxed">Masukkan teks, lalu sistem akan menghasilkan gambar “brat” siap download.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <a class="btn" href="/public"><i class="fas fa-th-large"></i>Hub</a>
+          <a class="btn" href="/"><i class="fas fa-home"></i>Beranda</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <article class="glass p-6 space-y-3">
+        <h2 class="text-xl font-bold text-blue-200">Input</h2>
+        <input id="brat-text" class="field" placeholder="Contoh: Arthur Bot — made by Arthur" maxlength="120"/>
+        <button id="brat-generate" type="button" class="btn w-full"><i class="fas fa-wand-magic"></i>Generate image</button>
+        <div id="brat-status" class="status-strip">Tulis teks lalu generate.</div>
+      </article>
+
+      <article class="glass p-6 space-y-3">
+        <h2 class="text-xl font-bold text-blue-200">Preview</h2>
+        <img id="brat-preview" class="preview hidden" alt="Hasil brat image"/>
+        <a id="brat-download" class="btn-dl hidden" href="#" download rel="noopener"><i class="fas fa-download"></i>Download</a>
+      </article>
+    </section>
+  </main>
+
+  <script defer src="/public-brat.js"></script>
+ </body>
+</html>

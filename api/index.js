@@ -237,6 +237,24 @@ app.get('/public/blackbox', (_req, res) => {
   return res.sendFile(path.join(__dirname, '../views/public-blackbox.html'));
 });
 
+app.get('/public/brat', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-brat.html'));
+});
+
+app.get('/public/bratvid', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-bratvid.html'));
+});
+
+app.get('/bot-status', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/bot-status.html'));
+});
+
 app.get('/short-link', (_req, res) => res.status(404).send(renderShortLinkErrorPage(
   'Halaman Tidak Ditemukan',
   'Endpoint ini tidak tersedia untuk publik.'
@@ -334,7 +352,6 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
               <a class="tool" href="${TOOL_PREFIX}/short-link">Short Link</a>
               <a class="tool" href="${TOOL_PREFIX}/ip-calculator">IP Calculator</a>
               <a class="tool" href="${TOOL_PREFIX}/pdf-to-jpg">PDF to JPG</a>
-              <a class="tool" href="${TOOL_PREFIX}/bot-status">Status VPS</a>
             </div>
             <div class="footer">
               <span class="hint">Akses privat aktif</span>
@@ -498,7 +515,7 @@ app.get(`${TOOL_PREFIX}/short-link`, ensureToolAccess, (_req, res) => sendToolVi
 app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolView(res, 'file-vault.html'));
 app.get(`${TOOL_PREFIX}/ip-calculator`, ensureToolAccess, (_req, res) => sendToolView(res, 'ip-calculator.html'));
 app.get(`${TOOL_PREFIX}/pdf-to-jpg`, ensureToolAccess, (_req, res) => sendToolView(res, 'pdf-to-jpg.html'));
-app.get(`${TOOL_PREFIX}/bot-status`, ensureToolAccess, (_req, res) => sendToolView(res, 'bot-status.html'));
+app.get(`${TOOL_PREFIX}/bot-status`, (_req, res) => res.redirect(302, '/bot-status'));
 
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_STORAGE_DIR),
@@ -1558,6 +1575,17 @@ app.get('/api/admin/server-stats', ensureToolApiAccess, async (_req, res) => {
   }
 });
 
+app.get('/api/public/server-stats', async (_req, res) => {
+  try {
+    const snapshot = await collectServerStatsSnapshot();
+    return res.json(snapshot);
+  } catch (error) {
+    return res.status(500).json({
+      message: error?.message || 'Gagal membaca statistik server.'
+    });
+  }
+});
+
 app.get('/api/public/whatimg', async (req, res) => {
   try {
     const payload = await callNeoxrApi('whatimg', neoxrQueryFromRequest(req.query));
@@ -1602,6 +1630,68 @@ app.post('/api/public/blackbox', async (req, res) => {
   }
 });
 
+app.get('/api/public/brat', async (req, res) => {
+  const text = String(req.query.text || '').trim();
+  if (!text) return res.status(400).json({ message: 'Parameter text wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('brat', { text });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal membuat brat image.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/bratvid', async (req, res) => {
+  const text = String(req.query.text || '').trim();
+  if (!text) return res.status(400).json({ message: 'Parameter text wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('bratvid', { text });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal membuat brat video.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/download', async (req, res) => {
+  const rawUrl = String(req.query.url || '').trim();
+  const filename = String(req.query.filename || 'download').trim() || 'download';
+  if (!rawUrl) return res.status(400).json({ message: 'Parameter url wajib diisi.' });
+
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch (_e) {
+    return res.status(400).json({ message: 'URL tidak valid.' });
+  }
+
+  const allowedHosts = new Set(['tmpfiles.org', 'www.tmpfiles.org']);
+  if (!allowedHosts.has(parsed.hostname)) {
+    return res.status(403).json({ message: 'Host download tidak diizinkan.' });
+  }
+
+  try {
+    const upstream = await fetch(parsed.toString(), { method: 'GET' });
+    if (!upstream.ok) {
+      return res.status(502).json({ message: `Gagal ambil file (HTTP ${upstream.status}).` });
+    }
+    const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/["\\r\\n]/g, '')}"`);
+    res.setHeader('Cache-Control', 'no-store');
+
+    const ab = await upstream.arrayBuffer();
+    res.end(Buffer.from(ab));
+  } catch (error) {
+    return res.status(500).json({ message: error?.message || 'Gagal proxy download.' });
+  }
+});
+
 app.get('/api/public/cuaca', async (req, res) => {
   const subdistrict = String(req.query.subdistrict || 'batang').trim();
   if (!subdistrict) {
@@ -1610,9 +1700,39 @@ app.get('/api/public/cuaca', async (req, res) => {
 
   try {
     const payload = await callNeoxrApi('cuaca', { subdistrict });
+    const normalized = normalizeWeatherSummary(payload);
+    const current = normalized?.current || null;
+    const rawLower = String(subdistrict || '').toLowerCase();
+    const suggestionsByCity = [
+      {
+        keys: ['surabaya', 'sby'],
+        values: ['Sukolilo', 'Rungkut', 'Wonokromo', 'Tegalsari', 'Genteng', 'Gubeng']
+      },
+      {
+        keys: ['jakarta', 'jkt'],
+        values: ['Menteng', 'Tanah Abang', 'Kebayoran Baru', 'Cempaka Putih', 'Tebet', 'Kemayoran']
+      },
+      {
+        keys: ['bandung'],
+        values: ['Coblong', 'Sukajadi', 'Cicendo', 'Lengkong', 'Kiaracondong', 'Antapani']
+      }
+    ];
+    const suggestionHit = suggestionsByCity.find((x) => x.keys.some((k) => rawLower.includes(k)));
+    const suggestions = suggestionHit ? suggestionHit.values : [];
+
+    if (!current) {
+      return res.status(404).json({
+        status: false,
+        message: 'Lokasi tidak ditemukan. Coba ketik nama kecamatan (bukan nama kota).',
+        suggestions,
+        normalized
+      });
+    }
+
     return res.json({
-      ...payload,
-      normalized: normalizeWeatherSummary(payload)
+      status: true,
+      normalized,
+      suggestions
     });
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({

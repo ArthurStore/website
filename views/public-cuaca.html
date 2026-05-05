@@ -138,9 +138,9 @@
     .weather-emoji {
       display: block;
       line-height: 1;
-      font-size: 1.45rem;
-      max-width: 1.35em;
-      max-height: 1.35em;
+      font-size: 2.15rem;
+      max-width: 1.65em;
+      max-height: 1.65em;
       overflow: hidden;
       transform-origin: center center;
       will-change: transform;
@@ -231,13 +231,32 @@
       position: relative;
       animation: weatherIconShellPulse 4.5s ease-in-out infinite;
     }
+    .headline-emoji {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      line-height: 1;
+      filter: drop-shadow(0 0 10px rgba(253, 224, 71, 0.55));
+    }
+
     .forecast-emoji {
-      display: inline-block;
-      font-size: 1.05rem;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.85rem;
       line-height: 1;
       vertical-align: middle;
-      animation: forecastEmojiWiggle 4s ease-in-out infinite;
+      transform-origin: center center;
+      will-change: transform, filter;
+      animation: forecastPop 2.9s ease-in-out infinite;
+      filter: drop-shadow(0 2px 10px rgba(147, 197, 253, 0.45));
     }
+    .forecast-weather-sunny { animation: forecastSun 2.4s ease-in-out infinite; filter: drop-shadow(0 0 14px rgba(253, 224, 71, 0.75)); }
+    .forecast-weather-rainy { animation: forecastRain 1.7s ease-in-out infinite; filter: drop-shadow(0 2px 10px rgba(56, 189, 248, 0.55)); }
+    .forecast-weather-storm { animation: forecastStorm 2.1s ease-in-out infinite; filter: drop-shadow(0 0 14px rgba(167, 139, 250, 0.65)); }
+    .forecast-weather-cloudy { animation: forecastCloud 3.6s ease-in-out infinite; filter: drop-shadow(0 2px 10px rgba(226, 232, 240, 0.35)); }
     .forecast-grid {
       margin-top: 12px;
       display: grid;
@@ -296,9 +315,31 @@
       0%, 100% { box-shadow: 0 0 16px rgba(147, 197, 253, 0.32); }
       50% { box-shadow: 0 0 28px rgba(147, 197, 253, 0.55); }
     }
-    @keyframes forecastEmojiWiggle {
-      0%, 100% { transform: rotate(0deg) scale(1); }
-      50% { transform: rotate(8deg) scale(1.05); }
+    @keyframes forecastPop {
+      0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      50% { transform: scale(1.08) rotate(4deg); opacity: 0.98; }
+    }
+    @keyframes forecastSun {
+      0%, 100% { transform: scale(1) rotate(-6deg); }
+      45% { transform: scale(1.18) rotate(10deg); }
+      70% { transform: scale(1.12) rotate(-2deg); }
+    }
+    @keyframes forecastRain {
+      0%, 100% { transform: translateY(0) scale(1); }
+      40% { transform: translateY(4px) scale(1.08); }
+      70% { transform: translateY(1px) scale(1.02); }
+    }
+    @keyframes forecastStorm {
+      0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+      20% { transform: translate(-2px, 1px) rotate(-10deg) scale(1.08); }
+      40% { transform: translate(3px, -1px) rotate(10deg) scale(1.05); }
+      60% { transform: translate(-1px, 2px) rotate(-6deg) scale(1.1); }
+      80% { transform: translate(2px, 0) rotate(6deg) scale(1.02); }
+    }
+    @keyframes forecastCloud {
+      0%, 100% { transform: translateX(0) translateY(0) scale(1); }
+      33% { transform: translateX(4px) translateY(-2px) scale(1.06); }
+      66% { transform: translateX(-4px) translateY(1px) scale(1); }
     }
     @keyframes rainFallMove {
       from { transform: translateY(-28px); }
@@ -315,6 +356,7 @@
       0%, 100% { transform: translateX(0) translateY(0) scale(1); }
       50% { transform: translateX(16px) translateY(-6px) scale(1.04); }
     }
+    /* headline emoji dibuat clean; efek "wow" dipindah ke emoji ramalan */
     @keyframes cloudySkyShift {
       0%, 100% { opacity: 0.72; transform: scale(1) translate3d(0, 0, 0); }
       50% { opacity: 1; transform: scale(1.06) translate3d(2%, -1%, 0); }
@@ -328,7 +370,8 @@
       .weather-cloudy.weather-hero::before,
       .weather-icon,
       .weather-emoji,
-      .forecast-emoji {
+      .forecast-emoji,
+      .headline-emoji {
         animation: none !important;
       }
       .weather-fx-rain { opacity: 0.35; }
@@ -341,8 +384,11 @@
    <section class="glass p-6">
     <div class="flex flex-col lg:flex-row gap-5 items-start lg:items-center lg:justify-between">
      <div>
-      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200">☀️ Cek Cuaca</h1>
-      <p class="text-blue-100 mt-2 max-w-2xl">Masukkan nama wilayah untuk melihat cuaca saat ini dan prakiraan jam berikutnya.</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200 flex flex-wrap items-center gap-3">
+       <span class="headline-emoji" aria-hidden="true">🌤️</span>
+       <span>Cek Cuaca</span>
+      </h1>
+      <p class="text-blue-100 mt-2 max-w-2xl leading-relaxed">Masukkan nama kecamatan untuk melihat kondisi sekarang dan ramalan per jam berikutnya.</p>
      </div>
      <div class="flex flex-wrap gap-2">
       <a href="/public" class="btn inline-flex items-center gap-2"><i class="fas fa-th-large"></i><span>Hub Public</span></a>
