@@ -60,6 +60,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const status = document.getElementById("brat-status");
   const dl = document.getElementById("brat-download");
 
+  input?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      btn?.click();
+    }
+  });
+
   btn?.addEventListener("click", async () => {
     const text = String(input?.value || "").trim();
     if (!text) {

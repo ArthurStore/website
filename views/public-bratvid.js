@@ -61,6 +61,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const status = document.getElementById("bratvid-status");
   const dl = document.getElementById("bratvid-download");
 
+  input?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      btn?.click();
+    }
+  });
+
   btn?.addEventListener("click", async () => {
     const text = String(input?.value || "").trim();
     if (!text) {
