@@ -1881,7 +1881,9 @@ function delayPdfConverter(ms) {
 async function convertPdfByUrlWithRetries(url, filename, to, options = {}) {
   const maxAttempts = Math.min(
     5,
-    Math.max(1, Number(options?.maxAttempts ?? process.env.PDF_CONVERTER_RETRY_ATTEMPTS) || 3)
+    // Minimal 2 attempt supaya timeout provider punya kesempatan retry,
+    // terutama untuk environment VPS yang kadang diset 1 via env.
+    Math.max(2, Number(options?.maxAttempts ?? process.env.PDF_CONVERTER_RETRY_ATTEMPTS) || 3)
   );
   const retryDelayMs = Math.min(
     10000,
