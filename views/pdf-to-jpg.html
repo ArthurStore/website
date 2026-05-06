@@ -328,7 +328,11 @@
             payload = {
               message: looksLikeHtml
                 ? `Respons server bukan JSON (HTTP ${response.status || 'unknown'}).`
-                : (rawText || 'Server mengembalikan respons non-JSON.')
+                : (rawText || 'Server mengembalikan respons non-JSON.'),
+              hint:
+                response.status === 504
+                  ? 'Ini biasanya Gateway Timeout dari Nginx (bukan dari aplikasi). Naikkan proxy_read_timeout/proxy_send_timeout di virtual host domain (+ blok HTTPS), lalu nginx -t && reload nginx. Lihat panduan di DEPLOY_VPS.md.'
+                  : ''
             };
           }
         }
@@ -337,7 +341,7 @@
           const details = [payload.message, payload.hint].filter(Boolean).join(' ');
           let finalMessage = details || 'Konversi gagal.';
           if (response.status === 504) {
-            finalMessage = `${finalMessage} Provider converter sedang lambat/timeout. Coba lagi sebentar, atau pakai file lebih kecil.`;
+            finalMessage = `${finalMessage} Kalau ini terjadi di VPS: cek timeout Nginx (proxy_read_timeout). Kalau respons HTML dari gateway, itu bukan retry Node yang gagal—koneksi diputus proxy lebih dulu.`;
           } else if (response.status === 502) {
             finalMessage = `${finalMessage} Provider converter sedang error (502), coba ulang beberapa menit lagi.`;
           }

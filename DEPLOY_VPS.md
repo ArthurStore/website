@@ -260,11 +260,20 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Penting untuk convert PDF → JPG (dan upload besar): tanpa ini Nginx sering memutus koneksi lebih dulu
+        # → browser melihat HTTP 504 / respons HTML "gateway timeout" walau Node masih memproses.
+        proxy_connect_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_read_timeout 600s;
+        send_timeout 600s;
     }
 }
 ```
 
 `client_max_body_size` wajib dinaikkan kalau pakai tool upload (contoh PDF to JPG), supaya tidak kena error **413 Request Entity Too Large** dari nginx.
+
+**PDF to JPG sering gagal di VPS tapi lancar di localhost** biasanya karena **timeout proxy Nginx** (default singkat). Pastikan blok `proxy_*_timeout` di atas ikut disalin ke virtual host HTTPS juga (setelah Certbot menambahkan blok `listen 443 ssl;`).
 
 Aktifkan site (buat symlink ke **sites-enabled**):
 
