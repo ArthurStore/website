@@ -1466,6 +1466,22 @@ async function callNeoxrApi(endpoint, queryParams = {}) {
   return payload;
 }
 
+function isTimeoutLikeError(error) {
+  const statusCode = Number(error?.statusCode) || null;
+  if (statusCode === 504) return true;
+  const msg = String(error?.message || '').toLowerCase();
+  return msg.includes('timeout') || msg.includes('timed out');
+}
+
+function sanitizePublicUpstreamMessage(error, fallback) {
+  if (isTimeoutLikeError(error)) {
+    return 'Server converter sedang timeout. Coba lagi beberapa saat, atau ulang dengan input yang lebih ringan.';
+  }
+  const raw = String(error?.message || fallback || '').trim();
+  // hilangkan kata "NeoXR" biar tidak tampil ke user
+  return raw.replace(/neoxr/gi, 'server');
+}
+
 function neoxrQueryFromRequest(query = {}) {
   const params = {};
   Object.entries(query).forEach(([key, value]) => {
@@ -1759,7 +1775,7 @@ app.get('/api/public/youtube', async (req, res) => {
     return res.json(payload);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal memproses YouTube downloader.',
+      message: sanitizePublicUpstreamMessage(error, 'Gagal memproses YouTube downloader.'),
       upstream: error?.payload || null
     });
   }
@@ -1773,7 +1789,7 @@ app.get('/api/public/ig', async (req, res) => {
     return res.json(payload);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal memproses Instagram downloader.',
+      message: sanitizePublicUpstreamMessage(error, 'Gagal memproses Instagram downloader.'),
       upstream: error?.payload || null
     });
   }
@@ -1787,7 +1803,7 @@ app.get('/api/public/webp2jpg', async (req, res) => {
     return res.json(payload);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal convert WEBP ke JPG.',
+      message: sanitizePublicUpstreamMessage(error, 'Gagal convert WEBP ke JPG.'),
       upstream: error?.payload || null
     });
   }
@@ -1801,7 +1817,7 @@ app.get('/api/public/webp2mp4', async (req, res) => {
     return res.json(payload);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal convert WEBP ke MP4.',
+      message: sanitizePublicUpstreamMessage(error, 'Gagal convert WEBP ke MP4.'),
       upstream: error?.payload || null
     });
   }
@@ -1815,10 +1831,54 @@ app.get('/api/public/trends', async (req, res) => {
     return res.json(payload);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal mengambil trending.',
+      message: sanitizePublicUpstreamMessage(error, 'Gagal mengambil trending.'),
       upstream: error?.payload || null
     });
   }
+});
+
+const publicTempUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { files: 1, fileSize: 20 * 1024 * 1024 }
+});
+
+app.post('/api/public/upload-temp', (req, res) => {
+  publicTempUpload.single('file')(req, res, async (error) => {
+    if (error) {
+      return res.status(400).json({ message: error?.message || 'Upload gagal.' });
+    }
+    const file = req.file;
+    if (!file?.buffer) {
+      return res.status(400).json({ message: 'File wajib diupload (field: file).' });
+    }
+    try {
+      // Pakai Litterbox (temporary) supaya tidak memenuhi storage sendiri.
+      const original = (String(file.originalname || 'upload').trim() || 'upload').replace(/[^\w.\-]+/g, '-');
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), CATBOX_TIMEOUT_MS);
+      try {
+        const payload = new FormData();
+        payload.append('reqtype', 'fileupload');
+        payload.append('time', `${String(LITTERBOX_RETENTION_HOURS || 72)}h`);
+        payload.append('fileToUpload', new Blob([file.buffer], { type: file.mimetype || 'application/octet-stream' }), original);
+        const resp = await fetch(LITTERBOX_UPLOAD_ENDPOINT, {
+          method: 'POST',
+          body: payload,
+          signal: timeoutController.signal
+        });
+        const rawText = String(await resp.text() || '').trim();
+        if (!resp.ok || !rawText || !/^https?:\/\//i.test(rawText)) {
+          return res.status(502).json({ message: 'Upload sementara gagal. Coba lagi beberapa saat.' });
+        }
+        return res.json({ status: true, url: rawText, expiresHours: LITTERBOX_RETENTION_HOURS });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    } catch (e) {
+      const msg = sanitizePublicUpstreamMessage(e, 'Upload sementara gagal. Coba lagi beberapa saat.');
+      return res.status(Number(e?.statusCode) || 502).json({ message: msg });
+    }
+  });
 });
 
 app.get('/api/public/cuaca', async (req, res) => {

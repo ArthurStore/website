@@ -18,10 +18,14 @@ function setActiveMode(mode) {
   const btnAudio = document.getElementById("yt-mode-audio");
   const qVideo = document.getElementById("yt-quality-video");
   const qAudio = document.getElementById("yt-quality-audio");
+  const wrapVideo = document.getElementById("yt-video-quality-wrap");
+  const wrapAudio = document.getElementById("yt-audio-quality-wrap");
   if (btnVideo) btnVideo.classList.toggle("active", mode === "video");
   if (btnAudio) btnAudio.classList.toggle("active", mode === "audio");
   if (qVideo) qVideo.disabled = mode !== "video";
   if (qAudio) qAudio.disabled = mode !== "audio";
+  if (wrapVideo) wrapVideo.classList.toggle("hidden", mode !== "video");
+  if (wrapAudio) wrapAudio.classList.toggle("hidden", mode !== "audio");
 }
 
 function buildDownloadHref(url, filename) {

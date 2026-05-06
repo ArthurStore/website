@@ -108,6 +108,12 @@
       text-decoration: none;
     }
     .btn-dl.hidden { display: none; }
+    .filebox {
+      border: 1px dashed rgba(125, 211, 252, 0.35);
+      border-radius: 16px;
+      padding: 12px 14px;
+      background: rgba(2, 6, 23, 0.45);
+    }
   </style>
  </head>
  <body>
@@ -134,7 +140,16 @@
           <button id="webp-mode-jpg" type="button" class="btn-outline active"><i class="fas fa-image"></i>WEBP → JPG</button>
           <button id="webp-mode-mp4" type="button" class="btn-outline"><i class="fas fa-film"></i>WEBP → MP4</button>
         </div>
-        <input id="webp-url" class="field" placeholder="https://.../file.webp" />
+        <div class="space-y-2">
+          <label class="text-blue-200 text-sm font-semibold" for="webp-url">URL WEBP (opsional)</label>
+          <input id="webp-url" class="field" placeholder="https://.../file.webp" />
+          <div class="text-blue-200/70 text-xs">Kalau URL kosong, kamu bisa upload file WEBP (temp).</div>
+        </div>
+        <div class="filebox space-y-2">
+          <label class="text-blue-200 text-sm font-semibold" for="webp-file">Upload WEBP (temp)</label>
+          <input id="webp-file" type="file" accept="image/webp" class="field" />
+          <div class="text-blue-200/70 text-xs">File diupload ke penyimpanan sementara (Litterbox), bukan disimpan permanen di VPS.</div>
+        </div>
         <button id="webp-convert" type="button" class="btn w-full"><i class="fas fa-sync"></i>Convert</button>
         <div id="webp-status" class="status-strip">Pilih mode, tempel URL webp, lalu convert.</div>
       </article>

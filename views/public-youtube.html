@@ -65,7 +65,9 @@
       border: 1px solid rgba(96, 165, 250, 0.35);
       background: rgba(2, 6, 23, 0.7);
       color: #e2e8f0;
-      padding: 12px 14px;
+      padding: 14px 16px;
+      font-size: 1.02rem;
+      min-height: 52px;
       outline: none;
     }
     .field:focus, select:focus { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35); }
@@ -141,7 +143,7 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="space-y-2">
+          <div id="yt-video-quality-wrap" class="space-y-2">
             <label class="text-blue-200 text-sm font-semibold" for="yt-quality-video">Kualitas video (maks 1080p)</label>
             <select id="yt-quality-video">
               <option value="144p">144p</option>
@@ -152,7 +154,7 @@
               <option value="1080p">1080p</option>
             </select>
           </div>
-          <div class="space-y-2">
+          <div id="yt-audio-quality-wrap" class="space-y-2 hidden">
             <label class="text-blue-200 text-sm font-semibold" for="yt-quality-audio">Kualitas audio</label>
             <select id="yt-quality-audio">
               <option value="64kbps">64kbps</option>

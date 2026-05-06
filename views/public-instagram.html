@@ -84,6 +84,20 @@
       gap: 8px;
       text-decoration: none;
     }
+    .nav-btn {
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-weight: 900;
+      border: 1px solid rgba(196, 181, 253, 0.35);
+      background: rgba(2, 6, 23, 0.55);
+      color: #e2e8f0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-btn:disabled { opacity: 0.5; cursor: default; }
   </style>
  </head>
  <body>
@@ -113,6 +127,11 @@
 
       <article class="glass p-6 space-y-3">
         <h2 class="text-xl font-bold text-violet-200">Hasil</h2>
+        <div id="ig-nav" class="hidden flex items-center justify-between gap-3 border border-violet-300/15 rounded-2xl p-3 bg-slate-950/35">
+          <button id="ig-prev" type="button" class="nav-btn"><i class="fas fa-chevron-left"></i>Prev</button>
+          <div id="ig-counter" class="text-violet-100/90 text-sm font-extrabold"></div>
+          <button id="ig-next" type="button" class="nav-btn">Next<i class="fas fa-chevron-right"></i></button>
+        </div>
         <div id="ig-results" class="space-y-4"></div>
       </article>
     </section>

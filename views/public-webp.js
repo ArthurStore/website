@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnJpg = document.getElementById("webp-mode-jpg");
   const btnMp4 = document.getElementById("webp-mode-mp4");
   const input = document.getElementById("webp-url");
+  const fileInput = document.getElementById("webp-file");
   const btn = document.getElementById("webp-convert");
   const status = document.getElementById("webp-status");
   const img = document.getElementById("webp-preview-img");
@@ -66,9 +67,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   btn?.addEventListener("click", async () => {
-    const url = safeText(input?.value);
-    if (!url) {
-      if (status) status.textContent = "Masukkan URL .webp dulu.";
+    let url = safeText(input?.value);
+    const file = fileInput?.files?.[0] || null;
+    if (!url && !file) {
+      if (status) status.textContent = "Masukkan URL .webp atau upload file WEBP dulu.";
       return;
     }
     if (status) status.textContent = "Memproses…";
@@ -85,6 +87,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (dl) dl.removeAttribute("href");
 
     try {
+      if (!url && file) {
+        const fd = new FormData();
+        fd.append("file", file, file.name || "upload.webp");
+        const up = await fetch("/api/public/upload-temp", { method: "POST", body: fd });
+        const upPayload = await up.json();
+        if (!up.ok) throw upPayload;
+        url = safeText(upPayload?.url);
+        if (!/^https?:\/\//i.test(url)) throw new Error("Upload temp tidak mengembalikan URL.");
+      }
+
       const endpoint = mode === "jpg" ? "webp2jpg" : "webp2mp4";
       const res = await fetch(`/api/public/${endpoint}?url=${encodeURIComponent(url)}`, {
         headers: { Accept: "application/json" }

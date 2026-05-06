@@ -18,7 +18,7 @@ function renderList(items) {
     return;
   }
 
-  items.forEach((row) => {
+  items.forEach((row, idx) => {
     const topic = safeText(row?.topic);
     const tweets = safeText(row?.tweets);
     if (!topic) return;
@@ -29,9 +29,34 @@ function renderList(items) {
     const wrap = document.createElement("div");
     wrap.className = "trend-item";
 
+    const header = document.createElement("div");
+    header.className = "flex items-start gap-3";
+
+    const rank = document.createElement("div");
+    const rankNum = idx + 1;
+    const rankCls = rankNum === 1 ? "rank-1" : rankNum === 2 ? "rank-2" : rankNum === 3 ? "rank-3" : "";
+    rank.className = `rank-badge ${rankCls}`.trim();
+    rank.textContent = String(rankNum);
+
+    const titleWrap = document.createElement("div");
+    titleWrap.className = "flex-1 min-w-0";
+
     const title = document.createElement("div");
     title.className = "trend-topic";
     title.textContent = topic;
+
+    // heuristik sederhana: kalau top 1-3 atau volume "Over" / "K" → tampilkan HOT
+    const isHot = rankNum <= 3 || /over|k|m|trending/i.test(String(tweets || ""));
+    if (isHot) {
+      const hot = document.createElement("span");
+      hot.className = "hot";
+      hot.innerHTML = `<i class="fas fa-fire"></i>HOT`;
+      title.appendChild(hot);
+    }
+
+    titleWrap.appendChild(title);
+    header.appendChild(rank);
+    header.appendChild(titleWrap);
 
     const meta = document.createElement("div");
     meta.className = "trend-meta";
@@ -44,7 +69,7 @@ function renderList(items) {
       <a href="${newsSearch}" target="_blank" rel="noopener"><i class="fas fa-newspaper"></i>Berita terkait</a>
     `;
 
-    wrap.appendChild(title);
+    wrap.appendChild(header);
     wrap.appendChild(meta);
     wrap.appendChild(actions);
     root.appendChild(wrap);
