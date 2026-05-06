@@ -9,6 +9,8 @@ const fs = require('fs');
 const os = require('os');
 const multer = require('multer');
 const archiver = require('archiver');
+const { Readable } = require('stream');
+const { pipeline } = require('stream/promises');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -247,6 +249,30 @@ app.get('/public/bratvid', (_req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   return res.sendFile(path.join(__dirname, '../views/public-bratvid.html'));
+});
+
+app.get('/public/youtube', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-youtube.html'));
+});
+
+app.get('/public/instagram', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-instagram.html'));
+});
+
+app.get('/public/webp', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-webp.html'));
+});
+
+app.get('/public/trends', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-trends.html'));
 });
 
 app.get('/bot-status', (_req, res) => {
@@ -1670,7 +1696,24 @@ app.get('/api/public/download', async (req, res) => {
     return res.status(400).json({ message: 'URL tidak valid.' });
   }
 
-  const allowedHosts = new Set(['tmpfiles.org', 'www.tmpfiles.org']);
+  const allowedHosts = new Set([
+    // tmpfiles (legacy)
+    'tmpfiles.org',
+    'www.tmpfiles.org',
+    // NeoXR / CDN
+    's.neoxr.eu',
+    'cdn.neoxr.my.id',
+    // IG downloader upstream in examples
+    'dl.snapcdn.app',
+    // WEBP converters examples
+    'tiny-img.com',
+    'www.tiny-img.com',
+    // ezgif temp mp4 hosts (varying subdomains)
+    'ezgif.com',
+    'www.ezgif.com',
+    's4.ezgif.com',
+    's8.ezgif.com'
+  ]);
   if (!allowedHosts.has(parsed.hostname)) {
     return res.status(403).json({ message: 'Host download tidak diizinkan.' });
   }
@@ -1684,11 +1727,97 @@ app.get('/api/public/download', async (req, res) => {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/["\\r\\n]/g, '')}"`);
     res.setHeader('Cache-Control', 'no-store');
+    if (upstream.body) {
+      try {
+        // Stream ke client biar file besar (mp4/mp3) tidak di-buffer full di RAM.
+        const nodeStream = Readable.fromWeb(upstream.body);
+        await pipeline(nodeStream, res);
+        return;
+      } catch (_streamError) {
+        // fallback ke buffer (untuk compatibility tertentu)
+      }
+    }
 
     const ab = await upstream.arrayBuffer();
     res.end(Buffer.from(ab));
   } catch (error) {
     return res.status(500).json({ message: error?.message || 'Gagal proxy download.' });
+  }
+});
+
+app.get('/api/public/youtube', async (req, res) => {
+  const url = String(req.query.url || '').trim();
+  const type = String(req.query.type || '').trim().toLowerCase();
+  const quality = String(req.query.quality || '').trim();
+  if (!url) return res.status(400).json({ message: 'Parameter url wajib diisi.' });
+  if (!['video', 'audio'].includes(type)) {
+    return res.status(400).json({ message: 'Parameter type wajib diisi: video | audio.' });
+  }
+  if (!quality) return res.status(400).json({ message: 'Parameter quality wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('youtube', { url, type, quality });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal memproses YouTube downloader.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/ig', async (req, res) => {
+  const url = String(req.query.url || '').trim();
+  if (!url) return res.status(400).json({ message: 'Parameter url wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('ig', { url });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal memproses Instagram downloader.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/webp2jpg', async (req, res) => {
+  const url = String(req.query.url || '').trim();
+  if (!url) return res.status(400).json({ message: 'Parameter url wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('webp2jpg', { url });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal convert WEBP ke JPG.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/webp2mp4', async (req, res) => {
+  const url = String(req.query.url || '').trim();
+  if (!url) return res.status(400).json({ message: 'Parameter url wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('webp2mp4', { url });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal convert WEBP ke MP4.',
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/trends', async (req, res) => {
+  const q = String(req.query.q || 'indonesia').trim();
+  if (!q) return res.status(400).json({ message: 'Parameter q wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('trends', { q });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: error?.message || 'Gagal mengambil trending.',
+      upstream: error?.payload || null
+    });
   }
 });
 

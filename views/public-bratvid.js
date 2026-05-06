@@ -31,7 +31,8 @@ function setDownload(url, filenameHint) {
     link.removeAttribute("href");
     return;
   }
-  link.href = url;
+  const safeName = String(filenameHint || "bratvid.mp4");
+  link.href = `/api/public/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeName)}`;
   link.setAttribute("download", filenameHint || "bratvid.mp4");
   link.classList.remove("hidden");
 }
