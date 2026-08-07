@@ -273,6 +273,18 @@ server {
 
 `client_max_body_size` wajib dinaikkan kalau pakai tool upload (File Vault / PDF to JPG), supaya tidak kena error **413 Request Entity Too Large** dari nginx. Nilai `2048M` mendukung file besar (>200MB); File Vault juga memakai upload chunked otomatis untuk file ≥50MB.
 
+Setelah `git pull`, **wajib** restart proses Node agar route baru aktif:
+
+```bash
+cd /var/www/arthurg-website
+git pull
+npm ci
+pm2 restart arthurg-website
+# atau: pm2 reload ecosystem.config.cjs --env production
+```
+
+Tanpa restart PM2, file HTML/JS baru bisa sudah ter-serve (static), tetapi route Express seperti `/public/tiktok`, `/admin/pastebin`, dan fix `country` di `/api/public/trends` **tetap 404 / error** karena proses lama masih jalan.
+
 **PDF to JPG sering gagal di VPS tapi lancar di localhost** biasanya karena **timeout proxy Nginx** (default singkat). Pastikan blok `proxy_*_timeout` di atas ikut disalin ke virtual host HTTPS juga (setelah Certbot menambahkan blok `listen 443 ssl;`).
 
 Aktifkan site (buat symlink ke **sites-enabled**):

@@ -339,120 +339,132 @@ function attachScrollWhiteMaskFix() {
 }
 
 function createCursorTrail() {
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const finePointer = window.matchMedia("(pointer: fine)").matches;
-  if (reduceMotion || !finePointer) return;
-  if (!document.body) return;
-  document.body.classList.add("cursor-trail-only");
-
-  const glow = document.createElement("div");
-  glow.className = "cursor-glow";
-  glow.setAttribute("aria-hidden", "true");
-  const dot = document.createElement("div");
-  dot.className = "cursor-dot";
-  dot.setAttribute("aria-hidden", "true");
-  document.body.appendChild(glow);
-  document.body.appendChild(dot);
-
-  let targetX = window.innerWidth / 2;
-  let targetY = window.innerHeight / 2;
-  let glowX = targetX;
-  let glowY = targetY;
-  let dotX = targetX;
-  let dotY = targetY;
-  let rafId = 0;
-  let lastMoveAt = 0;
-
-  const setHoverState = (target) => {
-    if (!(target instanceof Element)) return;
-    const clickable = target.closest("a, button, input, textarea, select, [role='button'], .cta-button, .service-link, .bot-preview");
-    document.body.classList.toggle("cursor-hovering-link", Boolean(clickable));
-  };
-
-  const activateTracking = (x, y, target) => {
-    if (Number.isFinite(x) && Number.isFinite(y)) {
-      targetX = x;
-      targetY = y;
-      lastMoveAt = Date.now();
+  try {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
+    if (reduceMotion || !finePointer) {
+      document.body?.classList.remove("cursor-trail-only", "cursor-trail-ready");
+      return;
     }
-    document.body.classList.add("cursor-tracking");
-    if (target) setHoverState(target);
-  };
+    if (!document.body) return;
 
-  const onPointerMove = (event) => {
-    activateTracking(event.clientX, event.clientY, event.target);
-  };
+    const glow = document.createElement("div");
+    glow.className = "cursor-glow";
+    glow.setAttribute("aria-hidden", "true");
+    glow.style.pointerEvents = "none";
+    const dot = document.createElement("div");
+    dot.className = "cursor-dot";
+    dot.setAttribute("aria-hidden", "true");
+    dot.style.pointerEvents = "none";
+    document.body.appendChild(glow);
+    document.body.appendChild(dot);
 
-  const onMouseMove = (event) => {
-    activateTracking(event.clientX, event.clientY, event.target);
-  };
+    // Baru sembunyikan cursor native setelah elemen custom benar-benar terpasang
+    document.body.classList.add("cursor-trail-only", "cursor-trail-ready");
 
-  const onPointerEnter = (event) => {
-    activateTracking(event.clientX, event.clientY, event.target);
-  };
+    let targetX = window.innerWidth / 2;
+    let targetY = window.innerHeight / 2;
+    let glowX = targetX;
+    let glowY = targetY;
+    let dotX = targetX;
+    let dotY = targetY;
+    let rafId = 0;
+    let lastMoveAt = 0;
 
-  const onPointerLeave = () => {
-    document.body.classList.remove("cursor-tracking");
-    document.body.classList.remove("cursor-hovering-link");
-  };
+    const setHoverState = (target) => {
+      if (!(target instanceof Element)) return;
+      const clickable = target.closest("a, button, input, textarea, select, [role='button'], .cta-button, .service-link, .bot-preview");
+      document.body.classList.toggle("cursor-hovering-link", Boolean(clickable));
+    };
 
-  const onVisibilityChange = () => {
-    if (document.hidden) {
+    const activateTracking = (x, y, target) => {
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        targetX = x;
+        targetY = y;
+        lastMoveAt = Date.now();
+      }
+      document.body.classList.add("cursor-tracking");
+      if (target) setHoverState(target);
+    };
+
+    const onPointerMove = (event) => {
+      activateTracking(event.clientX, event.clientY, event.target);
+    };
+
+    const onMouseMove = (event) => {
+      activateTracking(event.clientX, event.clientY, event.target);
+    };
+
+    const onPointerEnter = (event) => {
+      activateTracking(event.clientX, event.clientY, event.target);
+    };
+
+    const onPointerLeave = () => {
+      document.body.classList.remove("cursor-tracking");
+      document.body.classList.remove("cursor-hovering-link");
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        onPointerLeave();
+        return;
+      }
+      document.body.classList.add("cursor-tracking");
+    };
+
+    const onWindowFocus = () => {
+      document.body.classList.add("cursor-tracking");
+    };
+
+    const onWindowBlur = () => {
       onPointerLeave();
-      return;
-    }
-    document.body.classList.add("cursor-tracking");
-  };
+    };
 
-  const onWindowFocus = () => {
-    document.body.classList.add("cursor-tracking");
-  };
-
-  const onWindowBlur = () => {
-    onPointerLeave();
-  };
-
-  const tick = () => {
-    if (document.hidden) {
+    const tick = () => {
+      if (document.hidden) {
+        rafId = window.requestAnimationFrame(tick);
+        return;
+      }
+      if (!lastMoveAt && document.hasFocus()) {
+        document.body.classList.add("cursor-tracking");
+      }
+      if (lastMoveAt && Date.now() - lastMoveAt > 1800 && document.hasFocus()) {
+        document.body.classList.add("cursor-tracking");
+      }
+      glowX += (targetX - glowX) * 0.16;
+      glowY += (targetY - glowY) * 0.16;
+      dotX += (targetX - dotX) * 0.35;
+      dotY += (targetY - dotY) * 0.35;
+      glow.style.transform = `translate3d(${glowX - 19}px, ${glowY - 19}px, 0)`;
+      dot.style.transform = `translate3d(${dotX - 4}px, ${dotY - 4}px, 0)`;
       rafId = window.requestAnimationFrame(tick);
-      return;
-    }
-    if (!lastMoveAt && document.hasFocus()) {
-      document.body.classList.add("cursor-tracking");
-    }
-    if (lastMoveAt && Date.now() - lastMoveAt > 1800 && document.hasFocus()) {
-      document.body.classList.add("cursor-tracking");
-    }
-    glowX += (targetX - glowX) * 0.16;
-    glowY += (targetY - glowY) * 0.16;
-    dotX += (targetX - dotX) * 0.35;
-    dotY += (targetY - dotY) * 0.35;
-    glow.style.transform = `translate3d(${glowX - 19}px, ${glowY - 19}px, 0)`;
-    dot.style.transform = `translate3d(${dotX - 4}px, ${dotY - 4}px, 0)`;
+    };
+
+    window.addEventListener("pointermove", onPointerMove, { passive: true });
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
+    window.addEventListener("pointerenter", onPointerEnter, { passive: true });
+    document.addEventListener("pointerleave", onPointerLeave);
+    document.addEventListener("pointerdown", (event) => setHoverState(event.target));
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onWindowFocus);
+    window.addEventListener("blur", onWindowBlur);
+    document.body.classList.add("cursor-tracking");
     rafId = window.requestAnimationFrame(tick);
-  };
 
-  window.addEventListener("pointermove", onPointerMove, { passive: true });
-  window.addEventListener("mousemove", onMouseMove, { passive: true });
-  window.addEventListener("pointerenter", onPointerEnter, { passive: true });
-  document.addEventListener("pointerleave", onPointerLeave);
-  document.addEventListener("pointerdown", (event) => setHoverState(event.target));
-  document.addEventListener("visibilitychange", onVisibilityChange);
-  window.addEventListener("focus", onWindowFocus);
-  window.addEventListener("blur", onWindowBlur);
-  document.body.classList.add("cursor-tracking");
-  rafId = window.requestAnimationFrame(tick);
-
-  window.addEventListener("beforeunload", () => {
-    if (rafId) window.cancelAnimationFrame(rafId);
-    window.removeEventListener("pointermove", onPointerMove);
-    window.removeEventListener("mousemove", onMouseMove);
-    window.removeEventListener("pointerenter", onPointerEnter);
-    document.removeEventListener("pointerleave", onPointerLeave);
-    document.removeEventListener("visibilitychange", onVisibilityChange);
-    window.removeEventListener("focus", onWindowFocus);
-    window.removeEventListener("blur", onWindowBlur);
-  }, { once: true });
+    window.addEventListener("beforeunload", () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("pointerenter", onPointerEnter);
+      document.removeEventListener("pointerleave", onPointerLeave);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onWindowFocus);
+      window.removeEventListener("blur", onWindowBlur);
+    }, { once: true });
+  } catch (_error) {
+    // Fallback: pastikan cursor native tetap bisa dipakai
+    document.body?.classList.remove("cursor-trail-only", "cursor-trail-ready");
+  }
 }
 
 function playFirstLoadSound() {
@@ -486,10 +498,11 @@ function createFirstLoadExperience() {
   })();
   if (!alwaysPlayIntro) return;
 
+  // Pastikan overlay loading Arthur Bot selalu muncul di initial hydration
   document.body.classList.add("first-load-active");
   introReadyPlayed = false;
   const introLayer = document.createElement("div");
-  introLayer.className = "first-load-overlay";
+  introLayer.className = "first-load-overlay is-visible";
   introLayer.setAttribute("aria-hidden", "true");
   introLayer.innerHTML = `
     <div class="first-load-ring"></div>
@@ -498,9 +511,6 @@ function createFirstLoadExperience() {
   `;
 
   document.body.appendChild(introLayer);
-  window.requestAnimationFrame(() => {
-    introLayer.classList.add("is-visible");
-  });
 
   const ctx = ensureAudioContext();
   if (ctx && ctx.state === "running") {
@@ -631,27 +641,39 @@ if ('IntersectionObserver' in window) {
       if (!entry.isIntersecting) return;
       const img = entry.target;
       const source = img.getAttribute('data-src');
-      if (source) {
+      if (source && img.getAttribute('src') !== source) {
+        // Jangan unmount/kosongkan src saat keluar viewport — hanya load sekali
         img.src = source;
       }
-      img.addEventListener('load', () => {
-        img.classList.remove('is-loading');
-        img.classList.add('is-ready');
-      }, { once: true });
-      img.addEventListener('error', () => {
-        img.classList.remove('is-loading');
-      }, { once: true });
+      const markReady = () => {
+        img.classList.remove('is-loading', 'is-lazy');
+        img.classList.add('is-ready', 'is-loaded');
+      };
+      if (img.complete && img.naturalWidth > 0) {
+        markReady();
+      } else {
+        img.addEventListener('load', markReady, { once: true });
+        img.addEventListener('error', () => {
+          img.classList.remove('is-loading');
+        }, { once: true });
+      }
       observer.unobserve(img);
     });
-  }, { rootMargin: '200px 0px' });
+  }, { rootMargin: '280px 0px', threshold: 0.01 });
 
-  lazyImages.forEach((img) => lazyObserver.observe(img));
+  lazyImages.forEach((img) => {
+    img.classList.add('is-lazy', 'is-loading');
+    // Pertahankan dimensi agar tidak CLS / hilang saat scroll balik
+    if (!img.getAttribute('width') && img.width) img.setAttribute('width', String(img.width));
+    if (!img.getAttribute('height') && img.height) img.setAttribute('height', String(img.height));
+    lazyObserver.observe(img);
+  });
 } else {
   lazyImages.forEach((img) => {
     const source = img.getAttribute('data-src');
     if (source) img.src = source;
-    img.classList.remove('is-loading');
-    img.classList.add('is-ready');
+    img.classList.remove('is-loading', 'is-lazy');
+    img.classList.add('is-ready', 'is-loaded');
   });
 }
 
