@@ -249,7 +249,7 @@ server {
     listen 80;
     listen [::]:80;
     server_name arthurg.my.id www.arthurg.my.id;
-    client_max_body_size 200M;
+    client_max_body_size 2048M;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -271,7 +271,7 @@ server {
 }
 ```
 
-`client_max_body_size` wajib dinaikkan kalau pakai tool upload (contoh PDF to JPG), supaya tidak kena error **413 Request Entity Too Large** dari nginx.
+`client_max_body_size` wajib dinaikkan kalau pakai tool upload (File Vault / PDF to JPG), supaya tidak kena error **413 Request Entity Too Large** dari nginx. Nilai `2048M` mendukung file besar (>200MB); File Vault juga memakai upload chunked otomatis untuk file ≥50MB.
 
 **PDF to JPG sering gagal di VPS tapi lancar di localhost** biasanya karena **timeout proxy Nginx** (default singkat). Pastikan blok `proxy_*_timeout` di atas ikut disalin ke virtual host HTTPS juga (setelah Certbot menambahkan blok `listen 443 ssl;`).
 

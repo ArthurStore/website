@@ -19,8 +19,8 @@ function renderList(items) {
   }
 
   items.forEach((row, idx) => {
-    const topic = safeText(row?.topic);
-    const tweets = safeText(row?.tweets);
+    const topic = safeText(row?.topic || row?.hashtag || row?.name || row?.title);
+    const tweets = safeText(row?.tweets || row?.score || row?.volume || row?.tweet_volume || row?.recordDate);
     if (!topic) return;
 
     const xSearch = `https://twitter.com/search?q=${encodeURIComponent(topic)}`;
@@ -89,12 +89,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   btn?.addEventListener("click", async () => {
-    const q = safeText(input?.value || "indonesia") || "indonesia";
+    const country = safeText(input?.value || "indonesia") || "indonesia";
     if (status) status.textContent = "Memuat…";
     btn.disabled = true;
     renderList([]);
     try {
-      const res = await fetch(`/api/public/trends?q=${encodeURIComponent(q)}`, {
+      const res = await fetch(`/api/public/trends?country=${encodeURIComponent(country)}`, {
         headers: { Accept: "application/json" }
       });
       const payload = await res.json();

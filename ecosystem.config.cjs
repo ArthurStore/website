@@ -13,6 +13,8 @@ module.exports = {
         NODE_ENV: "production",
         PORT: 3000,
         STORAGE_CAPACITY_MB: 10240,
+        MAX_UPLOAD_FILE_SIZE_MB: 2048,
+        UPLOAD_CHUNK_SIZE_MB: 8,
         NEOXR_APIKEY: "yokheimoet",
         PDF_CONVERTER_API_KEY: "yokheimoet",
         IMGBB_API_KEY: "yokheimoet"
@@ -21,6 +23,8 @@ module.exports = {
         NODE_ENV: "production",
         PORT: 3000,
         STORAGE_CAPACITY_MB: 10240,
+        MAX_UPLOAD_FILE_SIZE_MB: 2048,
+        UPLOAD_CHUNK_SIZE_MB: 8,
         NEOXR_APIKEY: "yokheimoet",
         PDF_CONVERTER_API_KEY: "yokheimoet",
         IMGBB_API_KEY: "yokheimoet"
