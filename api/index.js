@@ -144,10 +144,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Static files - sesuaikan path untuk Vercel
-app.use('/views', express.static(path.join(__dirname, '../views')));
-app.use(express.static(path.join(__dirname, '../views')));
-
 app.use(sesss({
   secret: process.env.SESSION_SECRET || 'captchaSecretKey12345',
   resave: false,
@@ -291,7 +287,7 @@ app.get('/public/trends', (_req, res) => {
   return res.sendFile(path.join(__dirname, '../views/public-trends.html'));
 });
 
-app.get('/public/tiktok', (_req, res) => {
+app.get(['/public/tiktok', '/public/tiktok/', '/public-tiktok'], (_req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   return res.sendFile(path.join(__dirname, '../views/public-tiktok.html'));
@@ -565,7 +561,24 @@ app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolVi
 app.get(`${TOOL_PREFIX}/ip-calculator`, ensureToolAccess, (_req, res) => sendToolView(res, 'ip-calculator.html'));
 app.get(`${TOOL_PREFIX}/pdf-to-jpg`, ensureToolAccess, (_req, res) => sendToolView(res, 'pdf-to-jpg.html'));
 app.get(`${TOOL_PREFIX}/pastebin`, ensureToolAccess, (_req, res) => sendToolView(res, 'pastebin.html'));
+app.get(`${TOOL_PREFIX}/pastebin/`, ensureToolAccess, (_req, res) => sendToolView(res, 'pastebin.html'));
+app.get('/pastebin.html', ensureToolAccess, (_req, res) => sendToolView(res, 'pastebin.html'));
 app.get(`${TOOL_PREFIX}/bot-status`, (_req, res) => res.redirect(302, '/bot-status'));
+
+// Static files - sesuaikan path untuk Vercel
+const staticOptions = {
+  extensions: ['html'],
+  index: ['index.html'],
+  fallthrough: true,
+  etag: true,
+  setHeaders(res, filePath) {
+    if (/\.(html|js|css)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    }
+  }
+};
+app.use('/views', express.static(path.join(__dirname, '../views'), staticOptions));
+app.use(express.static(path.join(__dirname, '../views'), staticOptions));
 
 const uploadStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOAD_STORAGE_DIR),
@@ -2153,8 +2166,13 @@ app.get('/api/public/webp2mp4', async (req, res) => {
 });
 
 app.get('/api/public/trends', async (req, res) => {
-  const country = String(req.query.country || req.query.q || 'indonesia').trim();
-  if (!country) return res.status(400).json({ message: 'Parameter country wajib diisi.' });
+  // NeoXR WAJIB menerima key `country` (bukan q/query).
+  const country = String(
+    req.query.country ||
+    req.query.q ||
+    req.query.query ||
+    'indonesia'
+  ).trim() || 'indonesia';
   try {
     const payload = await callNeoxrApi('trends', { country });
     return res.json(payload);

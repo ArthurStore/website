@@ -2,7 +2,7 @@
  <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1" name="viewport"/>
-  <title>X Trending · Public</title>
+  <title>TikTok Downloader · Video & MP3</title>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -16,16 +16,17 @@
       font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
       color: #dbeafe;
       background:
-        radial-gradient(circle at 18% 14%, rgba(59, 130, 246, 0.18), transparent 42%),
-        radial-gradient(circle at 82% 18%, rgba(34, 211, 238, 0.16), transparent 44%),
-        linear-gradient(145deg, #020617 0%, #0b1f45 45%, #111c3f 100%);
+        radial-gradient(circle at 15% 10%, rgba(236, 72, 153, 0.16), transparent 40%),
+        radial-gradient(circle at 80% 18%, rgba(56, 189, 248, 0.16), transparent 44%),
+        linear-gradient(145deg, #020617 0%, #0b1733 55%, #06152e 100%);
     }
     h1, h2 { font-family: Outfit, "Plus Jakarta Sans", sans-serif; letter-spacing: -0.02em; }
     .glass {
       border-radius: 18px;
       border: 1px solid rgba(96, 165, 250, 0.28);
       background: rgba(15, 23, 42, 0.74);
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(4px);
+      transform: translateZ(0);
       box-shadow: 0 18px 36px rgba(2, 6, 23, 0.44);
     }
     .btn {
@@ -51,7 +52,9 @@
       border: 1px solid rgba(96, 165, 250, 0.35);
       background: rgba(2, 6, 23, 0.7);
       color: #e2e8f0;
-      padding: 12px 14px;
+      padding: 14px 16px;
+      font-size: 1.02rem;
+      min-height: 52px;
       outline: none;
     }
     .field:focus { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35); }
@@ -64,58 +67,36 @@
       line-height: 1.5;
       color: #e2e8f0;
     }
-    .trend-item {
-      border: 1px solid rgba(96, 165, 250, 0.18);
-      background: rgba(2, 6, 23, 0.45);
-      border-radius: 16px;
-      padding: 14px 14px;
+    .thumb {
+      width: 100%;
+      max-height: 360px;
+      object-fit: cover;
+      border-radius: 14px;
+      border: 1px solid rgba(96, 165, 250, 0.28);
+      background: rgba(2, 6, 23, 0.75);
     }
-    .rank-badge{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:34px;
-      height:34px;
-      border-radius:999px;
-      font-weight:900;
-      border:1px solid rgba(148,163,184,0.25);
-      background: rgba(15,23,42,0.55);
-      color:#e2e8f0;
-      flex: 0 0 auto;
+    video {
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(96, 165, 250, 0.28);
+      background: rgba(2, 6, 23, 0.75);
     }
-    .rank-1{ background: linear-gradient(135deg, rgba(245,158,11,0.45), rgba(234,179,8,0.18)); border-color: rgba(245,158,11,0.55); color: #fff7ed; }
-    .rank-2{ background: linear-gradient(135deg, rgba(148,163,184,0.45), rgba(148,163,184,0.12)); border-color: rgba(148,163,184,0.55); color: #f8fafc; }
-    .rank-3{ background: linear-gradient(135deg, rgba(217,119,6,0.45), rgba(217,119,6,0.12)); border-color: rgba(217,119,6,0.55); color: #fff7ed; }
-    .hot {
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      border-radius:999px;
-      padding:6px 10px;
-      font-weight:900;
-      font-size: 0.78rem;
-      border:1px solid rgba(239,68,68,0.45);
-      background: rgba(239,68,68,0.12);
-      color:#fecaca;
-      margin-left: 10px;
-      vertical-align: middle;
-    }
-    .trend-topic { font-weight: 800; color: #bfdbfe; }
-    .trend-meta { font-size: 0.82rem; color: rgba(191, 219, 254, 0.75); margin-top: 6px; }
-    .trend-actions a {
+    .btn-dl {
+      margin-top: 10px;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 800;
+      border: 1px solid rgba(125, 211, 252, 0.45);
+      background: rgba(15, 23, 42, 0.65);
+      color: #e2e8f0;
+      cursor: pointer;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      margin-top: 10px;
-      border-radius: 999px;
-      padding: 8px 12px;
-      border: 1px solid rgba(125, 211, 252, 0.32);
-      background: rgba(15, 23, 42, 0.55);
-      color: #e2e8f0;
       text-decoration: none;
-      font-weight: 800;
-      font-size: 0.85rem;
     }
+    .btn-dl.hidden { display: none; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
   </style>
  </head>
  <body>
@@ -123,9 +104,9 @@
     <section class="glass p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-2xl md:text-3xl font-extrabold text-blue-100">X trending</h1>
+          <h1 class="text-2xl md:text-3xl font-extrabold text-blue-100">TikTok downloader</h1>
           <p class="text-blue-200/90 mt-2 text-sm leading-relaxed">
-            Ambil trending topic berdasarkan country (default: indonesia). Tiap topik ada tombol quick search di X/Google News.
+            Tempel link post TikTok, lalu unduh Video (MP4) atau Audio (MP3) tanpa klik kanan.
           </p>
         </div>
         <div class="flex gap-2 flex-wrap">
@@ -136,21 +117,29 @@
     </section>
 
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-      <article class="glass p-6 space-y-3">
-        <h2 class="text-xl font-bold text-blue-200">Country</h2>
-        <label class="text-blue-200 text-sm font-semibold" for="trends-country">Nama negara / region</label>
-        <input id="trends-country" name="country" class="field" placeholder="indonesia" value="indonesia" autocomplete="country-name"/>
-        <button id="trends-fetch" type="button" class="btn w-full"><i class="fas fa-bolt"></i>Ambil trending</button>
-        <div id="trends-status" class="status-strip">Klik ambil untuk memuat trending.</div>
+      <article class="glass p-6 space-y-4">
+        <h2 class="text-xl font-bold text-blue-200">Input</h2>
+        <div class="space-y-2">
+          <label class="text-blue-200 text-sm font-semibold" for="tt-url">Link TikTok</label>
+          <input id="tt-url" class="field" placeholder="https://www.tiktok.com/@user/video/..." />
+        </div>
+        <button id="tt-fetch" type="button" class="btn w-full"><i class="fas fa-cloud-download-alt"></i>Ambil media</button>
+        <div id="tt-status" class="status-strip">Masukkan link TikTok lalu proses.</div>
       </article>
 
-      <article class="glass p-6 space-y-3">
+      <article class="glass p-6 space-y-4">
         <h2 class="text-xl font-bold text-blue-200">Hasil</h2>
-        <div id="trends-list" class="space-y-3"></div>
+        <img id="tt-thumb" class="thumb hidden" alt="Thumbnail TikTok"/>
+        <div id="tt-meta" class="status-strip hidden"></div>
+        <video id="tt-preview" class="hidden" controls playsinline></video>
+        <div class="actions">
+          <a id="tt-dl-video" class="btn-dl hidden" href="#" download rel="noopener"><i class="fas fa-video"></i>Download Video</a>
+          <a id="tt-dl-audio" class="btn-dl hidden" href="#" download rel="noopener"><i class="fas fa-music"></i>Download MP3</a>
+        </div>
       </article>
     </section>
   </main>
 
-  <script defer src="/public-trends.js?v=20260807b"></script>
+  <script defer src="/public-tiktok.js"></script>
  </body>
 </html>

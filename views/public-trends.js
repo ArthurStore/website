@@ -33,7 +33,7 @@ function renderList(items) {
     header.className = "flex items-start gap-3";
 
     const rank = document.createElement("div");
-    const rankNum = idx + 1;
+    const rankNum = Number(row?.rank) || idx + 1;
     const rankCls = rankNum === 1 ? "rank-1" : rankNum === 2 ? "rank-2" : rankNum === 3 ? "rank-3" : "";
     rank.className = `rank-badge ${rankCls}`.trim();
     rank.textContent = String(rankNum);
@@ -45,7 +45,6 @@ function renderList(items) {
     title.className = "trend-topic";
     title.textContent = topic;
 
-    // heuristik sederhana: kalau top 1-3 atau volume "Over" / "K" → tampilkan HOT
     const isHot = rankNum <= 3 || /over|k|m|trending/i.test(String(tweets || ""));
     if (isHot) {
       const hot = document.createElement("span");
@@ -76,8 +75,22 @@ function renderList(items) {
   });
 }
 
+async function fetchTrends(country) {
+  const safeCountry = safeText(country) || "indonesia";
+  // Key WAJIB bernama `country` untuk NeoXR upstream.
+  const url = `/api/public/trends?country=${encodeURIComponent(safeCountry)}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store"
+  });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) throw payload;
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  const input = document.getElementById("trends-q");
+  const input = document.getElementById("trends-country") || document.getElementById("trends-q");
   const btn = document.getElementById("trends-fetch");
   const status = document.getElementById("trends-status");
 
@@ -90,16 +103,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btn?.addEventListener("click", async () => {
     const country = safeText(input?.value || "indonesia") || "indonesia";
-    if (status) status.textContent = "Memuat…";
+    if (input) input.value = country;
+    if (status) status.textContent = `Memuat trending untuk country=${country}…`;
     btn.disabled = true;
     renderList([]);
     try {
-      const res = await fetch(`/api/public/trends?country=${encodeURIComponent(country)}`, {
-        headers: { Accept: "application/json" }
-      });
-      const payload = await res.json();
-      if (!res.ok) throw payload;
-      const items = Array.isArray(payload?.data) ? payload.data : [];
+      const items = await fetchTrends(country);
       renderList(items);
       if (status) status.textContent = `Selesai. ${items.length} topik.`;
     } catch (e) {
@@ -112,4 +121,3 @@ document.addEventListener("DOMContentLoaded", () => {
   // auto-load
   btn?.click();
 });
-
