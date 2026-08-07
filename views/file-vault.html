@@ -31,7 +31,10 @@
       background:
         radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.22), transparent 45%),
         radial-gradient(circle at 72% 72%, rgba(14, 165, 233, 0.14), transparent 42%);
-      filter: blur(36px);
+      filter: blur(16px);
+      transform: translateZ(0);
+      will-change: transform;
+      contain: strict;
       animation: vaultGlowMove 18s ease-in-out infinite;
     }
     .glass {
@@ -40,7 +43,7 @@
       background: linear-gradient(160deg, rgba(15, 23, 42, 0.8), rgba(10, 16, 33, 0.76));
       border: 1px solid rgba(148, 163, 184, 0.24);
       box-shadow: 0 18px 45px rgba(2, 6, 23, 0.45);
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(4px); transform: translateZ(0);
     }
     .neon-btn {
       border: 1px solid rgba(147, 197, 253, 0.35);
@@ -97,6 +100,9 @@
           </a>
           <a href="/admin/pdf-to-jpg" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
             PD2JPG
+          </a>
+          <a href="/admin/pastebin" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
+            Pastebin
           </a>
           <a href="/admin/short-link" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
             Short Link
@@ -158,6 +164,7 @@
                 <li>Tanpa durasi = file tetap ada selama server hidup.</li>
                 <li>Upload folder akan jadi 1 link publik: <code>/u/f/:folderId</code>.</li>
                 <li>User publik bisa preview isi folder + download all (ZIP).</li>
+                <li>File ≥50MB otomatis memakai upload chunked (dukung &gt;200MB).</li>
               </ul>
             </div>
           </div>
@@ -441,6 +448,7 @@
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', url);
+        xhr.timeout = 30 * 60 * 1000;
         xhr.onload = () => {
           let data = null;
           try {
@@ -455,6 +463,7 @@
           reject(new Error(data?.message || `Upload gagal (HTTP ${xhr.status}).`));
         };
         xhr.onerror = () => reject(new Error('Koneksi terputus saat upload.'));
+        xhr.ontimeout = () => reject(new Error('Upload timeout. Coba lagi atau pecah file lebih kecil.'));
         xhr.upload.onprogress = (event) => {
           if (!event.lengthComputable || !onProgress) return;
           const pct = Math.min(100, Math.round((event.loaded / event.total) * 100));
@@ -462,6 +471,55 @@
         };
         xhr.send(formData);
       });
+    }
+
+    async function uploadSingleFileChunked(file, relativePath, expiresInDays, onProgress) {
+      const initRes = await fetch('/api/uploads/chunk/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          relativePath: relativePath || file.name,
+          size: file.size,
+          mimeType: file.type || 'application/octet-stream',
+          expiresInDays: expiresInDays || undefined
+        })
+      });
+      const initData = await initRes.json();
+      if (!initRes.ok) throw new Error(initData.message || 'Gagal init chunk upload.');
+
+      const uploadId = initData.uploadId;
+      const chunkSize = Number(initData.chunkSize) || (8 * 1024 * 1024);
+      const totalChunks = Number(initData.totalChunks) || Math.ceil(file.size / chunkSize);
+
+      for (let i = 0; i < totalChunks; i += 1) {
+        const start = i * chunkSize;
+        const end = Math.min(file.size, start + chunkSize);
+        const blob = file.slice(start, end);
+        const formData = new FormData();
+        formData.append('uploadId', uploadId);
+        formData.append('chunkIndex', String(i));
+        formData.append('chunk', blob, `${file.name}.part${i}`);
+
+        await postFormDataWithProgress(
+          `/api/uploads/chunk?uploadId=${encodeURIComponent(uploadId)}&chunkIndex=${encodeURIComponent(String(i))}`,
+          formData,
+          (pct) => {
+            const overall = Math.round(((i + pct / 100) / totalChunks) * 100);
+            onProgress?.(Math.min(99, overall));
+          }
+        );
+      }
+
+      const completeRes = await fetch('/api/uploads/chunk/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ uploadId })
+      });
+      const completeData = await completeRes.json();
+      if (!completeRes.ok) throw new Error(completeData.message || 'Gagal menyelesaikan chunk upload.');
+      onProgress?.(100);
+      return completeData;
     }
 
     async function loadEntries() {
@@ -491,16 +549,10 @@
         return;
       }
 
-      const formData = new FormData();
-      const relativePaths = [];
-      allFiles.forEach((file) => {
-        formData.append('files', file, file.name);
-        relativePaths.push(file.webkitRelativePath || file.name);
-      });
-      formData.append('relativePaths', JSON.stringify(relativePaths));
-
       const expiresInDays = String(expiresInput.value || '').trim();
-      if (expiresInDays) formData.append('expiresInDays', expiresInDays);
+      const LARGE_FILE_BYTES = 50 * 1024 * 1024;
+      const hasLarge = allFiles.some((f) => f.size >= LARGE_FILE_BYTES);
+      const hasFolder = folderFiles.length > 0;
 
       uploadSubmitBtn.disabled = true;
       uploadProgressWrap.classList.remove('hidden');
@@ -508,10 +560,56 @@
       uploadProgressPct.textContent = '0%';
 
       try {
-        const data = await postFormDataWithProgress('/api/uploads', formData, (pct) => {
-          uploadProgressBar.style.width = `${pct}%`;
-          uploadProgressPct.textContent = `${pct}%`;
-        });
+        let data;
+        // File besar (>=50MB) tanpa folder → chunked upload agar lolos batas proxy/nginx
+        if (hasLarge && !hasFolder && plainFiles.length === 1 && folderFiles.length === 0) {
+          data = await uploadSingleFileChunked(
+            plainFiles[0],
+            plainFiles[0].webkitRelativePath || plainFiles[0].name,
+            expiresInDays,
+            (pct) => {
+              uploadProgressBar.style.width = `${pct}%`;
+              uploadProgressPct.textContent = `${pct}%`;
+            }
+          );
+        } else if (hasLarge && !hasFolder) {
+          // multi large files: upload satu per satu via chunk
+          const results = [];
+          for (let i = 0; i < allFiles.length; i += 1) {
+            const file = allFiles[i];
+            const base = Math.round((i / allFiles.length) * 100);
+            const span = Math.round(100 / allFiles.length);
+            const part = await uploadSingleFileChunked(
+              file,
+              file.webkitRelativePath || file.name,
+              expiresInDays,
+              (pct) => {
+                const overall = Math.min(100, base + Math.round((pct / 100) * span));
+                uploadProgressBar.style.width = `${overall}%`;
+                uploadProgressPct.textContent = `${overall}%`;
+              }
+            );
+            results.push(...(part.entries || []));
+          }
+          data = {
+            message: `${results.length} file besar berhasil diupload (chunked).`,
+            entries: results
+          };
+        } else {
+          const formData = new FormData();
+          const relativePaths = [];
+          allFiles.forEach((file) => {
+            formData.append('files', file, file.name);
+            relativePaths.push(file.webkitRelativePath || file.name);
+          });
+          formData.append('relativePaths', JSON.stringify(relativePaths));
+          if (expiresInDays) formData.append('expiresInDays', expiresInDays);
+
+          data = await postFormDataWithProgress('/api/uploads', formData, (pct) => {
+            uploadProgressBar.style.width = `${pct}%`;
+            uploadProgressPct.textContent = `${pct}%`;
+          });
+        }
 
         uploadProgressBar.style.width = '100%';
         uploadProgressPct.textContent = '100%';

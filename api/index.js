@@ -18,13 +18,20 @@ const shortLinks = new Map();
 const fileVaultEntries = new Map();
 const fileVaultFolders = new Map();
 const pdfTempUploads = new Map();
+const pastebinEntries = new Map();
+const chunkUploadSessions = new Map();
 const MAX_HISTORY_PER_LINK = 20;
 const PDF_TEMP_TTL_MS = 24 * 60 * 60 * 1000;
 const PDF_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
 const UPLOAD_STORAGE_DIR = process.env.UPLOAD_STORAGE_DIR || path.join(os.tmpdir(), 'Arthur.JS-file-vault');
 const PDF_TMP_UPLOAD_DIR = process.env.PDF_TMP_UPLOAD_DIR || path.join(os.tmpdir(), 'Arthur.JS-pdf-to-jpg-temp');
+const CHUNK_UPLOAD_DIR = process.env.CHUNK_UPLOAD_DIR || path.join(os.tmpdir(), 'Arthur.JS-chunk-uploads');
+const configuredChunkSizeMb = Number(process.env.UPLOAD_CHUNK_SIZE_MB || 8);
+const UPLOAD_CHUNK_SIZE_BYTES = Number.isFinite(configuredChunkSizeMb) && configuredChunkSizeMb > 0
+  ? Math.floor(configuredChunkSizeMb * 1024 * 1024)
+  : 8 * 1024 * 1024;
 const configuredStorageMb = Number(process.env.STORAGE_CAPACITY_MB || 0);
-const configuredMaxUploadMb = Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 0);
+const configuredMaxUploadMb = Number(process.env.MAX_UPLOAD_FILE_SIZE_MB || 2048);
 const STORAGE_CAPACITY_BYTES = Number.isFinite(configuredStorageMb) && configuredStorageMb > 0
   ? configuredStorageMb * 1024 * 1024
   : null;
@@ -121,12 +128,21 @@ if (!fs.existsSync(UPLOAD_STORAGE_DIR)) {
 if (!fs.existsSync(PDF_TMP_UPLOAD_DIR)) {
   fs.mkdirSync(PDF_TMP_UPLOAD_DIR, { recursive: true });
 }
+if (!fs.existsSync(CHUNK_UPLOAD_DIR)) {
+  fs.mkdirSync(CHUNK_UPLOAD_DIR, { recursive: true });
+}
 
 app.enable("trust proxy");
 app.set("json spaces", 2);
 app.use(cors());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true, limit: '64mb' }));
+app.use(bodyParser.json({ limit: '64mb' }));
+app.use((req, res, next) => {
+  // timeout panjang untuk upload/download besar
+  req.setTimeout(30 * 60 * 1000);
+  res.setTimeout(30 * 60 * 1000);
+  next();
+});
 
 // Static files - sesuaikan path untuk Vercel
 app.use('/views', express.static(path.join(__dirname, '../views')));
@@ -275,6 +291,12 @@ app.get('/public/trends', (_req, res) => {
   return res.sendFile(path.join(__dirname, '../views/public-trends.html'));
 });
 
+app.get('/public/tiktok', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-tiktok.html'));
+});
+
 app.get('/bot-status', (_req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -375,6 +397,7 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
             <p>Pilih tool yang ingin kamu gunakan.</p>
             <div class="tools">
               <a class="tool" href="${TOOL_PREFIX}/file-vault">File Vault</a>
+              <a class="tool" href="${TOOL_PREFIX}/pastebin">Text Pastebin</a>
               <a class="tool" href="${TOOL_PREFIX}/short-link">Short Link</a>
               <a class="tool" href="${TOOL_PREFIX}/ip-calculator">IP Calculator</a>
               <a class="tool" href="${TOOL_PREFIX}/pdf-to-jpg">PDF to JPG</a>
@@ -541,6 +564,7 @@ app.get(`${TOOL_PREFIX}/short-link`, ensureToolAccess, (_req, res) => sendToolVi
 app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolView(res, 'file-vault.html'));
 app.get(`${TOOL_PREFIX}/ip-calculator`, ensureToolAccess, (_req, res) => sendToolView(res, 'ip-calculator.html'));
 app.get(`${TOOL_PREFIX}/pdf-to-jpg`, ensureToolAccess, (_req, res) => sendToolView(res, 'pdf-to-jpg.html'));
+app.get(`${TOOL_PREFIX}/pastebin`, ensureToolAccess, (_req, res) => sendToolView(res, 'pastebin.html'));
 app.get(`${TOOL_PREFIX}/bot-status`, (_req, res) => res.redirect(302, '/bot-status'));
 
 const uploadStorage = multer.diskStorage({
@@ -1072,6 +1096,278 @@ app.post('/api/uploads', (req, res) => {
       summary: createUploadSummary()
     });
   });
+});
+
+
+function cleanupChunkSession(uploadId) {
+  const session = chunkUploadSessions.get(uploadId);
+  if (!session) return;
+  try {
+    if (session.dir && fs.existsSync(session.dir)) {
+      fs.rmSync(session.dir, { recursive: true, force: true });
+    }
+  } catch (_e) {
+    // ignore
+  }
+  chunkUploadSessions.delete(uploadId);
+}
+
+function cleanupExpiredChunkSessions() {
+  const now = Date.now();
+  for (const [id, session] of chunkUploadSessions.entries()) {
+    if (!session?.expiresAt || session.expiresAt > now) continue;
+    cleanupChunkSession(id);
+  }
+}
+
+const chunkPartUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const uploadId = String(req.query?.uploadId || req.body?.uploadId || '').trim();
+      const session = chunkUploadSessions.get(uploadId);
+      if (!session?.dir) return cb(new Error('Sesi upload chunk tidak valid.'));
+      cb(null, session.dir);
+    },
+    filename: (req, _file, cb) => {
+      const idx = Number(req.query?.chunkIndex ?? req.body?.chunkIndex);
+      if (!Number.isInteger(idx) || idx < 0) return cb(new Error('chunkIndex tidak valid.'));
+      cb(null, `part-${String(idx).padStart(6, '0')}`);
+    }
+  }),
+  limits: {
+    files: 1,
+    fileSize: Math.max(UPLOAD_CHUNK_SIZE_BYTES * 2, 16 * 1024 * 1024)
+  }
+});
+
+app.get('/api/uploads/limits', (_req, res) => {
+  return res.json({
+    maxUploadFileSizeMb: Number.isFinite(MAX_UPLOAD_FILE_SIZE_BYTES) && MAX_UPLOAD_FILE_SIZE_BYTES > 0
+      ? Math.floor(MAX_UPLOAD_FILE_SIZE_BYTES / (1024 * 1024))
+      : null,
+    chunkSizeBytes: UPLOAD_CHUNK_SIZE_BYTES,
+    chunkRecommendedOverBytes: 50 * 1024 * 1024
+  });
+});
+
+app.post('/api/uploads/chunk/init', (req, res) => {
+  cleanupExpiredChunkSessions();
+  const filename = String(req.body?.filename || 'upload.bin').trim() || 'upload.bin';
+  const relativePath = String(req.body?.relativePath || filename).trim() || filename;
+  const size = Number(req.body?.size || 0);
+  const mimeType = String(req.body?.mimeType || 'application/octet-stream').trim() || 'application/octet-stream';
+  const expiresInDays = Number(req.body?.expiresInDays || 0);
+
+  if (!Number.isFinite(size) || size <= 0) {
+    return res.status(400).json({ message: 'Ukuran file wajib diisi.' });
+  }
+  if (Number.isFinite(MAX_UPLOAD_FILE_SIZE_BYTES) && MAX_UPLOAD_FILE_SIZE_BYTES > 0 && size > MAX_UPLOAD_FILE_SIZE_BYTES) {
+    return res.status(400).json({
+      message: `Ukuran file melebihi batas ${Math.floor(MAX_UPLOAD_FILE_SIZE_BYTES / (1024 * 1024))}MB per file.`
+    });
+  }
+
+  const uploadId = crypto.randomBytes(12).toString('hex');
+  const dir = path.join(CHUNK_UPLOAD_DIR, uploadId);
+  fs.mkdirSync(dir, { recursive: true });
+  const totalChunks = Math.ceil(size / UPLOAD_CHUNK_SIZE_BYTES);
+  chunkUploadSessions.set(uploadId, {
+    uploadId,
+    filename,
+    relativePath,
+    size,
+    mimeType,
+    expiresInDays: Number.isFinite(expiresInDays) && expiresInDays > 0 ? expiresInDays : null,
+    totalChunks,
+    received: new Set(),
+    dir,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + (6 * 60 * 60 * 1000)
+  });
+
+  return res.status(201).json({
+    uploadId,
+    chunkSize: UPLOAD_CHUNK_SIZE_BYTES,
+    totalChunks
+  });
+});
+
+app.post('/api/uploads/chunk', (req, res) => {
+  cleanupExpiredChunkSessions();
+  chunkPartUpload.single('chunk')(req, res, (error) => {
+    if (error) {
+      return res.status(400).json({ message: error.message || 'Gagal menerima chunk.' });
+    }
+    const uploadId = String(req.query?.uploadId || req.body?.uploadId || '').trim();
+    const chunkIndex = Number(req.query?.chunkIndex ?? req.body?.chunkIndex);
+    const session = chunkUploadSessions.get(uploadId);
+    if (!session) {
+      cleanupUploadedTempFiles(req.file ? [req.file] : []);
+      return res.status(404).json({ message: 'Sesi upload tidak ditemukan / sudah expired.' });
+    }
+    if (!Number.isInteger(chunkIndex) || chunkIndex < 0 || chunkIndex >= session.totalChunks) {
+      cleanupUploadedTempFiles(req.file ? [req.file] : []);
+      return res.status(400).json({ message: 'chunkIndex di luar rentang.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'Chunk file wajib diupload.' });
+    }
+    session.received.add(chunkIndex);
+    return res.json({
+      ok: true,
+      received: session.received.size,
+      totalChunks: session.totalChunks
+    });
+  });
+});
+
+app.post('/api/uploads/chunk/complete', async (req, res) => {
+  cleanupExpiredChunkSessions();
+  cleanupExpiredUploads();
+  const uploadId = String(req.body?.uploadId || '').trim();
+  const session = chunkUploadSessions.get(uploadId);
+  if (!session) {
+    return res.status(404).json({ message: 'Sesi upload tidak ditemukan / sudah expired.' });
+  }
+
+  if (session.received.size !== session.totalChunks) {
+    return res.status(400).json({
+      message: `Chunk belum lengkap (${session.received.size}/${session.totalChunks}).`
+    });
+  }
+
+  const finalName = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}-${session.filename.replace(/[^\w.\-]+/g, '_')}`;
+  const finalPath = path.join(UPLOAD_STORAGE_DIR, finalName);
+
+  try {
+    const out = fs.createWriteStream(finalPath);
+    await new Promise((resolve, reject) => {
+      out.on('error', reject);
+      out.on('finish', resolve);
+      (async () => {
+        try {
+          for (let i = 0; i < session.totalChunks; i += 1) {
+            const partPath = path.join(session.dir, `part-${String(i).padStart(6, '0')}`);
+            if (!fs.existsSync(partPath)) throw new Error(`Part ${i} hilang.`);
+            const buf = fs.readFileSync(partPath);
+            const canContinue = out.write(buf);
+            if (!canContinue) {
+              await new Promise((r) => out.once('drain', r));
+            }
+          }
+          out.end();
+        } catch (err) {
+          out.destroy(err);
+          reject(err);
+        }
+      })();
+    });
+
+    const stat = fs.statSync(finalPath);
+    if (isStorageLimitEnabled()) {
+      const used = getUsedStorageBytes();
+      if (used + stat.size > STORAGE_CAPACITY_BYTES) {
+        try { fs.unlinkSync(finalPath); } catch (_e) {}
+        cleanupChunkSession(uploadId);
+        return res.status(400).json({ message: 'Kapasitas storage tidak mencukupi.' });
+      }
+    }
+
+    const createdAt = Date.now();
+    let expiresAt = null;
+    if (session.expiresInDays) {
+      expiresAt = createdAt + (session.expiresInDays * 24 * 60 * 60 * 1000);
+    }
+    const id = generateCode() + crypto.randomBytes(2).toString('hex');
+    const entry = {
+      id,
+      filePath: finalPath,
+      storedName: finalName,
+      originalName: session.filename,
+      relativePath: session.relativePath,
+      folderId: null,
+      sizeBytes: stat.size,
+      contentType: session.mimeType,
+      createdAt,
+      expiresAt,
+      clickCount: 0,
+      downloadCount: 0,
+      lastClickedAt: null,
+      lastDownloadedAt: null
+    };
+    fileVaultEntries.set(id, entry);
+    cleanupChunkSession(uploadId);
+
+    return res.status(201).json({
+      message: 'File besar berhasil diupload (chunked).',
+      entries: [serializeUploadEntry(req, entry)],
+      folder: null,
+      summary: createUploadSummary()
+    });
+  } catch (error) {
+    try { if (fs.existsSync(finalPath)) fs.unlinkSync(finalPath); } catch (_e) {}
+    return res.status(500).json({ message: error?.message || 'Gagal merakit chunk upload.' });
+  }
+});
+
+function serializePasteEntry(entry, includeContent = true) {
+  const base = {
+    id: entry.id,
+    title: entry.title,
+    size: entry.content.length,
+    createdAt: entry.createdAt,
+    updatedAt: entry.updatedAt
+  };
+  if (includeContent) base.content = entry.content;
+  return base;
+}
+
+app.get('/api/pastebin', (req, res) => {
+  if (!req.session?.toolAccessGranted) {
+    return res.status(401).json({ message: 'Unauthorized.' });
+  }
+  const items = Array.from(pastebinEntries.values())
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .map((entry) => serializePasteEntry(entry, true));
+  return res.json({ items });
+});
+
+app.post('/api/pastebin', (req, res) => {
+  if (!req.session?.toolAccessGranted) {
+    return res.status(401).json({ message: 'Unauthorized.' });
+  }
+  const title = String(req.body?.title || '').trim().slice(0, 120);
+  const content = String(req.body?.content || '');
+  if (!content.trim()) {
+    return res.status(400).json({ message: 'Konten snippet wajib diisi.' });
+  }
+  if (content.length > 500000) {
+    return res.status(400).json({ message: 'Snippet terlalu besar (maks 500KB karakter).' });
+  }
+  const id = crypto.randomBytes(8).toString('hex');
+  const now = Date.now();
+  const entry = { id, title, content, createdAt: now, updatedAt: now };
+  pastebinEntries.set(id, entry);
+  return res.status(201).json({ message: 'Snippet tersimpan.', item: serializePasteEntry(entry, true) });
+});
+
+app.get('/api/pastebin/:id', (req, res) => {
+  if (!req.session?.toolAccessGranted) {
+    return res.status(401).json({ message: 'Unauthorized.' });
+  }
+  const entry = pastebinEntries.get(String(req.params.id || '').trim());
+  if (!entry) return res.status(404).json({ message: 'Snippet tidak ditemukan.' });
+  return res.json({ item: serializePasteEntry(entry, true) });
+});
+
+app.delete('/api/pastebin/:id', (req, res) => {
+  if (!req.session?.toolAccessGranted) {
+    return res.status(401).json({ message: 'Unauthorized.' });
+  }
+  const id = String(req.params.id || '').trim();
+  if (!pastebinEntries.has(id)) return res.status(404).json({ message: 'Snippet tidak ditemukan.' });
+  pastebinEntries.delete(id);
+  return res.json({ message: 'Snippet dihapus.' });
 });
 
 app.delete('/api/uploads/:id', (req, res) => {
@@ -1700,6 +1996,52 @@ app.get('/api/public/bratvid', async (req, res) => {
   }
 });
 
+function isAllowedDownloadHost(hostname) {
+  const host = String(hostname || '').toLowerCase();
+  if (!host) return false;
+  const exact = new Set([
+    'tmpfiles.org',
+    'www.tmpfiles.org',
+    's.neoxr.eu',
+    'cdn.neoxr.my.id',
+    'dl.snapcdn.app',
+    'tiny-img.com',
+    'www.tiny-img.com',
+    'ezgif.com',
+    'www.ezgif.com',
+    's4.ezgif.com',
+    's8.ezgif.com',
+    'i.ibb.co',
+    'i.ibb.co.com',
+    'ibb.co',
+    'catbox.moe',
+    'files.catbox.moe',
+    'litter.catbox.moe'
+  ]);
+  if (exact.has(host)) return true;
+  const suffixes = [
+    '.neoxr.eu',
+    '.neoxr.my.id',
+    '.ezgif.com',
+    '.ibb.co',
+    '.ibb.co.com',
+    '.catbox.moe',
+    '.tmpfiles.org',
+    '.tiktokcdn.com',
+    '.tiktokcdn-us.com',
+    '.tiktokv.com',
+    '.tiktokv.us',
+    '.musical.ly',
+    '.byteoversea.com',
+    '.ibyteimg.com',
+    '.snapcdn.app',
+    '.cdninstagram.com',
+    '.fbcdn.net',
+    '.googleusercontent.com'
+  ];
+  return suffixes.some((suffix) => host === suffix.slice(1) || host.endsWith(suffix));
+}
+
 app.get('/api/public/download', async (req, res) => {
   const rawUrl = String(req.query.url || '').trim();
   const filename = String(req.query.filename || 'download').trim() || 'download';
@@ -1712,25 +2054,7 @@ app.get('/api/public/download', async (req, res) => {
     return res.status(400).json({ message: 'URL tidak valid.' });
   }
 
-  const allowedHosts = new Set([
-    // tmpfiles (legacy)
-    'tmpfiles.org',
-    'www.tmpfiles.org',
-    // NeoXR / CDN
-    's.neoxr.eu',
-    'cdn.neoxr.my.id',
-    // IG downloader upstream in examples
-    'dl.snapcdn.app',
-    // WEBP converters examples
-    'tiny-img.com',
-    'www.tiny-img.com',
-    // ezgif temp mp4 hosts (varying subdomains)
-    'ezgif.com',
-    'www.ezgif.com',
-    's4.ezgif.com',
-    's8.ezgif.com'
-  ]);
-  if (!allowedHosts.has(parsed.hostname)) {
+  if (!['http:', 'https:'].includes(parsed.protocol) || !isAllowedDownloadHost(parsed.hostname)) {
     return res.status(403).json({ message: 'Host download tidak diizinkan.' });
   }
 
@@ -1740,9 +2064,14 @@ app.get('/api/public/download', async (req, res) => {
       return res.status(502).json({ message: `Gagal ambil file (HTTP ${upstream.status}).` });
     }
     const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+    const safeFilename = filename.replace(/["\\\r\n]/g, '_').slice(0, 180) || 'download';
     res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/["\\r\\n]/g, '')}"`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodeURIComponent(safeFilename)}`
+    );
     res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     if (upstream.body) {
       try {
         // Stream ke client biar file besar (mp4/mp3) tidak di-buffer full di RAM.
@@ -1824,14 +2153,28 @@ app.get('/api/public/webp2mp4', async (req, res) => {
 });
 
 app.get('/api/public/trends', async (req, res) => {
-  const q = String(req.query.q || 'indonesia').trim();
-  if (!q) return res.status(400).json({ message: 'Parameter q wajib diisi.' });
+  const country = String(req.query.country || req.query.q || 'indonesia').trim();
+  if (!country) return res.status(400).json({ message: 'Parameter country wajib diisi.' });
   try {
-    const payload = await callNeoxrApi('trends', { q });
+    const payload = await callNeoxrApi('trends', { country });
     return res.json(payload);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({
       message: sanitizePublicUpstreamMessage(error, 'Gagal mengambil trending.'),
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/tiktok', async (req, res) => {
+  const url = String(req.query.url || '').trim();
+  if (!url) return res.status(400).json({ message: 'Parameter url wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('tiktok', { url });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: sanitizePublicUpstreamMessage(error, 'Gagal memproses TikTok downloader.'),
       upstream: error?.payload || null
     });
   }
@@ -3000,7 +3343,7 @@ app.post('/contact', (req, res) => {
 
 // ✅ BAGIAN INI YANG DITAMBAHKAN - Untuk development lokal
 if (require.main === module) {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log('='.repeat(50));
     console.log('✅ SERVER BERHASIL BERJALAN!');
     console.log('='.repeat(50));
@@ -3031,6 +3374,10 @@ if (require.main === module) {
     console.log('='.repeat(50));
     console.log('Press Ctrl+C to stop server');
   });
+  server.timeout = 30 * 60 * 1000;
+  server.headersTimeout = 31 * 60 * 1000;
+  server.requestTimeout = 30 * 60 * 1000;
+  server.keepAliveTimeout = 75 * 1000;
 }
 
 // Export untuk Vercel (serverless)

@@ -1,4 +1,4 @@
-body {
+    body {
       font-family: "Plus Jakarta Sans", "Poppins", ui-sans-serif, system-ui, sans-serif;
       background:
         radial-gradient(circle at 12% 16%, rgba(59, 130, 246, 0.28), transparent 34%),
@@ -7,13 +7,14 @@ body {
         radial-gradient(circle at 22% 78%, rgba(34, 211, 238, 0.18), transparent 38%),
         linear-gradient(132deg, #040912 0%, #0a1633 28%, #102754 56%, #111d44 78%, #060f25 100%);
       background-size: 170% 170%, 170% 170%, 170% 170%, 170% 170%, 340% 340%;
-      animation: auroraDrift 16s ease-in-out infinite;
+      animation: auroraDrift 28s ease-in-out infinite;
       color: #c0d6f9;
       overflow-x: hidden;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       position: relative;
+      transform: translateZ(0);
     }
 
     body.fx-tab-hidden {
@@ -36,10 +37,14 @@ body {
       background-image: 
         radial-gradient(circle at 25% 35%, rgba(59, 130, 246, 0.2) 0%, transparent 46%),
         radial-gradient(circle at 72% 68%, rgba(14, 165, 233, 0.16) 0%, transparent 42%);
-      filter: blur(36px);
+      filter: blur(18px);
       animation: ambientFloat 22s ease-in-out infinite;
       pointer-events: none;
       z-index: 0;
+      transform: translateZ(0);
+      will-change: transform;
+      contain: strict;
+      backface-visibility: hidden;
     }
 
     body::after {
@@ -279,7 +284,9 @@ body {
       background:
         radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.2), rgba(2, 6, 23, 0.94) 72%),
         linear-gradient(150deg, rgba(15, 23, 42, 0.96), rgba(8, 16, 36, 0.92));
-      backdrop-filter: blur(3px);
+      transform: translateZ(0);
+      will-change: opacity;
+      contain: layout paint style;
     }
 
     .first-load-overlay.is-visible {
@@ -351,7 +358,7 @@ body {
       border-radius: 999px;
       padding: 0.42rem 0.78rem;
       box-shadow: 0 10px 22px rgba(2, 6, 23, 0.42);
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(4px); transform: translateZ(0);
       transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
     }
 
@@ -420,7 +427,7 @@ body {
 
     #sidebar-overlay {
       background: rgba(14, 30, 64, 0.85);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(5px); transform: translateZ(0);
       position: fixed;
       inset: 0;
       z-index: 50;
@@ -435,7 +442,7 @@ body {
 
     #sidebar {
       background: rgba(14, 30, 64, 0.95);
-      backdrop-filter: blur(14px);
+      backdrop-filter: blur(6px); transform: translateZ(0);
       position: fixed;
       top: 0;
       left: 0;
@@ -506,7 +513,7 @@ body {
       width: 44px;
       height: 44px;
       background: rgba(14, 30, 64, 0.85);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(5px); transform: translateZ(0);
       border-radius: 0.5rem;
       display: flex;
       flex-direction: column;
@@ -584,7 +591,7 @@ body {
       border-top: 1px solid rgba(59, 130, 246, 0.4);
       padding: 1.25rem 1.5rem 1.25rem;
       background: rgba(14, 30, 64, 0.9);
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(5px); transform: translateZ(0);
       color: #93c5fd;
       text-align: center;
       font-size: 0.9rem;
@@ -641,19 +648,20 @@ body {
 
     img.optimized-image {
       opacity: 1;
-      transition: opacity 0.45s ease, filter 0.45s ease;
+      transition: opacity 0.35s ease;
+      transform: translateZ(0);
+      content-visibility: auto;
+      contain: paint;
     }
 
     img.optimized-image.is-lazy,
     img.optimized-image.is-loading {
-      opacity: 0.6;
-      filter: blur(8px);
+      opacity: 0.55;
     }
 
     img.optimized-image.is-ready,
     img.optimized-image.is-loaded {
       opacity: 1;
-      filter: blur(0);
     }
 
     .bot-previews-container {
@@ -681,7 +689,7 @@ body {
       position: fixed;
       inset: 0;
       background: rgba(14, 30, 64, 0.95);
-      backdrop-filter: blur(14px);
+      backdrop-filter: blur(6px); transform: translateZ(0);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -781,7 +789,7 @@ body {
       font-size: 0.875rem;
       padding: 0.45rem 0.9rem;
       border-radius: 999px;
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(4px); transform: translateZ(0);
     }
 
     .cta-button {
@@ -933,6 +941,22 @@ body {
       .md\\:inline {
         display: inline;
       }
+    }
+
+
+    .hero-rgb-title .rgb-title-main,
+    .hero-rgb-title .rgb-accent,
+    .section-rgb-title,
+    .first-load-ring,
+    .first-load-core {
+      will-change: transform, opacity, filter;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+    }
+
+    .fade-in-slide {
+      contain: layout paint;
+      transform: translateZ(0);
     }
 
     @media (prefers-reduced-motion: reduce) {

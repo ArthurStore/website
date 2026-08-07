@@ -10,26 +10,31 @@ function createAmbientParticles() {
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
+    contain: strict;
+    transform: translateZ(0);
   `;
   document.body.appendChild(particleContainer);
 
-  for (let i = 0; i < 8; i += 1) {
+  const count = window.matchMedia("(max-width: 768px)").matches ? 4 : 6;
+  for (let i = 0; i < count; i += 1) {
     const particle = document.createElement("span");
-    const size = Math.random() * 2.8 + 1.2;
-    const duration = Math.random() * 20 + 18;
+    const size = Math.random() * 2.4 + 1.1;
+    const duration = Math.random() * 24 + 22;
     const delay = Math.random() * 8;
-    const travelX = Math.random() * 42 - 21;
-    const travelY = Math.random() * 70 - 35;
+    const travelX = Math.random() * 36 - 18;
+    const travelY = Math.random() * 56 - 28;
 
     particle.style.cssText = `
       position: absolute;
       width: ${size}px;
       height: ${size}px;
       border-radius: 50%;
-      background: rgba(147, 197, 253, ${Math.random() * 0.45 + 0.25});
+      background: rgba(147, 197, 253, ${Math.random() * 0.35 + 0.2});
       top: ${Math.random() * 100}%;
       left: ${Math.random() * 100}%;
-      filter: blur(0.5px);
+      transform: translateZ(0);
+      will-change: transform;
+      contain: layout paint;
       animation: ambientParticle ${duration}s ease-in-out ${delay}s infinite alternate;
       --tx: ${travelX}px;
       --ty: ${travelY}px;
@@ -408,6 +413,10 @@ function createCursorTrail() {
   };
 
   const tick = () => {
+    if (document.hidden) {
+      rafId = window.requestAnimationFrame(tick);
+      return;
+    }
     if (!lastMoveAt && document.hasFocus()) {
       document.body.classList.add("cursor-tracking");
     }

@@ -55,6 +55,10 @@ function bindImageModal() {
   return { open, close };
 }
 
+function buildDownloadHref(url, filename) {
+  return `/api/public/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename || "download")}`;
+}
+
 function setDownloadLink(url, filenameHint) {
   const link = document.getElementById("remini-download");
   if (!link) return;
@@ -63,8 +67,9 @@ function setDownloadLink(url, filenameHint) {
     link.removeAttribute("href");
     return;
   }
-  link.href = url;
-  link.setAttribute("download", filenameHint || "remini-enhanced");
+  const filename = filenameHint || "remini-enhanced.jpg";
+  link.href = buildDownloadHref(url, filename);
+  link.setAttribute("download", filename);
   link.classList.remove("hidden");
 }
 
