@@ -1,4 +1,4 @@
-    /* single-scroll-guard */
+    /* single-scroll-guard: hanya root yang scroll (mouse wheel harus jalan) */
     main, #main-content, .layout-container, #app, .wrapper {
       overflow: visible !important;
       height: auto !important;
@@ -12,7 +12,6 @@
       max-width: 100%;
       scroll-behavior: smooth;
       background: #040912;
-      overscroll-behavior-y: none;
     }
 
     body {
@@ -30,7 +29,7 @@
       background-attachment: scroll;
       color: #c0d6f9;
       overflow-x: hidden;
-      overflow-y: clip;
+      overflow-y: visible;
       min-height: 100vh;
       min-height: 100dvh;
       width: 100%;
@@ -40,7 +39,6 @@
       position: relative;
       transform: translateZ(0);
       cursor: auto;
-      overscroll-behavior-y: none;
     }
 
     body.fx-tab-hidden::before {
@@ -389,52 +387,63 @@
       }
     }
 
+    /* Glow teks murni (tanpa background-clip) agar tidak jadi kotak rectangular */
+    .hero-rgb-title {
+      color: #dbeafe;
+      position: relative;
+    }
+
     .hero-rgb-title .rgb-title-main,
     .hero-rgb-title .rgb-accent,
     .section-rgb-title {
-      display: inline-block;
-      background-image: linear-gradient(
-        110deg,
-        #f8fbff 0%,
-        #93c5fd 20%,
-        #67e8f9 38%,
-        #a5b4fc 56%,
-        #22d3ee 74%,
-        #ffffff 100%
-      );
-      background-size: 320% 100%;
-      background-clip: text;
-      -webkit-background-clip: text;
-      color: transparent;
-      filter: saturate(1.15);
+      display: inline;
+      background: none !important;
+      background-image: none !important;
+      -webkit-background-clip: unset !important;
+      background-clip: unset !important;
+      color: #bfdbfe;
+      filter: none;
+      box-shadow: none;
       text-shadow:
-        0 0 10px rgba(147, 197, 253, 0.65),
-        0 0 22px rgba(56, 189, 248, 0.55),
-        0 0 34px rgba(59, 130, 246, 0.45),
-        0 0 54px rgba(14, 165, 233, 0.38);
-      animation: rgbTextFlow 4.8s linear infinite;
+        0 0 20px rgba(59, 130, 246, 0.6),
+        0 0 40px rgba(59, 130, 246, 0.3);
     }
 
-    .hero-rgb-title {
-      color: #dbeafe;
+    .hero-rgb-title .rgb-title-main {
+      color: #e0f2fe;
+      text-shadow:
+        0 0 18px rgba(125, 211, 252, 0.75),
+        0 0 36px rgba(59, 130, 246, 0.45),
+        0 0 56px rgba(14, 165, 233, 0.28);
     }
 
-    .hero-rgb-title .rgb-title-main,
     .hero-rgb-title .rgb-accent {
-      animation:
-        rgbTextFlow 4.8s linear infinite,
-        glowPulseHero 2.7s ease-in-out infinite;
+      color: #7dd3fc;
+      text-shadow:
+        0 0 16px rgba(56, 189, 248, 0.55),
+        0 0 32px rgba(37, 99, 235, 0.35);
     }
 
     .section-rgb-title {
-      animation:
-        rgbTextFlow 6s linear infinite,
-        glowPulseSection 3.1s ease-in-out infinite;
+      color: #93c5fd;
       text-shadow:
-        0 0 5px rgba(147, 197, 253, 0.34),
-        0 0 11px rgba(56, 189, 248, 0.28),
-        0 0 18px rgba(59, 130, 246, 0.22);
-      filter: saturate(1.04);
+        0 0 16px rgba(59, 130, 246, 0.45),
+        0 0 28px rgba(59, 130, 246, 0.25);
+    }
+
+    .hero-rgb-title::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 45%;
+      width: min(420px, 80%);
+      height: 120px;
+      transform: translate(-50%, -50%);
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.28), transparent 70%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: -1;
     }
 
     #sidebar-overlay {
@@ -1015,7 +1024,12 @@
       .section-rgb-title {
         animation: none !important;
         color: #93c5fd;
-        background-image: none;
+        background-image: none !important;
+        text-shadow: none;
+      }
+
+      .hero-rgb-title::before {
+        display: none !important;
       }
 
       .first-load-overlay {

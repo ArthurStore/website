@@ -496,21 +496,32 @@ function createFirstLoadExperience() {
       return true;
     }
   })();
-  if (!alwaysPlayIntro) return;
 
-  // Pastikan overlay loading Arthur Bot selalu muncul di initial hydration
+  // Pakai splash HTML kritis jika ada; kalau dimatikan user, buang segera.
+  let introLayer = document.getElementById("boot-splash");
+  if (!alwaysPlayIntro) {
+    document.body.classList.remove("first-load-active");
+    introLayer?.remove();
+    return;
+  }
+
   document.body.classList.add("first-load-active");
   introReadyPlayed = false;
-  const introLayer = document.createElement("div");
-  introLayer.className = "first-load-overlay is-visible";
-  introLayer.setAttribute("aria-hidden", "true");
-  introLayer.innerHTML = `
-    <div class="first-load-ring"></div>
-    <div class="first-load-core"></div>
-    <p class="first-load-label">Arthur Bot Experience</p>
-  `;
 
-  document.body.appendChild(introLayer);
+  if (!introLayer) {
+    introLayer = document.createElement("div");
+    introLayer.id = "boot-splash";
+    introLayer.className = "first-load-overlay is-visible";
+    introLayer.setAttribute("aria-hidden", "true");
+    introLayer.innerHTML = `
+      <div class="first-load-ring"></div>
+      <div class="first-load-core"></div>
+      <p class="first-load-label">Arthur Bot Experience</p>
+    `;
+    document.body.appendChild(introLayer);
+  } else {
+    introLayer.classList.add("is-visible");
+  }
 
   const ctx = ensureAudioContext();
   if (ctx && ctx.state === "running") {

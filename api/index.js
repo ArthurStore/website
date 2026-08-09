@@ -293,6 +293,12 @@ app.get(['/public/tiktok', '/public/tiktok/', '/public-tiktok'], (_req, res) => 
   return res.sendFile(path.join(__dirname, '../views/public-tiktok.html'));
 });
 
+app.get(['/p/:slug', '/p/:slug/'], (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-paste.html'));
+});
+
 app.get('/bot-status', (_req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -1323,11 +1329,60 @@ app.post('/api/uploads/chunk/complete', async (req, res) => {
   }
 });
 
-function serializePasteEntry(entry, includeContent = true) {
+function sanitizePasteSlug(raw) {
+  return String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+}
+
+function findPasteBySlug(slug) {
+  const key = String(slug || '').trim().toLowerCase();
+  if (!key) return null;
+  for (const entry of pastebinEntries.values()) {
+    if (String(entry.slug || '').toLowerCase() === key || String(entry.id) === key) {
+      return entry;
+    }
+  }
+  return null;
+}
+
+function isPasteSlugTaken(slug, exceptId = null) {
+  const key = String(slug || '').trim().toLowerCase();
+  if (!key) return false;
+  for (const entry of pastebinEntries.values()) {
+    if (exceptId && entry.id === exceptId) continue;
+    if (String(entry.slug || '').toLowerCase() === key) return true;
+  }
+  return false;
+}
+
+function generateUniquePasteSlug() {
+  for (let i = 0; i < 24; i += 1) {
+    const candidate = generateCode();
+    if (!isPasteSlugTaken(candidate) && !pastebinEntries.has(candidate)) {
+      return candidate;
+    }
+  }
+  return crypto.randomBytes(5).toString('hex');
+}
+
+function buildPastePublicUrl(req, slug) {
+  return `${req.protocol}://${req.get('host')}/p/${encodeURIComponent(slug)}`;
+}
+
+function serializePasteEntry(req, entry, includeContent = true) {
+  const slug = entry.slug || entry.id;
   const base = {
     id: entry.id,
+    slug,
     title: entry.title,
-    size: entry.content.length,
+    size: String(entry.content || '').length,
+    clickCount: Number(entry.clickCount || 0),
+    views: Number(entry.clickCount || 0),
+    publicUrl: buildPastePublicUrl(req, slug),
     createdAt: entry.createdAt,
     updatedAt: entry.updatedAt
   };
@@ -1341,7 +1396,7 @@ app.get('/api/pastebin', (req, res) => {
   }
   const items = Array.from(pastebinEntries.values())
     .sort((a, b) => b.updatedAt - a.updatedAt)
-    .map((entry) => serializePasteEntry(entry, true));
+    .map((entry) => serializePasteEntry(req, entry, true));
   return res.json({ items });
 });
 
@@ -1357,30 +1412,68 @@ app.post('/api/pastebin', (req, res) => {
   if (content.length > 500000) {
     return res.status(400).json({ message: 'Snippet terlalu besar (maks 500KB karakter).' });
   }
+
+  const requestedSlug = sanitizePasteSlug(req.body?.slug);
+  let slug = requestedSlug;
+  if (slug) {
+    if (slug.length < 3) {
+      return res.status(400).json({ message: 'Slug minimal 3 karakter (huruf/angka/dash/underscore).' });
+    }
+    if (isPasteSlugTaken(slug)) {
+      return res.status(409).json({ message: 'Slug sudah dipakai, gunakan slug lain.' });
+    }
+  } else {
+    slug = generateUniquePasteSlug();
+  }
+
   const id = crypto.randomBytes(8).toString('hex');
   const now = Date.now();
-  const entry = { id, title, content, createdAt: now, updatedAt: now };
+  const entry = {
+    id,
+    slug,
+    title,
+    content,
+    clickCount: 0,
+    createdAt: now,
+    updatedAt: now
+  };
   pastebinEntries.set(id, entry);
-  return res.status(201).json({ message: 'Snippet tersimpan.', item: serializePasteEntry(entry, true) });
+  return res.status(201).json({
+    message: 'Snippet tersimpan.',
+    item: serializePasteEntry(req, entry, true)
+  });
 });
 
 app.get('/api/pastebin/:id', (req, res) => {
   if (!req.session?.toolAccessGranted) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const entry = pastebinEntries.get(String(req.params.id || '').trim());
+  const key = String(req.params.id || '').trim();
+  const entry = pastebinEntries.get(key) || findPasteBySlug(key);
   if (!entry) return res.status(404).json({ message: 'Snippet tidak ditemukan.' });
-  return res.json({ item: serializePasteEntry(entry, true) });
+  return res.json({ item: serializePasteEntry(req, entry, true) });
 });
 
 app.delete('/api/pastebin/:id', (req, res) => {
   if (!req.session?.toolAccessGranted) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const id = String(req.params.id || '').trim();
-  if (!pastebinEntries.has(id)) return res.status(404).json({ message: 'Snippet tidak ditemukan.' });
-  pastebinEntries.delete(id);
+  const key = String(req.params.id || '').trim();
+  const entry = pastebinEntries.get(key) || findPasteBySlug(key);
+  if (!entry) return res.status(404).json({ message: 'Snippet tidak ditemukan.' });
+  pastebinEntries.delete(entry.id);
   return res.json({ message: 'Snippet dihapus.' });
+});
+
+app.get('/api/public/paste/:slug', (req, res) => {
+  const slug = String(req.params.slug || '').trim();
+  const entry = findPasteBySlug(slug);
+  if (!entry) {
+    return res.status(404).json({ message: 'Snippet tidak ditemukan.' });
+  }
+  entry.clickCount = Number(entry.clickCount || 0) + 1;
+  entry.updatedAt = Date.now();
+  return res.json({ item: serializePasteEntry(req, entry, true) });
 });
 
 app.delete('/api/uploads/:id', (req, res) => {
@@ -2169,11 +2262,12 @@ app.get('/api/version', (_req, res) => {
   return res.json({
     ok: true,
     name: 'Arthur.JS-website',
-    build: '2026-08-09-emergency-fix',
+    build: '2026-08-09-ui-paste-public',
     features: {
       trendsCountryParam: true,
       tiktokRoute: true,
       pastebinRoute: true,
+      pastePublicShortLink: true,
       chunkedUpload: true
     }
   });
@@ -3398,8 +3492,10 @@ if (require.main === module) {
     console.log(`   - GET  /ip-calculator → ip-calculator.html`);
     console.log(`   - GET  /captcha       → Generate captcha`);
     console.log(`   - GET  /s/:code       → Redirect shortlink`);
+    console.log(`   - GET  /p/:slug       → Public pastebin`);
     console.log(`   - GET  /u/:id         → File public landing`);
     console.log(`   - GET  /api/short-links      → List shortlink`);
+    console.log(`   - GET  /api/public/paste/:slug → Public paste + click analytics`);
     console.log(`   - POST /api/short-links      → Create shortlink`);
     console.log(`   - GET  /api/short-links/:code  → Shortlink detail`);
     console.log(`   - DELETE /api/short-links/:code → Delete shortlink`);

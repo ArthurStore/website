@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paste · Arthur</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+  <link rel="shortcut icon" href="/favicon-robot.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: #dbeafe;
+      background:
+        radial-gradient(circle at 14% 12%, rgba(56, 189, 248, 0.18), transparent 36%),
+        radial-gradient(circle at 84% 10%, rgba(59, 130, 246, 0.16), transparent 38%),
+        linear-gradient(145deg, #030712 0%, #0b1733 46%, #06152e 100%);
+    }
+    .glass {
+      background: linear-gradient(160deg, rgba(15, 23, 42, 0.84), rgba(10, 16, 33, 0.78));
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      box-shadow: 0 18px 45px rgba(2, 6, 23, 0.45);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 18px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(147, 197, 253, 0.35);
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 52%, #1e3a8a 100%);
+      color: #fff;
+      font-weight: 700;
+      padding: 10px 14px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .btn-outline {
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(2, 6, 23, 0.55);
+      color: #e2e8f0;
+    }
+    pre {
+      margin: 0;
+      border-radius: 14px;
+      overflow: auto;
+      max-height: 70vh;
+      border: 1px solid rgba(96, 165, 250, 0.22);
+    }
+    code.hljs {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9rem;
+      padding: 16px !important;
+    }
+  </style>
+</head>
+<body class="px-4 py-8 md:px-8">
+  <main class="mx-auto max-w-5xl space-y-5">
+    <header class="glass p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <p class="text-xs uppercase tracking-[0.22em] text-blue-300">Public Paste</p>
+        <h1 id="paste-title" class="mt-2 text-2xl md:text-3xl font-bold text-blue-100">Memuat…</h1>
+        <p id="paste-meta" class="mt-2 text-sm text-blue-200/90"></p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="btn-copy" class="btn" type="button">Copy Raw Text</button>
+        <a id="btn-download" class="btn btn-outline" href="#" download="snippet.txt">Download (.txt)</a>
+        <a class="btn btn-outline" href="/">Beranda</a>
+      </div>
+    </header>
+
+    <section class="glass p-4 md:p-5">
+      <pre><code id="paste-code" class="language-plaintext">Memuat snippet…</code></pre>
+      <p id="paste-error" class="hidden mt-3 text-sm text-rose-200"></p>
+    </section>
+  </main>
+
+  <script>
+    function escapeHtml(v) {
+      return String(v || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (_e) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return ok;
+      }
+    }
+
+    function getSlug() {
+      const parts = window.location.pathname.split('/').filter(Boolean);
+      return parts[0] === 'p' ? (parts[1] || '') : '';
+    }
+
+    let RAW = '';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const slug = getSlug();
+      const titleEl = document.getElementById('paste-title');
+      const metaEl = document.getElementById('paste-meta');
+      const codeEl = document.getElementById('paste-code');
+      const errEl = document.getElementById('paste-error');
+      const dl = document.getElementById('btn-download');
+      const copyBtn = document.getElementById('btn-copy');
+
+      if (!slug) {
+        titleEl.textContent = 'Snippet tidak ditemukan';
+        errEl.textContent = 'Slug kosong.';
+        errEl.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/public/paste/${encodeURIComponent(slug)}`, {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Gagal memuat snippet.');
+        const item = data.item || {};
+        RAW = String(item.content || '');
+        titleEl.textContent = item.title || slug;
+        metaEl.textContent = `/${'p/' + slug} · ${RAW.length} chars · ${Number(item.clickCount || 0)} klik`;
+        codeEl.textContent = RAW;
+        codeEl.className = 'language-plaintext';
+        if (window.hljs) {
+          window.hljs.highlightElement(codeEl);
+        }
+        const blob = new Blob([RAW], { type: 'text/plain;charset=utf-8' });
+        dl.href = URL.createObjectURL(blob);
+        dl.download = `${slug}.txt`;
+        document.title = `${item.title || slug} · Paste`;
+      } catch (e) {
+        titleEl.textContent = 'Snippet tidak ditemukan';
+        codeEl.textContent = '';
+        errEl.textContent = e.message || 'Error';
+        errEl.classList.remove('hidden');
+      }
+
+      copyBtn.addEventListener('click', async () => {
+        const ok = await copyText(RAW);
+        copyBtn.textContent = ok ? 'Copied!' : 'Gagal copy';
+        setTimeout(() => { copyBtn.textContent = 'Copy Raw Text'; }, 1400);
+      });
+    });
+  </script>
+</body>
+</html>

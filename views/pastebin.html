@@ -10,25 +10,59 @@
   <style>
     :root { color-scheme: dark; }
     body {
-      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      font-family: Arial, sans-serif;
       color: #dbeafe;
       min-height: 100vh;
+      position: relative;
       background:
-        radial-gradient(circle at 12% 14%, rgba(56, 189, 248, 0.18), transparent 33%),
-        radial-gradient(circle at 82% 12%, rgba(59, 130, 246, 0.16), transparent 36%),
+        radial-gradient(circle at 12% 14%, rgba(56, 189, 248, 0.22), transparent 33%),
+        radial-gradient(circle at 82% 12%, rgba(59, 130, 246, 0.2), transparent 36%),
         linear-gradient(145deg, #030712 0%, #0b1733 46%, #06152e 100%);
+      background-size: 130% 130%, 130% 130%, 220% 220%;
+      animation: vaultGradientShift 20s ease-in-out infinite;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: -15%;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.22), transparent 45%),
+        radial-gradient(circle at 72% 72%, rgba(14, 165, 233, 0.14), transparent 42%);
+      filter: blur(16px);
+      transform: translateZ(0);
+      will-change: transform;
+      contain: strict;
+      animation: vaultGlowMove 18s ease-in-out infinite;
     }
     .glass {
-      background: linear-gradient(160deg, rgba(15, 23, 42, 0.82), rgba(10, 16, 33, 0.78));
+      position: relative;
+      z-index: 1;
+      background: linear-gradient(160deg, rgba(15, 23, 42, 0.8), rgba(10, 16, 33, 0.76));
       border: 1px solid rgba(148, 163, 184, 0.24);
       box-shadow: 0 18px 45px rgba(2, 6, 23, 0.45);
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       transform: translateZ(0);
     }
     .neon-btn {
       border: 1px solid rgba(147, 197, 253, 0.35);
       background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 52%, #1e3a8a 100%);
       box-shadow: 0 8px 20px rgba(37, 99, 235, 0.33);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .neon-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(37, 99, 235, 0.45);
+    }
+    .link-btn {
+      transition: background-color 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+    }
+    .link-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(147, 197, 253, 0.58);
     }
     textarea, input {
       width: 100%;
@@ -51,49 +85,67 @@
     .snippet-body {
       white-space: pre-wrap;
       word-break: break-word;
-      max-height: 180px;
+      max-height: 160px;
       overflow: auto;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 0.82rem;
       color: #cbd5e1;
       margin-top: 8px;
     }
+    @keyframes vaultGradientShift {
+      0% { background-position: 0% 0%, 100% 0%, 0% 50%; }
+      50% { background-position: 8% 12%, 88% 14%, 100% 50%; }
+      100% { background-position: 0% 0%, 100% 0%, 0% 50%; }
+    }
+    @keyframes vaultGlowMove {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+      50% { transform: translate3d(2%, -2%, 0) scale(1.04); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body { animation: none; }
+      body::before { animation: none; }
+    }
   </style>
 </head>
 <body class="px-4 py-8 md:px-8 md:py-10">
-  <main class="mx-auto max-w-6xl space-y-6">
+  <main class="mx-auto max-w-7xl space-y-6">
     <header class="glass rounded-2xl p-6 md:p-8">
       <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p class="text-sm uppercase tracking-[0.25em] text-blue-300">/admin/pastebin</p>
           <h1 class="mt-2 text-3xl font-bold text-blue-100 md:text-4xl">Text Vault / Pastebin</h1>
           <p class="mt-3 max-w-3xl text-sm text-blue-200 md:text-base">
-            Simpan snippet kode/teks mentah, salin cepat ke clipboard, lihat ulang, atau hapus kapan saja.
+            Simpan snippet kode/teks, dapatkan short link publik <code>/p/slug</code>, pantau klik, salin, atau unduh.
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <a href="/admin" class="rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Admin Home</a>
-          <a href="/admin/file-vault" class="rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">File Vault</a>
-          <a href="/admin/logout" class="rounded-lg border border-rose-300/60 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20">Logout</a>
+          <a href="/admin" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Admin Home</a>
+          <a href="/admin/file-vault" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">File Vault</a>
+          <a href="/admin/short-link" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Short Link</a>
+          <a href="/admin/logout" class="link-btn rounded-lg border border-rose-300/60 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20">Logout</a>
         </div>
       </div>
     </header>
 
-    <section class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-      <div class="glass rounded-2xl p-6 space-y-4">
+    <section class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+      <div class="glass rounded-2xl p-6 md:p-7 space-y-4">
         <h2 class="text-xl font-semibold text-blue-100">Snippet baru</h2>
         <div>
           <label class="mb-2 block text-sm font-semibold text-blue-200" for="paste-title">Judul (opsional)</label>
           <input id="paste-title" placeholder="contoh: nginx config / snippet API" />
         </div>
         <div>
+          <label class="mb-2 block text-sm font-semibold text-blue-200" for="paste-slug">Custom slug (opsional)</label>
+          <input id="paste-slug" placeholder="contoh: nginx-prod (kosong = otomatis)" />
+        </div>
+        <div>
           <label class="mb-2 block text-sm font-semibold text-blue-200" for="paste-content">Isi teks / kode</label>
           <textarea id="paste-content" placeholder="Tempel teks atau kode di sini..."></textarea>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button id="paste-save" type="button" class="neon-btn rounded-lg px-4 py-2.5 text-sm font-semibold text-white">Save Snippet</button>
-          <button id="paste-copy-draft" type="button" class="rounded-lg border border-violet-400/40 px-4 py-2.5 text-sm font-semibold text-violet-100 hover:bg-violet-500/20">Copy to Clipboard</button>
-          <button id="paste-clear" type="button" class="rounded-lg border border-slate-400/40 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-500/20">Clear</button>
+          <button id="paste-save" type="button" class="neon-btn rounded-lg px-5 py-2.5 text-sm font-semibold text-white">Save Snippet</button>
+          <button id="paste-copy-draft" type="button" class="link-btn rounded-lg border border-violet-400/40 px-4 py-2.5 text-sm font-semibold text-violet-100 hover:bg-violet-500/20">Copy to Clipboard</button>
+          <button id="paste-clear" type="button" class="link-btn rounded-lg border border-slate-400/40 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-500/20">Clear</button>
         </div>
         <div id="feedback" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
       </div>
@@ -101,7 +153,7 @@
       <aside class="glass rounded-2xl p-6">
         <div class="flex items-center justify-between gap-3">
           <h2 class="text-xl font-semibold text-blue-100">Tersimpan</h2>
-          <button id="paste-refresh" type="button" class="rounded-lg border border-cyan-400/40 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20">Refresh</button>
+          <button id="paste-refresh" type="button" class="link-btn rounded-lg border border-cyan-400/40 px-3 py-1.5 text-xs font-semibold text-cyan-100 hover:bg-cyan-500/20">Refresh</button>
         </div>
         <div id="paste-list" class="mt-4 space-y-3"></div>
         <p id="paste-empty" class="mt-4 hidden text-sm text-blue-200">Belum ada snippet.</p>
@@ -111,6 +163,7 @@
 
   <script>
     const titleInput = document.getElementById('paste-title');
+    const slugInput = document.getElementById('paste-slug');
     const contentInput = document.getElementById('paste-content');
     const listRoot = document.getElementById('paste-list');
     const emptyState = document.getElementById('paste-empty');
@@ -147,6 +200,10 @@
         .replace(/"/g, '&quot;');
     }
 
+    function publicUrl(slug) {
+      return `${window.location.origin}/p/${encodeURIComponent(slug)}`;
+    }
+
     function renderList(items) {
       listRoot.innerHTML = '';
       if (!items.length) {
@@ -158,16 +215,20 @@
         const card = document.createElement('div');
         card.className = 'snippet-card';
         const created = item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID') : '-';
+        const slug = item.slug || item.id;
+        const share = publicUrl(slug);
         card.innerHTML = `
           <div class="flex items-start justify-between gap-3">
-            <div>
+            <div class="min-w-0">
               <p class="font-semibold text-blue-100">${escapeHtml(item.title || 'Untitled')}</p>
-              <p class="text-xs text-blue-300 mt-1">${created} · ${Number(item.size || 0)} chars</p>
+              <p class="text-xs text-blue-300 mt-1">${created} · ${Number(item.size || 0)} chars · ${Number(item.clickCount || 0)} klik</p>
+              <a href="${escapeHtml(share)}" target="_blank" rel="noopener" class="mt-1 inline-block break-all text-xs font-semibold text-cyan-200 hover:underline">${escapeHtml(share)}</a>
             </div>
           </div>
           <div class="snippet-body">${escapeHtml(item.content || '')}</div>
           <div class="mt-3 flex flex-wrap gap-2">
-            <button data-action="copy" data-id="${item.id}" class="rounded-md border border-violet-400/40 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-500/20">Copy to Clipboard</button>
+            <button data-action="copy-link" data-url="${escapeHtml(share)}" class="rounded-md border border-emerald-400/40 px-2 py-1 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/20">Copy Link</button>
+            <button data-action="copy" data-id="${item.id}" class="rounded-md border border-violet-400/40 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-500/20">Copy Text</button>
             <button data-action="load" data-id="${item.id}" class="rounded-md border border-cyan-400/40 px-2 py-1 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20">View / Edit</button>
             <button data-action="delete" data-id="${item.id}" class="rounded-md border border-rose-400/40 px-2 py-1 text-xs font-semibold text-rose-200 hover:bg-rose-500/20">Delete</button>
           </div>
@@ -185,6 +246,7 @@
 
     document.getElementById('paste-save').addEventListener('click', async () => {
       const title = String(titleInput.value || '').trim();
+      const slug = String(slugInput.value || '').trim();
       const content = String(contentInput.value || '');
       if (!content.trim()) {
         showFeedback('error', 'Isi teks tidak boleh kosong.');
@@ -194,12 +256,14 @@
         const res = await fetch('/api/pastebin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, content })
+          body: JSON.stringify({ title, content, slug })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Gagal menyimpan.');
-        showFeedback('success', 'Snippet tersimpan.');
+        const share = data.item?.publicUrl || publicUrl(data.item?.slug || data.item?.id);
+        showFeedback('success', `Snippet tersimpan. Short link: ${share}`);
         titleInput.value = '';
+        slugInput.value = '';
         contentInput.value = '';
         await loadSnippets();
       } catch (e) {
@@ -214,6 +278,7 @@
 
     document.getElementById('paste-clear').addEventListener('click', () => {
       titleInput.value = '';
+      slugInput.value = '';
       contentInput.value = '';
       feedback.classList.add('hidden');
     });
@@ -226,10 +291,19 @@
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
       const action = target.getAttribute('data-action');
-      const id = target.getAttribute('data-id');
-      if (!action || !id) return;
+      if (!action) return;
 
       try {
+        if (action === 'copy-link') {
+          const url = target.getAttribute('data-url') || '';
+          const ok = await copyText(url);
+          showFeedback(ok ? 'success' : 'error', ok ? 'Short link disalin.' : 'Gagal menyalin link.');
+          return;
+        }
+
+        const id = target.getAttribute('data-id');
+        if (!id) return;
+
         if (action === 'copy' || action === 'load') {
           const res = await fetch(`/api/pastebin/${encodeURIComponent(id)}`);
           const data = await res.json();
@@ -239,6 +313,7 @@
             showFeedback(ok ? 'success' : 'error', ok ? 'Snippet disalin.' : 'Gagal menyalin.');
           } else {
             titleInput.value = data.item?.title || '';
+            slugInput.value = data.item?.slug || '';
             contentInput.value = data.item?.content || '';
             showFeedback('success', 'Snippet dimuat ke editor.');
             window.scrollTo({ top: 0, behavior: 'smooth' });
