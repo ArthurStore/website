@@ -1,36 +1,46 @@
+    /* single-scroll-guard */
+    main, #main-content, .layout-container, #app, .wrapper {
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
+    }
+
     html {
       overflow-x: hidden;
       overflow-y: auto;
       height: auto;
+      max-width: 100%;
       scroll-behavior: smooth;
       background: #040912;
+      overscroll-behavior-y: none;
     }
 
     body {
       font-family: "Plus Jakarta Sans", "Poppins", ui-sans-serif, system-ui, sans-serif;
-      background:
+      background-color: #040912;
+      background-image:
+        radial-gradient(ellipse 90% 55% at 50% 100%, rgba(56, 189, 248, 0.22), transparent 70%),
         radial-gradient(circle at 12% 16%, rgba(59, 130, 246, 0.28), transparent 34%),
         radial-gradient(circle at 88% 10%, rgba(56, 189, 248, 0.22), transparent 36%),
         radial-gradient(circle at 72% 84%, rgba(99, 102, 241, 0.24), transparent 44%),
         radial-gradient(circle at 22% 78%, rgba(34, 211, 238, 0.18), transparent 38%),
-        linear-gradient(132deg, #040912 0%, #0a1633 28%, #102754 56%, #111d44 78%, #060f25 100%);
-      background-size: 140% 140%, 140% 140%, 140% 140%, 140% 140%, 200% 200%;
-      background-attachment: fixed;
-      animation: auroraDrift 28s ease-in-out infinite;
+        linear-gradient(165deg, #040912 0%, #0a1633 34%, #102754 62%, #060f25 100%);
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      background-attachment: scroll;
       color: #c0d6f9;
       overflow-x: hidden;
-      overflow-y: visible;
+      overflow-y: clip;
       min-height: 100vh;
       min-height: 100dvh;
+      width: 100%;
+      max-width: 100%;
       display: flex;
       flex-direction: column;
       position: relative;
       transform: translateZ(0);
       cursor: auto;
-    }
-
-    body.fx-tab-hidden {
-      animation-play-state: paused !important;
+      overscroll-behavior-y: none;
     }
 
     body.fx-tab-hidden::before {
@@ -62,25 +72,14 @@
       content: '';
       position: fixed;
       inset: 0;
-      background:
-        radial-gradient(circle at center, transparent 45%, rgba(2, 6, 23, 0.58) 100%),
-        linear-gradient(180deg, rgba(12, 22, 48, 0.06) 0%, rgba(7, 13, 30, 0.42) 100%),
-        repeating-linear-gradient(
-          40deg,
-          rgba(148, 163, 184, 0.03) 0px,
-          rgba(148, 163, 184, 0.03) 1px,
-          transparent 1px,
-          transparent 8px
-        ),
-        repeating-linear-gradient(
-          -42deg,
-          rgba(14, 165, 233, 0.025) 0px,
-          rgba(14, 165, 233, 0.025) 1px,
-          transparent 1px,
-          transparent 10px
-        );
       pointer-events: none;
       z-index: 0;
+      background:
+        radial-gradient(circle at 50% 108%, rgba(56, 189, 248, 0.26) 0%, transparent 42%),
+        radial-gradient(circle at center, transparent 45%, rgba(2, 6, 23, 0.45) 100%),
+        linear-gradient(180deg, rgba(12, 22, 48, 0.04) 0%, rgba(7, 13, 30, 0.28) 100%);
+      transform: translateZ(0);
+      contain: strict;
     }
 
     body.fx-white-mask::after {
