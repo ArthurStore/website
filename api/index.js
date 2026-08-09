@@ -2165,6 +2165,20 @@ app.get('/api/public/webp2mp4', async (req, res) => {
   }
 });
 
+app.get('/api/version', (_req, res) => {
+  return res.json({
+    ok: true,
+    name: 'Arthur.JS-website',
+    build: '2026-08-09-emergency-fix',
+    features: {
+      trendsCountryParam: true,
+      tiktokRoute: true,
+      pastebinRoute: true,
+      chunkedUpload: true
+    }
+  });
+});
+
 app.get('/api/public/trends', async (req, res) => {
   // NeoXR WAJIB menerima key `country` (bukan q/query).
   const country = String(
@@ -2174,6 +2188,11 @@ app.get('/api/public/trends', async (req, res) => {
     'indonesia'
   ).trim() || 'indonesia';
   try {
+    // Bangun URL secara eksplisit agar key `country` tidak pernah hilang.
+    const endpointUrl = buildNeoxrUrl('trends', { country });
+    if (!/[?&]country=/.test(endpointUrl)) {
+      return res.status(500).json({ message: 'Internal: parameter country gagal disiapkan.' });
+    }
     const payload = await callNeoxrApi('trends', { country });
     return res.json(payload);
   } catch (error) {

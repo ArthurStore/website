@@ -285,6 +285,24 @@ pm2 restart arthurg-website
 
 Tanpa restart PM2, file HTML/JS baru bisa sudah ter-serve (static), tetapi route Express seperti `/public/tiktok`, `/admin/pastebin`, dan fix `country` di `/api/public/trends` **tetap 404 / error** karena proses lama masih jalan.
 
+Cara cepat deploy:
+
+```bash
+cd /var/www/arthurg-website
+bash scripts/deploy-vps.sh
+```
+
+Verifikasi setelah restart:
+
+```bash
+curl -s https://arthurg.my.id/api/version
+# harus ada: "build": "2026-08-09-emergency-fix"
+curl -sI https://arthurg.my.id/public/tiktok | head -5
+curl -s 'https://arthurg.my.id/api/public/trends?country=indonesia' | head -c 200
+```
+
+Jika `/public/tiktok` masih 404 dari Nginx (tanpa header `X-Powered-By: Express`), pastikan virtual host mem-proxy semua path ke Node — contoh di `deploy/nginx-arthurg.my.id.conf`.
+
 **PDF to JPG sering gagal di VPS tapi lancar di localhost** biasanya karena **timeout proxy Nginx** (default singkat). Pastikan blok `proxy_*_timeout` di atas ikut disalin ke virtual host HTTPS juga (setelah Certbot menambahkan blok `listen 443 ssl;`).
 
 Aktifkan site (buat symlink ke **sites-enabled**):
