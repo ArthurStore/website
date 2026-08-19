@@ -17,7 +17,7 @@ module.exports = {
         UPLOAD_CHUNK_SIZE_MB: 8,
         NEOXR_APIKEY: "yokheimoet",
         PDF_CONVERTER_API_KEY: "yokheimoet",
-        IMGBB_API_KEY: "yokheimoet"
+        IMGBB_API_KEY: "f6f51ae27d6509e9a555a312d14ae3d7",
       },
       env_production: {
         NODE_ENV: "production",
@@ -27,7 +27,7 @@ module.exports = {
         UPLOAD_CHUNK_SIZE_MB: 8,
         NEOXR_APIKEY: "yokheimoet",
         PDF_CONVERTER_API_KEY: "yokheimoet",
-        IMGBB_API_KEY: "yokheimoet"
+        IMGBB_API_KEY: "f6f51ae27d6509e9a555a312d14ae3d7",
       }
     }
   ]

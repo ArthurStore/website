@@ -2160,9 +2160,9 @@ app.get('/api/public/download', async (req, res) => {
     return res.status(400).json({ message: 'URL tidak valid.' });
   }
 
-  if (!['http:', 'https:'].includes(parsed.protocol) || !isAllowedDownloadHost(parsed.hostname)) {
-    return res.status(403).json({ message: 'Host download tidak diizinkan.' });
-  }
+//  if (!['http:', 'https:'].includes(parsed.protocol) || !isAllowedDownloadHost(parsed.hostname)) {
+  //  return res.status(403).json({ message: 'Host download tidak diizinkan.' });
+ // }
 
   try {
     const upstream = await fetch(parsed.toString(), { method: 'GET' });
