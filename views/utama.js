@@ -4,14 +4,16 @@ function createAmbientParticles() {
 
   const particleContainer = document.createElement("div");
   particleContainer.setAttribute("aria-hidden", "true");
-  particleContainer.style.cssText = `
+    particleContainer.style.cssText = `
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100%;
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
-    contain: strict;
-    transform: translateZ(0);
   `;
   document.body.appendChild(particleContainer);
 
@@ -338,135 +340,6 @@ function attachScrollWhiteMaskFix() {
   document.body.classList.remove("fx-white-mask");
 }
 
-function createCursorTrail() {
-  try {
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const finePointer = window.matchMedia("(pointer: fine)").matches;
-    if (reduceMotion || !finePointer) {
-      document.body?.classList.remove("cursor-trail-only", "cursor-trail-ready");
-      return;
-    }
-    if (!document.body) return;
-
-    const glow = document.createElement("div");
-    glow.className = "cursor-glow";
-    glow.setAttribute("aria-hidden", "true");
-    glow.style.pointerEvents = "none";
-    const dot = document.createElement("div");
-    dot.className = "cursor-dot";
-    dot.setAttribute("aria-hidden", "true");
-    dot.style.pointerEvents = "none";
-    document.body.appendChild(glow);
-    document.body.appendChild(dot);
-
-    // Baru sembunyikan cursor native setelah elemen custom benar-benar terpasang
-    document.body.classList.add("cursor-trail-only", "cursor-trail-ready");
-
-    let targetX = window.innerWidth / 2;
-    let targetY = window.innerHeight / 2;
-    let glowX = targetX;
-    let glowY = targetY;
-    let dotX = targetX;
-    let dotY = targetY;
-    let rafId = 0;
-    let lastMoveAt = 0;
-
-    const setHoverState = (target) => {
-      if (!(target instanceof Element)) return;
-      const clickable = target.closest("a, button, input, textarea, select, [role='button'], .cta-button, .service-link, .bot-preview");
-      document.body.classList.toggle("cursor-hovering-link", Boolean(clickable));
-    };
-
-    const activateTracking = (x, y, target) => {
-      if (Number.isFinite(x) && Number.isFinite(y)) {
-        targetX = x;
-        targetY = y;
-        lastMoveAt = Date.now();
-      }
-      document.body.classList.add("cursor-tracking");
-      if (target) setHoverState(target);
-    };
-
-    const onPointerMove = (event) => {
-      activateTracking(event.clientX, event.clientY, event.target);
-    };
-
-    const onMouseMove = (event) => {
-      activateTracking(event.clientX, event.clientY, event.target);
-    };
-
-    const onPointerEnter = (event) => {
-      activateTracking(event.clientX, event.clientY, event.target);
-    };
-
-    const onPointerLeave = () => {
-      document.body.classList.remove("cursor-tracking");
-      document.body.classList.remove("cursor-hovering-link");
-    };
-
-    const onVisibilityChange = () => {
-      if (document.hidden) {
-        onPointerLeave();
-        return;
-      }
-      document.body.classList.add("cursor-tracking");
-    };
-
-    const onWindowFocus = () => {
-      document.body.classList.add("cursor-tracking");
-    };
-
-    const onWindowBlur = () => {
-      onPointerLeave();
-    };
-
-    const tick = () => {
-      if (document.hidden) {
-        rafId = window.requestAnimationFrame(tick);
-        return;
-      }
-      if (!lastMoveAt && document.hasFocus()) {
-        document.body.classList.add("cursor-tracking");
-      }
-      if (lastMoveAt && Date.now() - lastMoveAt > 1800 && document.hasFocus()) {
-        document.body.classList.add("cursor-tracking");
-      }
-      glowX += (targetX - glowX) * 0.16;
-      glowY += (targetY - glowY) * 0.16;
-      dotX += (targetX - dotX) * 0.35;
-      dotY += (targetY - dotY) * 0.35;
-      glow.style.transform = `translate3d(${glowX - 19}px, ${glowY - 19}px, 0)`;
-      dot.style.transform = `translate3d(${dotX - 4}px, ${dotY - 4}px, 0)`;
-      rafId = window.requestAnimationFrame(tick);
-    };
-
-    window.addEventListener("pointermove", onPointerMove, { passive: true });
-    window.addEventListener("mousemove", onMouseMove, { passive: true });
-    window.addEventListener("pointerenter", onPointerEnter, { passive: true });
-    document.addEventListener("pointerleave", onPointerLeave);
-    document.addEventListener("pointerdown", (event) => setHoverState(event.target));
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("focus", onWindowFocus);
-    window.addEventListener("blur", onWindowBlur);
-    document.body.classList.add("cursor-tracking");
-    rafId = window.requestAnimationFrame(tick);
-
-    window.addEventListener("beforeunload", () => {
-      if (rafId) window.cancelAnimationFrame(rafId);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("pointerenter", onPointerEnter);
-      document.removeEventListener("pointerleave", onPointerLeave);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("focus", onWindowFocus);
-      window.removeEventListener("blur", onWindowBlur);
-    }, { once: true });
-  } catch (_error) {
-    // Fallback: pastikan cursor native tetap bisa dipakai
-    document.body?.classList.remove("cursor-trail-only", "cursor-trail-ready");
-  }
-}
-
 function playFirstLoadSound() {
   playUiTone({
     type: "triangle",
@@ -643,7 +516,6 @@ document.addEventListener("visibilitychange", () => {
   document.body.classList.toggle("fx-tab-hidden", document.hidden);
 });
 createAmbientParticles();
-createCursorTrail();
 
 const lazyImages = document.querySelectorAll('img[data-src]');
 if ('IntersectionObserver' in window) {

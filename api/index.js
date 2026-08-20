@@ -200,6 +200,18 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../views/thur.html'));
 });
 
+app.get('/robots.txt', (_req, res) => {
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  return res.sendFile(path.join(__dirname, '../views/robots.txt'));
+});
+
+app.get('/sitemap.xml', (_req, res) => {
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  return res.sendFile(path.join(__dirname, '../views/sitemap.xml'));
+});
+
 app.get('/sertifikat', (req, res) => {
     res.sendFile(path.join(__dirname, '../views/sertifikat.html'));
 });
@@ -291,6 +303,24 @@ app.get(['/public/tiktok', '/public/tiktok/', '/public-tiktok'], (_req, res) => 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   return res.sendFile(path.join(__dirname, '../views/public-tiktok.html'));
+});
+
+app.get('/public/emojimix', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-emojimix.html'));
+});
+
+app.get('/public/iqc', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-iqc.html'));
+});
+
+app.get('/public/cekresi', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(path.join(__dirname, '../views/public-cekresi.html'));
 });
 
 app.get(['/p/:slug', '/p/:slug/'], (_req, res) => {
@@ -2102,6 +2132,59 @@ app.get('/api/public/bratvid', async (req, res) => {
   }
 });
 
+app.get('/api/public/emojimix', async (req, res) => {
+  const emoji1 = String(req.query.emoji1 || req.query.a || '').trim();
+  const emoji2 = String(req.query.emoji2 || req.query.b || '').trim();
+  if (!emoji1 || !emoji2) {
+    return res.status(400).json({ message: 'Parameter emoji1 dan emoji2 wajib diisi.' });
+  }
+  try {
+    const payload = await callNeoxrApi('emoji', { q: `${emoji1}_${emoji2}` });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: sanitizePublicUpstreamMessage(error, 'Gagal mix emoji.'),
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/iqc', async (req, res) => {
+  const text = String(req.query.text || '').trim();
+  const time = String(req.query.time || '').trim();
+  const chatTime = String(req.query.chat_time || req.query.chatTime || '').trim();
+  if (!text) return res.status(400).json({ message: 'Parameter text wajib diisi.' });
+  if (!time) return res.status(400).json({ message: 'Parameter time wajib diisi.' });
+  if (!chatTime) return res.status(400).json({ message: 'Parameter chat_time wajib diisi.' });
+  try {
+    const payload = await callNeoxrApi('iqc', { text, time, chat_time: chatTime });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: sanitizePublicUpstreamMessage(error, 'Gagal membuat screenshot iQC.'),
+      upstream: error?.payload || null
+    });
+  }
+});
+
+app.get('/api/public/cekresi', async (req, res) => {
+  const resi = String(req.query.resi || req.query.awb || '').trim();
+  const ekspedisi = String(req.query.ekspedisi || req.query.courier || '').trim().toLowerCase();
+  if (!resi) return res.status(400).json({ message: 'Parameter resi wajib diisi.' });
+  if (!['jnt', 'spx'].includes(ekspedisi)) {
+    return res.status(400).json({ message: 'Parameter ekspedisi wajib jnt atau spx.' });
+  }
+  try {
+    const payload = await callNeoxrApi('cekresi', { resi, ekspedisi });
+    return res.json(payload);
+  } catch (error) {
+    return res.status(Number(error?.statusCode) || 502).json({
+      message: sanitizePublicUpstreamMessage(error, 'Gagal cek resi.'),
+      upstream: error?.payload || null
+    });
+  }
+});
+
 function isAllowedDownloadHost(hostname) {
   const host = String(hostname || '').toLowerCase();
   if (!host) return false;
@@ -2262,13 +2345,17 @@ app.get('/api/version', (_req, res) => {
   return res.json({
     ok: true,
     name: 'Arthur.JS-website',
-    build: '2026-08-09-ui-paste-public',
+    build: '2026-08-20-public-tools-seo',
     features: {
       trendsCountryParam: true,
       tiktokRoute: true,
       pastebinRoute: true,
       pastePublicShortLink: true,
-      chunkedUpload: true
+      chunkedUpload: true,
+      emojimixRoute: true,
+      iqcRoute: true,
+      cekresiRoute: true,
+      robotsSitemap: true
     }
   });
 });
@@ -3495,7 +3582,11 @@ if (require.main === module) {
     console.log(`   - GET  /p/:slug       → Public pastebin`);
     console.log(`   - GET  /u/:id         → File public landing`);
     console.log(`   - GET  /api/short-links      → List shortlink`);
-    console.log(`   - GET  /api/public/paste/:slug → Public paste + click analytics`);
+    console.log(`   - GET  /public/emojimix   → Emoji mix`);
+    console.log(`   - GET  /public/iqc        → iPhone WA screenshot`);
+    console.log(`   - GET  /public/cekresi    → Cek resi J&T / SPX`);
+    console.log(`   - GET  /robots.txt        → Robots`);
+    console.log(`   - GET  /sitemap.xml       → Sitemap`);
     console.log(`   - POST /api/short-links      → Create shortlink`);
     console.log(`   - GET  /api/short-links/:code  → Shortlink detail`);
     console.log(`   - DELETE /api/short-links/:code → Delete shortlink`);

@@ -16,14 +16,20 @@
     body {
       font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
       margin: 0;
-      min-height: 100vh;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-y;
+      cursor: default;
       color: #dbeafe;
       background:
-        radial-gradient(circle at 15% 10%, rgba(14, 165, 233, 0.28), transparent 38%),
+        radial-gradient(ellipse at left center, rgba(30, 90, 200, 0.25), transparent 58%),
         radial-gradient(circle at 82% 15%, rgba(99, 102, 241, 0.3), transparent 42%),
         radial-gradient(circle at 50% 88%, rgba(34, 211, 238, 0.2), transparent 42%),
         linear-gradient(145deg, #020617 0%, #0b1f45 45%, #111c3f 100%);
     }
+    a, button, .btn-go, .btn-outline { cursor: pointer; }
     .glass {
       background: rgba(8, 16, 36, 0.74);
       border: 1px solid rgba(96, 165, 250, 0.28);
@@ -95,6 +101,9 @@
     .fx-webp::after { background: radial-gradient(circle, #22c55e, transparent 70%); }
     .fx-trends::after { background: radial-gradient(circle, #60a5fa, transparent 70%); }
     .fx-tt::after { background: radial-gradient(circle, #f472b6, transparent 70%); }
+    .fx-emoji::after { background: radial-gradient(circle, #facc15, transparent 70%); }
+    .fx-iqc::after { background: radial-gradient(circle, #34d399, transparent 70%); }
+    .fx-resi::after { background: radial-gradient(circle, #fb923c, transparent 70%); }
     .hub-head-actions { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
   </style>
  </head>
@@ -103,9 +112,9 @@
    <section class="glass p-6 md:p-8">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
      <div>
-      <h1 class="text-3xl md:text-5xl font-extrabold text-blue-100">Hub fitur public</h1>
+      <h1 class="text-3xl md:text-5xl font-extrabold text-blue-100">Public Tools Hub</h1>
       <p class="text-blue-200 mt-2 max-w-2xl leading-relaxed">
-       Kumpulan tools ringan—bahasa campur ID &amp; EN—tanpa ribet install. Dari cuaca sampai AI text &amp; image enhance, semuanya lewat browser.
+       Solusi tools ringan • High Performance &amp; 24/7 Uptime. Mix ID + EN, zero install — cuaca, enhance, download, sampai tracking paket.
       </p>
      </div>
      <div class="hub-head-actions">
@@ -118,119 +127,146 @@
    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <article class="glass feature-card fx-sun p-6">
       <div class="emoji"><i class="fas fa-cloud-sun text-amber-200"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Weather hub</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Weather Hub</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Real-time snapshot &amp; hourly outlook untuk wilayah Indonesia—visual, cepat, langsung dipakai planning outdoor atau commute.
+       Snapshot cuaca realtime + hourly outlook untuk wilayah Indonesia. Cepat, visual, siap buat planning outdoor.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/cuaca">Buka cuaca</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/cuaca">Cek Cuaca</a></div>
     </article>
 
     <article class="glass feature-card fx-mail p-6">
       <div class="emoji"><i class="fas fa-envelope-open-text text-sky-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tempmail reader</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tempmail Reader</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Check disposable inbox untuk verifikasi akun atau QA flow—tanpa exposing email utama kamu.
+       Baca disposable inbox untuk OTP &amp; QA — tanpa expose email utama.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/tempmail">Buka tempmail</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/tempmail">Buka Inbox</a></div>
     </article>
 
     <article class="glass feature-card fx-up p-6">
       <div class="emoji"><i class="fas fa-expand-arrows-alt text-cyan-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Image upscaler</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Image Upscaler</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Upload still image, dapatkan versi yang lebih besar &amp; tajam—ideal untuk poster ringan atau asset sosmed sebelum editing lanjutan.
+       Upload still image, dapatkan versi lebih besar &amp; tajam — siap poster ringan atau aset sosmed.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/upscale">Buka upscaler</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/upscale">Upscale Sekarang</a></div>
     </article>
 
     <article class="glass feature-card fx-remini p-6">
       <div class="emoji"><i class="fas fa-magic text-violet-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Remini-style online</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Remini-style Enhance</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Enhance portrait &amp; foto blur menjadi lebih clarify—think “Remini vibe” lewat pipeline otomasi, lengkap preview before / after.
+       Clarify portrait &amp; foto blur — vibe Remini, preview before / after langsung di browser.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/remini">Buka enhancer</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/remini">Enhance Foto</a></div>
     </article>
 
     <article class="glass feature-card fx-guess p-6">
       <div class="emoji"><i class="fas fa-puzzle-piece text-emerald-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tebak gambar</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Tebak Gambar</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Puzzle gambar interaktif: ambil soal baru, tebak jawaban di kolom input—fun quick break.
+       Quick puzzle: ambil soal baru, tebak di kolom input. Fun break 30 detik.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/whatimg">Main sekarang</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/whatimg">Main Sekarang</a></div>
     </article>
 
     <article class="glass feature-card fx-ai p-6">
       <div class="emoji"><i class="fas fa-brain text-fuchsia-300"></i></div>
       <h2 class="text-2xl font-bold text-blue-200 mt-3">Blackbox AI</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Tanya apa saja via prompt panjang (POST aman)—output langsung teks jawaban, tanpa clutter metadata.
+       Prompt panjang, jawaban teks bersih — tanpa clutter metadata.
       </p>
       <div class="mt-5"><a class="btn-go" href="/public/blackbox">Chat AI</a></div>
     </article>
 
     <article class="glass feature-card fx-brat p-6">
       <div class="emoji"><i class="fas fa-font text-sky-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Brat generator (image)</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Brat Generator</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-        Ubah teks jadi brat-style image. Cocok buat quick meme atau sticker draft.
+        Teks jadi brat-style image. Quick meme, sticker draft, done.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/brat">Buat brat image</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/brat">Buat Image</a></div>
     </article>
 
     <article class="glass feature-card fx-bratvid p-6">
       <div class="emoji"><i class="fas fa-video text-rose-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Brat generator (video)</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Brat Video</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-        Versi video (mp4) dari brat-style text. Ada preview dan tombol download.
+        Versi MP4 dari brat-style text. Preview + download langsung.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/bratvid">Buat brat video</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/bratvid">Buat Video</a></div>
     </article>
 
     <article class="glass feature-card fx-yt p-6">
       <div class="emoji"><i class="fab fa-youtube text-red-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">YouTube downloader</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">YouTube Downloader</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Download YT MP4 (hingga 1080p) atau MP3—lengkap preview &amp; tombol download 1-klik.
+       MP4 hingga 1080p atau MP3 — preview &amp; download 1-klik.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/youtube">Buka YouTube tool</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/youtube">Download YT</a></div>
     </article>
 
     <article class="glass feature-card fx-ig p-6">
       <div class="emoji"><i class="fab fa-instagram text-pink-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">Instagram downloader</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Instagram Downloader</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       All-in-one downloader untuk story / reel / post—hasil list media + download langsung.
+       Story / reel / post — list media + download langsung.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/instagram">Buka IG downloader</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/instagram">Download IG</a></div>
     </article>
 
     <article class="glass feature-card fx-webp p-6">
       <div class="emoji"><i class="fas fa-file-image text-emerald-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">WEBP converter</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">WEBP Converter</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Convert URL WEBP ke JPG atau MP4, lengkap preview dan tombol download.
+       Convert URL WEBP ke JPG atau MP4, lengkap preview &amp; download.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/webp">Buka converter</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/webp">Convert WEBP</a></div>
     </article>
 
     <article class="glass feature-card fx-trends p-6">
       <div class="emoji"><i class="fab fa-twitter text-sky-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">X trending</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">X Trending</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Lihat trending topic (by country) + tombol search cepat di X dan berita terkait.
+       Trending topic by country + quick search di X dan berita terkait.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/trends">Buka trending</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/trends">Lihat Trending</a></div>
     </article>
 
     <article class="glass feature-card fx-tt p-6">
       <div class="emoji"><i class="fab fa-tiktok text-pink-300"></i></div>
-      <h2 class="text-2xl font-bold text-blue-200 mt-3">TikTok downloader</h2>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">TikTok Downloader</h2>
       <p class="text-blue-100 mt-2 leading-relaxed">
-       Unduh video TikTok (MP4) atau audio (MP3) dari link post—preview + download 1-klik.
+       Unduh video MP4 atau audio MP3 dari link post — preview + 1-klik.
       </p>
-      <div class="mt-5"><a class="btn-go" href="/public/tiktok">Buka TikTok tool</a></div>
+      <div class="mt-5"><a class="btn-go" href="/public/tiktok">Download TikTok</a></div>
+    </article>
+
+    <article class="glass feature-card fx-emoji p-6">
+      <div class="emoji">🧩</div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Emoji Mix</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Blend dua emoji jadi satu visual. Pick, mix, download — siap sticker.
+      </p>
+      <div class="mt-5"><a class="btn-go" href="/public/emojimix">Mix Emoji</a></div>
+    </article>
+
+    <article class="glass feature-card fx-iqc p-6">
+      <div class="emoji"><i class="fas fa-mobile-alt text-emerald-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">iPhone WA Screenshot</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Mockup chat iQC bergaya iPhone. Isi pesan + jam, generate, download.
+      </p>
+      <div class="mt-5"><a class="btn-go" href="/public/iqc">Buat Screenshot</a></div>
+    </article>
+
+    <article class="glass feature-card fx-resi p-6">
+      <div class="emoji"><i class="fas fa-truck text-orange-300"></i></div>
+      <h2 class="text-2xl font-bold text-blue-200 mt-3">Cek Resi</h2>
+      <p class="text-blue-100 mt-2 leading-relaxed">
+       Tracking J&amp;T &amp; SPX realtime. Nomor resi masuk, timeline status keluar.
+      </p>
+      <div class="mt-5"><a class="btn-go" href="/public/cekresi">Cek Resi</a></div>
     </article>
    </section>
   </main>

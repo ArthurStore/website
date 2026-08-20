@@ -3,20 +3,33 @@
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1" name="viewport"/>
   <title>
-   Layanan Bot WhatsApp Profesional | Portofolio Arthur
+   Arthur Bot — Solusi Automasi WhatsApp Profesional
   </title>
+  <meta name="description" content="Solusi Automasi WhatsApp Profesional • High Performance & 24/7 Uptime. Script siap pakai, sewa bot grup, dan public tools untuk bisnis & komunitas."/>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com">
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&amp;display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="/utama.css?v=20260809c">
+  <link rel="stylesheet" href="/utama.css?v=20260820a">
   <style>
-    /* Splash kritis: tampil sebelum JS defer siap agar tidak blank */
+    /* Splash kritis: pinned to the top of the viewport, visible above the fold */
     #boot-splash.first-load-overlay {
       opacity: 1;
       pointer-events: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 100dvh;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: clamp(3.5rem, 12vh, 7rem);
     }
   </style>
  </head>
@@ -114,28 +127,29 @@
   </aside>
   <main id="main-content" tabindex="-1">
    <section class="fade-in-slide" id="home" style="animation-delay: 0.2s;">
-    <div class="flex flex-col-reverse md:flex-row items-center justify-center gap-10 md:gap-20 max-w-6xl mx-auto">
+    <p class="hero-kicker">Arthur Bot Experience</p>
+    <div class="flex flex-col md:flex-row items-center justify-center gap-10 md:gap-20 max-w-6xl mx-auto">
      <div class="text-center md:text-left flex-1 max-w-xl">
-      <h1 class="text-4xl md:text-5xl font-extrabold text-blue-300 mb-8 leading-tight hero-rgb-title">
-       <span class="rgb-title-main">Solusi Bot WhatsApp</span>
+      <h1 class="text-4xl md:text-5xl font-extrabold text-blue-300 mb-5 leading-tight hero-rgb-title">
+       <span class="rgb-title-main">Solusi Automasi WhatsApp Profesional</span>
        <span class="text-blue-500 block md:inline rgb-accent">
-        Profesional untuk Bisnis &amp; Komunitas
+        High Performance &amp; 24/7 Uptime
        </span>
       </h1>
       <p class="text-blue-200 text-lg mb-6 leading-relaxed">
-       Kami membantu Anda mengotomasi layanan chat, meningkatkan respons pelanggan, dan mengelola grup WhatsApp secara lebih efisien melalui script siap pakai maupun layanan sewa bot yang stabil, aman, dan mudah digunakan.
+       Auto-reply, manajemen grup, dan workflow bisnis dalam satu stack. Script siap deploy atau sewa bot managed — setup cepat, uptime stabil, support on-call.
       </p>
       <ul class="hero-highlights" aria-label="Keunggulan layanan">
-       <li>Respons Otomatis Cepat</li>
-       <li>Setup Mudah &amp; Terarah</li>
-       <li>Dukungan Teknis Berkelanjutan</li>
+       <li>Instant Auto-Reply</li>
+       <li>Plug &amp; Play Setup</li>
+       <li>Support 24/7</li>
       </ul>
       <div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
        <a class="inline-block cta-button cta-primary text-white font-semibold px-8 py-4 rounded-lg shadow-lg" href="#projects">
-        <i class="fas fa-shopping-cart mr-2"></i>Lihat Layanan &amp; Harga
+        <i class="fas fa-shopping-cart mr-2"></i>Lihat Paket &amp; Harga
        </a>
        <a class="inline-block cta-button cta-secondary text-white font-semibold px-8 py-4 rounded-lg shadow-lg" href="https://wa.me/6285102775181" target="_blank" rel="noopener noreferrer">
-        <i class="fab fa-whatsapp mr-2"></i>Kontak WhatsApp
+        <i class="fab fa-whatsapp mr-2"></i>Chat WhatsApp
        </a>
       </div>
      </div>
@@ -148,15 +162,15 @@
    </section>
    <section class="fade-in-slide text-center" id="about" style="animation-delay: 0.4s;">
     <h2 class="section-rgb-title text-4xl font-bold text-blue-400 border-b-2 border-blue-600 inline-block pb-2 mb-8">
-     Tentang Bot WhatsApp
+     Tentang Arthur Bot
     </h2>
     <p class="text-blue-200 text-lg leading-relaxed max-w-3xl mx-auto">
-     Layanan Bot WhatsApp ini dirancang untuk kebutuhan operasional modern: mulai dari auto-reply, manajemen anggota grup, hingga command kustom yang dapat disesuaikan dengan alur kerja bisnis maupun komunitas Anda.
+     Engine otomasi WhatsApp untuk operasional modern: auto-reply, manajemen member, dan custom command yang nyambung ke alur bisnis maupun komunitas.
     </p>
    </section>
    <section class="fade-in-slide text-center" id="projects" style="animation-delay: 0.6s;">
     <h2 class="section-rgb-title text-4xl font-bold text-blue-400 border-b-2 border-blue-600 inline-block pb-2 mb-8">
-     Layanan &amp; Harga
+     Paket &amp; Pricing
     </h2>
     <div class="max-w-5xl mx-auto">
      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 justify-items-center">
@@ -167,7 +181,7 @@
         Paket Script Bot
        </h3>
        <p class="text-blue-200 mb-4">
-        Script bot siap deploy dengan struktur rapi, dokumentasi jelas, dan fitur inti yang sudah teruji. Cocok untuk developer, pemilik komunitas, maupun tim bisnis yang ingin membangun otomasi sendiri dengan fleksibel.
+        Ready-to-deploy script: struktur rapi, docs jelas, fitur inti sudah battle-tested. Cocok untuk developer &amp; tim yang ingin full control.
        </p>
        <a class="service-link inline-flex items-center space-x-2" href="https://wa.me/6285102775181" target="_blank" rel="noopener noreferrer">
         <span>
@@ -185,7 +199,7 @@
         Paket Sewa Bot Grup
        </h3>
        <p class="text-blue-200 mb-4">
-        Solusi sewa bot end-to-end untuk Anda yang ingin fokus ke aktivitas utama. Mulai dari setup, monitoring, hingga maintenance dilakukan secara berkala agar performa bot tetap optimal.
+        Managed bot, end-to-end. Setup, monitoring, dan maintenance kami handle — kamu fokus ke komunitas. High performance, 24/7 uptime.
        </p>
        <a class="service-link inline-flex items-center space-x-2" href="https://wa.me/6285102775181" target="_blank" rel="noopener noreferrer">
         <span>
@@ -281,25 +295,23 @@
      </div>
      </div>
      <article class="mt-8 mx-auto max-w-4xl bg-black bg-opacity-40 rounded-xl border border-blue-500/40 p-6 shadow-lg text-left">
-      <h3 class="text-2xl font-bold text-blue-200 mb-3">Portal fitur public</h3>
+      <h3 class="text-2xl font-bold text-blue-200 mb-3">Public Tools Hub</h3>
       <p class="text-blue-100 mb-4 leading-relaxed">
-       Kumpulan fitur praktis yang bisa dipakai langsung di browser. Tersedia berbagai tool seperti cuaca, email sementara, peningkatan kualitas gambar, permainan tebak gambar, dan chat AI dalam satu hub.
+       Tools ringan, langsung di browser — tanpa install. Cuaca, tempmail, image enhance, downloader, sampai AI chat dalam satu portal.
       </p>
       <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-blue-100 text-sm list-disc list-inside marker:text-blue-400">
        <li><strong class="text-blue-50">Weather</strong> — cuaca real-time wilayah Indonesia</li>
-       <li><strong class="text-blue-50">Tempmail</strong> — baca inbox disposable untuk OTP / testing</li>
-       <li><strong class="text-blue-50">Image upscaler</strong> — naikkan resolusi &amp; ketajaman foto</li>
-       <li><strong class="text-blue-50">Remini-style enhance</strong> — detail foto lebih bersih online</li>
-       <li><strong class="text-blue-50">Tebak gambar</strong> — puzzle gambar singkat</li>
-       <li><strong class="text-blue-50">Blackbox AI</strong> — jawaban teks cepat untuk pertanyaanmu</li>
-       <li><strong class="text-blue-50">YouTube downloader</strong> — MP4 hingga 1080p atau MP3, ada preview &amp; download 1-klik</li>
-       <li><strong class="text-blue-50">Instagram downloader</strong> — story / reel / post, list media + download langsung</li>
-       <li><strong class="text-blue-50">WEBP converter</strong> — WEBP ke JPG/MP4 via URL atau upload temp</li>
-       <li><strong class="text-blue-50">X trending</strong> — trending topic + link berita terkait</li>
+       <li><strong class="text-blue-50">Tempmail</strong> — inbox disposable untuk OTP / QA</li>
+       <li><strong class="text-blue-50">Image upscaler</strong> — naikkan resolusi &amp; ketajaman</li>
+       <li><strong class="text-blue-50">Remini-style enhance</strong> — foto blur jadi lebih jernih</li>
+       <li><strong class="text-blue-50">Emoji Mix</strong> — blend dua emoji jadi sticker</li>
+       <li><strong class="text-blue-50">iPhone WA Screenshot</strong> — mockup chat iQC siap share</li>
+       <li><strong class="text-blue-50">Cek Resi</strong> — tracking J&amp;T / SPX realtime</li>
+       <li><strong class="text-blue-50">YouTube / IG / TikTok</strong> — download MP4 &amp; MP3 1-klik</li>
       </ul>
       <div class="mt-5">
        <a class="inline-block cta-button cta-primary text-white font-semibold px-8 py-4 rounded-lg shadow-lg" href="/public">
-        <i class="fas fa-globe mr-2"></i>Buka hub fitur public
+        <i class="fas fa-globe mr-2"></i>Buka Public Tools
        </a>
       </div>
      </article>
@@ -307,7 +319,7 @@
    </section>
    <section class="fade-in-slide text-center" id="contact" style="animation-delay: 1.4s;">
   <h2 class="section-rgb-title text-4xl font-bold text-blue-400 border-b-2 border-blue-600 inline-block pb-2 mb-8">
-    Konsultasi &amp; Kolaborasi
+    Let's Talk — Konsultasi
   </h2>
 
   <div class="max-w-4xl mx-auto">
@@ -336,7 +348,7 @@
     </div>
     <div>
       <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition">
-        Kirim Pesan
+        Kirim Sekarang
       </button>
     </div>
    </form>
@@ -373,6 +385,6 @@
     <img alt="" id="modal-image" src=""/>
    </div>
   </div>
-  <script defer src="/utama.js?v=20260809c"></script>
+  <script defer src="/utama.js?v=20260820a"></script>
  </body>
 </html>
