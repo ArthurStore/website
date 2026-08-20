@@ -213,44 +213,35 @@
     }
 
 @keyframes firstLoadRingPulse {
-  0% {
-    transform: scale(0.62);
-    opacity: 0;
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
   }
-  52% {
-    opacity: 0.95;
-  }
-  100% {
-    transform: scale(1.26);
-    opacity: 0;
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
   }
 }
 
 @keyframes firstLoadCorePulse {
-  0% {
-    transform: scale(0.52);
-    opacity: 0;
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.9;
   }
-  48% {
-    opacity: 0.92;
-  }
-  100% {
-    transform: scale(1.34);
-    opacity: 0;
+  50% {
+    transform: translate(-50%, -50%) scale(1.12);
+    opacity: 1;
   }
 }
 
 @keyframes firstLoadLabelPop {
   0% {
-    transform: translateY(8px) scale(0.9);
+    transform: translateY(6px) scale(0.96);
     opacity: 0;
-  }
-  42% {
-    opacity: 1;
   }
   100% {
     transform: translateY(0) scale(1);
-    opacity: 0.88;
+    opacity: 1;
   }
 }
 
@@ -261,11 +252,13 @@
     .first-load-overlay {
       position: fixed;
       inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100vh;
       z-index: 99999;
       pointer-events: auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
       margin: 0;
       padding: 0;
       opacity: 0;
@@ -287,31 +280,33 @@
     }
 
     .first-load-stage {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      position: relative;
+      top: auto;
+      left: auto;
+      transform: none;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 1rem;
       width: min(90vw, 420px);
+      margin: 0;
       z-index: 1;
     }
 
     .first-load-ring {
       position: relative;
-      width: min(48vw, 220px);
+      width: min(42vw, 200px);
       aspect-ratio: 1 / 1;
       border-radius: 999px;
       border: 1px solid rgba(125, 211, 252, 0.45);
       box-shadow:
         0 0 40px rgba(56, 189, 248, 0.35),
         inset 0 0 24px rgba(96, 165, 250, 0.2);
-      animation: firstLoadRingPulse 1.25s ease-out infinite;
+      animation: firstLoadRingPulse 1.6s ease-in-out infinite;
       display: grid;
       place-items: center;
+      flex: 0 0 auto;
     }
 
     .first-load-core {
@@ -325,7 +320,7 @@
       transform: translate(-50%, -50%);
       background: radial-gradient(circle, rgba(191, 219, 254, 0.95) 0%, rgba(59, 130, 246, 0.38) 48%, rgba(30, 64, 175, 0) 72%);
       filter: blur(0.2px);
-      animation: firstLoadCorePulse 1.18s ease-out infinite;
+      animation: firstLoadCorePulse 1.6s ease-in-out infinite;
       pointer-events: none;
     }
 
@@ -342,7 +337,7 @@
       padding: 0.62rem 1rem;
       border-radius: 999px;
       box-shadow: 0 0 24px rgba(56, 189, 248, 0.36);
-      animation: firstLoadLabelPop 1.18s ease-out 1;
+      animation: firstLoadLabelPop 0.7s ease-out 1;
       margin: 0;
     }
 
@@ -352,7 +347,8 @@
       border-radius: 999px;
       background: rgba(148, 163, 184, 0.25);
       overflow: hidden;
-      margin-top: 0.35rem;
+      margin-top: 0.15rem;
+      flex: 0 0 auto;
     }
 
     .first-load-bar-fill {

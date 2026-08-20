@@ -20,25 +20,36 @@
   }
   </script>
   <title>
-   Arthur Bot — Solusi Automasi WhatsApp Profesional
+   Gerald Arthur Gunawan — Arthur Bot | Automasi WhatsApp Profesional
   </title>
-  <meta name="description" content="Solusi Automasi WhatsApp Profesional • High Performance & 24/7 Uptime. Script siap pakai, sewa bot grup, dan public tools untuk bisnis & komunitas."/>
+  <meta name="description" content="Gerald Arthur Gunawan (Arthur G) — Network Engineer & Bot Developer Surabaya. Solusi Automasi WhatsApp Profesional • High Performance & 24/7 Uptime."/>
+  <meta property="og:title" content="Gerald Arthur Gunawan — Arthur Bot"/>
+  <meta property="og:description" content="Portofolio & layanan bot WhatsApp oleh Gerald Arthur Gunawan (Arthur G). Script siap pakai, sewa bot, dan public tools."/>
+  <meta property="og:url" content="https://arthurg.my.id/"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="Arthur G — Gerald Arthur Gunawan"/>
+  <meta name="twitter:card" content="summary"/>
+  <meta name="twitter:title" content="Gerald Arthur Gunawan — Arthur Bot"/>
+  <meta name="twitter:description" content="Network Engineer & Bot Developer Surabaya. Automasi WhatsApp profesional."/>
+  <link rel="canonical" href="https://arthurg.my.id/"/>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com">
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&amp;display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="/utama.css?v=20260820b">
+  <link rel="stylesheet" href="/utama.css?v=20260820c">
   <style>
-    /* Critical splash: full-viewport loading screen only (not part of page content) */
+    /* Critical splash: true viewport center (no absolute stage drift) */
     #boot-splash.first-load-overlay {
       position: fixed !important;
       inset: 0 !important;
+      width: 100vw !important;
+      height: 100dvh !important;
+      min-height: 100vh !important;
       z-index: 99999 !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
+      display: grid !important;
+      place-items: center !important;
       background: #030712 !important;
       opacity: 1;
       pointer-events: auto;
@@ -46,16 +57,17 @@
       padding: 0 !important;
     }
     #boot-splash .first-load-stage {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      transform: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
       gap: 1rem;
       width: min(90vw, 420px);
+      margin: 0 !important;
     }
     #boot-splash.is-gone {
       display: none !important;
@@ -169,6 +181,9 @@
         High Performance &amp; 24/7 Uptime
        </span>
       </h1>
+      <p class="text-sky-300/90 text-sm md:text-base font-semibold mb-3 tracking-wide">
+       by Gerald Arthur Gunawan · Arthur G
+      </p>
       <p class="text-blue-200 text-lg mb-6 leading-relaxed">
        Auto-reply, manajemen grup, dan workflow bisnis dalam satu stack. Script siap deploy atau sewa bot managed — setup cepat, uptime stabil, support on-call.
       </p>
@@ -407,7 +422,7 @@
     </span>
    </div>
    <div aria-label="Hak cipta" class="copyright" tabindex="0">
-    © 2026 Arthur Bot Solutions. Semua hak cipta dilindungi.
+    © 2026 Gerald Arthur Gunawan · Arthur Bot Solutions. Semua hak cipta dilindungi.
    </div>
   </footer>
   <div aria-label="Image preview modal" aria-modal="true" id="image-modal" role="dialog" tabindex="-1">
@@ -418,6 +433,6 @@
     <img alt="" id="modal-image" src=""/>
    </div>
   </div>
-  <script defer src="/utama.js?v=20260820b"></script>
+  <script defer src="/utama.js?v=20260820c"></script>
  </body>
 </html>

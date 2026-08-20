@@ -82,6 +82,8 @@ npm ci
 
 ## 4) Konfigurasi yang perlu kamu ubah sebelum dijalankan
 
+> Ringkasan teknis (API key, cara run local, SEO Google): lihat juga **[`README.md`](./README.md)**.
+
 Edit file PM2:
 
 ```bash
@@ -90,6 +92,10 @@ nano /var/www/arthurg-website/ecosystem.config.cjs
 
 Bagian penting yang harus kamu cek:
 
+- `NEOXR_APIKEY` (**wajib** untuk public tools: cuaca, AI, downloader, dll.)
+  - ganti dengan API key dari dashboard NeoXR
+  - setelah diganti: `pm2 restart arthurg-website --env production`
+- `PDF_CONVERTER_API_KEY` (PDF → JPG; biasanya sama dengan NeoXR)
 - `PORT` (default `3000`)
 - `TOOL_ACCESS_PIN` (ganti dari default agar lebih aman)
   - kompatibel juga dengan `ADMIN_PIN` untuk versi lama, tapi disarankan pakai `TOOL_ACCESS_PIN`
@@ -126,6 +132,8 @@ env_production: {
   NODE_ENV: "production",
   PORT: 3000,
   TOOL_ACCESS_PIN: "050507",
+  NEOXR_APIKEY: "ganti_neoxr_api_key_anda",
+  PDF_CONVERTER_API_KEY: "ganti_neoxr_api_key_anda",
   PDF_TMP_PUBLIC_BASE_URL: "https://arthurg.my.id",
   PDF_CONVERTER_TIMEOUT_MS: 300000,
   CATBOX_UPLOAD_ENDPOINT: "https://catbox.moe/user/api.php",
