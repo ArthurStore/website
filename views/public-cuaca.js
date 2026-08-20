@@ -71,14 +71,21 @@ function weatherIconClass(mode) {
 
 async function requestJson(url) {
   const response = await fetch(url, { method: "GET", headers: { Accept: "application/json" } });
+  const raw = await response.text();
   let payload = {};
   try {
-    payload = await response.json();
+    payload = raw ? JSON.parse(raw) : {};
   } catch (_error) {
-    payload = { message: "Response bukan JSON valid." };
+    const error = new Error(
+      raw && /^\s*</.test(raw)
+        ? "Server mengembalikan HTML, bukan JSON. Coba refresh atau cek endpoint API."
+        : "Response bukan JSON valid."
+    );
+    error.payload = { message: error.message, preview: String(raw || "").slice(0, 180) };
+    throw error;
   }
   if (!response.ok) {
-    const error = new Error(payload?.message || `Request gagal (${response.status})`);
+    const error = new Error(payload?.message || payload?.msg || `Request gagal (${response.status})`);
     error.payload = payload;
     throw error;
   }
@@ -101,7 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     resultNode.textContent = "Mengambil data cuaca...";
     try {
-      const payload = await requestJson(`/api/public/cuaca?subdistrict=${encodeURIComponent(subdistrict)}`);
+      const payload = await requestJson(
+        `/api/public/cuaca?q=${encodeURIComponent(subdistrict)}&subdistrict=${encodeURIComponent(subdistrict)}`
+      );
       const normalized = payload?.normalized || {};
       const current = normalized?.current || null;
       const forecast = Array.isArray(normalized?.forecast) ? normalized.forecast : [];

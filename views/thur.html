@@ -2,6 +2,23 @@
  <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1" name="viewport"/>
+  <meta name="author" content="Gerald Arthur Gunawan">
+  <meta name="creator" content="Gerald Arthur Gunawan">
+  <meta name="publisher" content="Gerald Arthur Gunawan">
+  <meta name="keywords" content="Gerald Arthur Gunawan, Arthur G, sewa bot, bot whatsapp, developer surabaya">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Gerald Arthur Gunawan",
+    "alternateName": "Arthur G",
+    "url": "https://arthurg.my.id",
+    "jobTitle": "Network Engineer & Bot Developer",
+    "sameAs": [
+      "https://github.com/ArthurStore"
+    ]
+  }
+  </script>
   <title>
    Arthur Bot — Solusi Automasi WhatsApp Profesional
   </title>
@@ -12,34 +29,51 @@
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&amp;family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&amp;display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="/utama.css?v=20260820a">
+  <link rel="stylesheet" href="/utama.css?v=20260820b">
   <style>
-    /* Splash kritis: pinned to the top of the viewport, visible above the fold */
+    /* Critical splash: full-viewport loading screen only (not part of page content) */
     #boot-splash.first-load-overlay {
+      position: fixed !important;
+      inset: 0 !important;
+      z-index: 99999 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: #030712 !important;
       opacity: 1;
-      pointer-events: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      height: 100dvh;
-      min-height: 100%;
+      pointer-events: auto;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    #boot-splash .first-load-stage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      padding-top: clamp(3.5rem, 12vh, 7rem);
+      justify-content: center;
+      gap: 1rem;
+      width: min(90vw, 420px);
+    }
+    #boot-splash.is-gone {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
   </style>
  </head>
  <body class="first-load-active">
-  <div id="boot-splash" class="first-load-overlay is-visible" aria-hidden="true">
-   <div class="first-load-ring"></div>
-   <div class="first-load-core"></div>
-   <p class="first-load-label">Arthur Bot Experience</p>
-   <div style="position:absolute;bottom:18%;left:50%;transform:translateX(-50%);width:min(220px,55vw);height:4px;border-radius:999px;background:rgba(148,163,184,.25);overflow:hidden;">
-    <div style="height:100%;width:35%;border-radius:999px;background:linear-gradient(90deg,#38bdf8,#2563eb);animation:firstLoadShimmer 1.1s ease-in-out infinite;"></div>
+  <div id="boot-splash" class="first-load-overlay is-visible" aria-hidden="true" role="status" aria-live="polite">
+   <div class="first-load-stage">
+    <div class="first-load-ring" aria-hidden="true">
+     <div class="first-load-core" aria-hidden="true"></div>
+    </div>
+    <p class="first-load-label">Arthur Bot Experience</p>
+    <div class="first-load-bar" aria-hidden="true">
+     <div class="first-load-bar-fill"></div>
+    </div>
    </div>
   </div>
   <button aria-controls="sidebar" aria-expanded="false" aria-label="Toggle menu" id="hamburger-btn">
@@ -127,7 +161,6 @@
   </aside>
   <main id="main-content" tabindex="-1">
    <section class="fade-in-slide" id="home" style="animation-delay: 0.2s;">
-    <p class="hero-kicker">Arthur Bot Experience</p>
     <div class="flex flex-col md:flex-row items-center justify-center gap-10 md:gap-20 max-w-6xl mx-auto">
      <div class="text-center md:text-left flex-1 max-w-xl">
       <h1 class="text-4xl md:text-5xl font-extrabold text-blue-300 mb-5 leading-tight hero-rgb-title">
@@ -385,6 +418,6 @@
     <img alt="" id="modal-image" src=""/>
    </div>
   </div>
-  <script defer src="/utama.js?v=20260820a"></script>
+  <script defer src="/utama.js?v=20260820b"></script>
  </body>
 </html>

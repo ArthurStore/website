@@ -1880,12 +1880,22 @@ async function callNeoxrApi(endpoint, queryParams = {}) {
     clearTimeout(timeoutId);
   }
 
+  const contentType = String(response.headers.get('content-type') || '').toLowerCase();
   const rawText = await response.text();
   let payload = {};
+  let parsedOk = false;
   try {
     payload = rawText ? JSON.parse(rawText) : {};
+    parsedOk = true;
   } catch (_error) {
     payload = { raw: rawText };
+  }
+
+  if (!parsedOk || contentType.includes('text/html') || /^\s*<(!doctype|html)\b/i.test(rawText || '')) {
+    const htmlError = new Error('Upstream mengembalikan HTML, bukan JSON valid.');
+    htmlError.statusCode = 502;
+    htmlError.payload = { message: htmlError.message, contentType, preview: String(rawText || '').slice(0, 180) };
+    throw htmlError;
   }
 
   if (!response.ok) {
@@ -1895,7 +1905,72 @@ async function callNeoxrApi(endpoint, queryParams = {}) {
     throw upstreamError;
   }
 
+  if (payload && payload.status === false) {
+    const failError = new Error(payload?.msg || payload?.message || 'Upstream mengembalikan status gagal.');
+    failError.statusCode = Number(response.status) === 200 ? 502 : Number(response.status) || 502;
+    failError.payload = payload;
+    throw failError;
+  }
+
   return payload;
+}
+
+function extractAiReplyText(payload) {
+  if (payload == null) return '';
+  if (typeof payload === 'string') return payload.trim();
+  if (typeof payload !== 'object') return '';
+
+  const candidates = [
+    payload?.data?.data?.response,
+    payload?.data?.response,
+    payload?.data?.message,
+    payload?.data?.text,
+    payload?.data?.answer,
+    payload?.data?.result,
+    typeof payload?.data === 'string' ? payload.data : null,
+    payload?.result,
+    payload?.response,
+    payload?.message,
+    payload?.text,
+    payload?.answer
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+
+  if (payload?.data && typeof payload.data === 'object') {
+    for (const value of Object.values(payload.data)) {
+      if (typeof value === 'string' && value.trim() && value.length > 1) return value.trim();
+    }
+  }
+  return '';
+}
+
+async function callBlackboxCompatibleAi(q) {
+  const endpoints = ['blackbox', 'gpt4', 'gemini-chat', 'bard'];
+  let lastError = null;
+  for (const endpoint of endpoints) {
+    try {
+      const payload = await callNeoxrApi(endpoint, { q });
+      const text = extractAiReplyText(payload);
+      if (text) {
+        return {
+          status: true,
+          data: {
+            response: text,
+            message: text,
+            source: endpoint
+          },
+          upstream: payload
+        };
+      }
+      lastError = new Error(`Endpoint ${endpoint} sukses tanpa teks.`);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error('Gagal menghubungi AI upstream.');
 }
 
 function isTimeoutLikeError(error) {
@@ -2078,11 +2153,11 @@ app.get('/api/public/blackbox', async (req, res) => {
     return res.status(400).json({ message: 'Parameter q wajib diisi (pertanyaan untuk AI).' });
   }
   try {
-    const payload = await callNeoxrApi('blackbox', { q });
+    const payload = await callBlackboxCompatibleAi(q);
     return res.json(payload);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal menghubungi Blackbox AI.',
+      message: sanitizePublicUpstreamMessage(error, 'Gagal menghubungi Blackbox AI.'),
       upstream: error?.payload || null
     });
   }
@@ -2094,11 +2169,11 @@ app.post('/api/public/blackbox', async (req, res) => {
     return res.status(400).json({ message: 'Body JSON wajib berisi field "q" (teks pertanyaan).' });
   }
   try {
-    const payload = await callNeoxrApi('blackbox', { q });
+    const payload = await callBlackboxCompatibleAi(q);
     return res.json(payload);
   } catch (error) {
     return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal menghubungi Blackbox AI.',
+      message: sanitizePublicUpstreamMessage(error, 'Gagal menghubungi Blackbox AI.'),
       upstream: error?.payload || null
     });
   }
@@ -2443,16 +2518,37 @@ app.post('/api/public/upload-temp', (req, res) => {
 });
 
 app.get('/api/public/cuaca', async (req, res) => {
-  const subdistrict = String(req.query.subdistrict || 'batang').trim();
-  if (!subdistrict) {
-    return res.status(400).json({ message: 'Parameter subdistrict wajib diisi.' });
+  const query = String(
+    req.query.q ||
+    req.query.subdistrict ||
+    req.query.query ||
+    ''
+  ).trim();
+  if (!query) {
+    return res.status(400).json({ message: 'Parameter q / subdistrict wajib diisi.' });
   }
 
   try {
-    const payload = await callNeoxrApi('cuaca', { subdistrict });
+    // NeoXR cuaca docs/variasi: beberapa build pakai q, yang aktif saat ini wajib subdistrict.
+    // Kirim keduanya agar kompatibel, lalu parse JSON dengan aman.
+    let payload;
+    try {
+      payload = await callNeoxrApi('cuaca', { q: query, subdistrict: query });
+    } catch (firstError) {
+      try {
+        payload = await callNeoxrApi('cuaca', { subdistrict: query });
+      } catch (secondError) {
+        try {
+          payload = await callNeoxrApi('cuaca', { q: query });
+        } catch (_thirdError) {
+          throw firstError?.payload ? firstError : secondError;
+        }
+      }
+    }
+
     const normalized = normalizeWeatherSummary(payload);
     const current = normalized?.current || null;
-    const rawLower = String(subdistrict || '').toLowerCase();
+    const rawLower = String(query || '').toLowerCase();
     const suggestionsByCity = [
       {
         keys: ['surabaya', 'sby'],
@@ -2485,8 +2581,14 @@ app.get('/api/public/cuaca', async (req, res) => {
       suggestions
     });
   } catch (error) {
+    const upstreamMsg = String(error?.payload?.msg || error?.message || '').toLowerCase();
+    let message = sanitizePublicUpstreamMessage(error, 'Gagal mengambil data cuaca.');
+    if (upstreamMsg.includes('something went wrong') || upstreamMsg.includes('html, bukan json')) {
+      message = 'Layanan cuaca upstream sedang bermasalah. Coba lagi beberapa saat, atau coba nama kecamatan lain.';
+    }
     return res.status(Number(error?.statusCode) || 502).json({
-      message: error?.message || 'Gagal mengambil data cuaca.',
+      status: false,
+      message,
       upstream: error?.payload || null
     });
   }

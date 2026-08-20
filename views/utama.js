@@ -358,6 +358,19 @@ function playFirstLoadSound() {
   });
 }
 
+function dismissBootSplash(introLayer) {
+  if (!introLayer || introLayer.dataset.dismissed === "1") return;
+  introLayer.dataset.dismissed = "1";
+  introLayer.classList.add("is-fading");
+  introLayer.classList.remove("is-visible");
+  document.body.classList.remove("first-load-active");
+  window.setTimeout(() => {
+    introLayer.classList.add("is-gone");
+    introLayer.style.display = "none";
+    introLayer.remove();
+  }, 480);
+}
+
 function createFirstLoadExperience() {
   if (!document.body) return;
   const firstLoadAlwaysKey = "arthur-site-first-load-always-v1";
@@ -374,7 +387,11 @@ function createFirstLoadExperience() {
   let introLayer = document.getElementById("boot-splash");
   if (!alwaysPlayIntro) {
     document.body.classList.remove("first-load-active");
-    introLayer?.remove();
+    if (introLayer) {
+      introLayer.classList.add("is-gone");
+      introLayer.style.display = "none";
+      introLayer.remove();
+    }
     return;
   }
 
@@ -386,14 +403,22 @@ function createFirstLoadExperience() {
     introLayer.id = "boot-splash";
     introLayer.className = "first-load-overlay is-visible";
     introLayer.setAttribute("aria-hidden", "true");
+    introLayer.setAttribute("role", "status");
     introLayer.innerHTML = `
-      <div class="first-load-ring"></div>
-      <div class="first-load-core"></div>
-      <p class="first-load-label">Arthur Bot Experience</p>
+      <div class="first-load-stage">
+        <div class="first-load-ring" aria-hidden="true">
+          <div class="first-load-core" aria-hidden="true"></div>
+        </div>
+        <p class="first-load-label">Arthur Bot Experience</p>
+        <div class="first-load-bar" aria-hidden="true"><div class="first-load-bar-fill"></div></div>
+      </div>
     `;
     document.body.appendChild(introLayer);
   } else {
     introLayer.classList.add("is-visible");
+    introLayer.classList.remove("is-gone", "is-fading");
+    introLayer.style.display = "";
+    delete introLayer.dataset.dismissed;
   }
 
   const ctx = ensureAudioContext();
@@ -403,18 +428,27 @@ function createFirstLoadExperience() {
     deferredIntroChime = true;
   }
 
-  window.setTimeout(() => {
-    introLayer.classList.add("is-fading");
-    document.body.classList.remove("first-load-active");
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
     if (!introReadyPlayed) {
       playReadyJrengSound();
       introReadyPlayed = true;
     }
-  }, 2850);
+    dismissBootSplash(introLayer);
+  };
 
-  window.setTimeout(() => {
-    introLayer.remove();
-  }, 4300);
+  const onReady = () => {
+    window.setTimeout(finish, 900);
+  };
+
+  if (document.readyState === "complete") {
+    onReady();
+  } else {
+    window.addEventListener("load", onReady, { once: true });
+  }
+  window.setTimeout(finish, 3200);
 }
 
 function forceWelcomeReadySoundOnce() {

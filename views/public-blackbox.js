@@ -1,16 +1,39 @@
 function extractReply(payload) {
-  if (!payload || typeof payload !== "object") return "";
-  const d = payload.data;
-  if (typeof d === "string") return d.trim();
-  if (d != null && typeof d.message === "string") return d.message.trim();
-  if (typeof payload.message === "string") return payload.message.trim();
+  if (payload == null) return "";
+  if (typeof payload === "string") return payload.trim();
+  if (typeof payload !== "object") return "";
+
+  const candidates = [
+    payload?.data?.data?.response,
+    payload?.data?.response,
+    payload?.data?.message,
+    payload?.data?.text,
+    payload?.data?.answer,
+    payload?.data?.result,
+    typeof payload?.data === "string" ? payload.data : null,
+    payload?.result,
+    payload?.response,
+    payload?.message,
+    payload?.text,
+    payload?.answer
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+
+  if (payload?.data && typeof payload.data === "object") {
+    for (const value of Object.values(payload.data)) {
+      if (typeof value === "string" && value.trim() && value.length > 1) return value.trim();
+    }
+  }
   return "";
 }
 
 function pickErrorMessage(err) {
   if (err == null || err === "") return "Terjadi kesalahan.";
   if (typeof err === "string") return err;
-  return err.message || err.error || "Terjadi kesalahan.";
+  return err.message || err.error || err.msg || "Terjadi kesalahan.";
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -32,13 +55,19 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ q })
       });
-      const payload = await response.json();
+      const raw = await response.text();
+      let payload = {};
+      try {
+        payload = raw ? JSON.parse(raw) : {};
+      } catch (_error) {
+        throw new Error("Response bukan JSON valid.");
+      }
       if (!response.ok) throw payload;
       const text = extractReply(payload);
       if (out) {
         out.textContent =
           text ||
-          "Respons sukses tapi tidak ada teks yang bisa ditampilkan (cek struktur data upstream).";
+          "Respons sukses tapi tidak ada teks yang bisa ditampilkan.";
       }
     } catch (error) {
       if (out) out.textContent = pickErrorMessage(error);

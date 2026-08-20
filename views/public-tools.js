@@ -75,7 +75,9 @@ function bindWeatherPage() {
     }
     result.textContent = "Lagi cek cuaca...";
     try {
-      const payload = await requestJson(`/api/public/cuaca?subdistrict=${encodeURIComponent(subdistrict)}`);
+      const payload = await requestJson(
+        `/api/public/cuaca?q=${encodeURIComponent(subdistrict)}&subdistrict=${encodeURIComponent(subdistrict)}`
+      );
       const normalized = payload?.normalized || {};
       const current = normalized?.current || null;
       const forecast = Array.isArray(normalized?.forecast) ? normalized.forecast : [];
