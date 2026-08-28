@@ -1,0 +1,16 @@
+{
+  "name": "Arthur.JS Website",
+  "install": "npm ci",
+  "terminals": [
+    {
+      "name": "web",
+      "command": "npm start"
+    }
+  ],
+  "ports": [
+    {
+      "name": "web",
+      "port": 3000
+    }
+  ]
+}
