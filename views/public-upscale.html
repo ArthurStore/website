@@ -182,36 +182,36 @@
     <section class="glass p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <p class="text-sm text-blue-200">Public · Image upscaler</p>
-          <h1 class="text-3xl md:text-4xl font-extrabold text-blue-100">Upscaler image</h1>
-          <p class="text-blue-200 mt-2 leading-relaxed">Upload still image—backend akan menghasilkan versi lebih besar &amp; tajam. Preview side-by-side + download untuk hasil akhir.</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">Public Tools</p>
+          <h1 class="text-3xl md:text-4xl font-extrabold text-blue-100 mt-1">Image Upscaler</h1>
+          <p class="text-blue-200 mt-2 leading-relaxed">Unggah gambar untuk memperbesar resolusi dan ketajaman detailnya secara otomatis.</p>
         </div>
         <div class="flex flex-wrap gap-2">
-          <a href="/public" class="btn-primary inline-flex items-center gap-2 w-fit">Hub</a>
-          <a href="/" class="btn-primary inline-flex items-center gap-2 w-fit opacity-90">Beranda</a>
+          <a href="/public" class="btn-primary inline-flex items-center gap-2 w-fit">Public Tools</a>
+          <a href="/" class="btn-primary inline-flex items-center gap-2 w-fit opacity-90">Home</a>
         </div>
       </div>
     </section>
 
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <article class="glass p-5 relative">
-        <h2 class="text-2xl font-bold text-blue-200 mb-3">Upload</h2>
+        <h2 class="text-2xl font-bold text-blue-200 mb-3">Upload Gambar</h2>
         <form id="upscale-form" class="space-y-3">
           <input id="image-file" class="hidden-input" name="image" type="file" accept="image/*" aria-label="Pilih file gambar"/>
           <div id="upscale-dropzone" class="dropzone" tabindex="0" role="button" aria-label="Klik untuk memilih gambar">
-            <p class="text-lg font-semibold text-blue-100"><i class="fas fa-image mr-2"></i>Klik area ini atau tombol di bawah</p>
-            <p class="text-sm text-blue-200 mt-2">JPG / PNG / WEBP · bisa juga drag &amp; drop ke kotak ini</p>
+            <p class="text-lg font-semibold text-blue-100"><i class="fas fa-image mr-2"></i>Klik area ini atau tarik gambar ke sini</p>
+            <p class="text-sm text-blue-200 mt-2">Mendukung format JPG, PNG, dan WEBP</p>
           </div>
-          <button type="button" class="btn-primary w-full" id="upscale-browse"><i class="fas fa-folder-open mr-2"></i>Pilih dari perangkat</button>
+          <button type="button" class="btn-primary w-full" id="upscale-browse"><i class="fas fa-folder-open mr-2"></i>Pilih File</button>
           <p id="upscale-file-info" class="text-xs text-blue-200">Belum ada file dipilih.</p>
-          <button class="btn-primary w-full" type="submit">Jalankan upscaler</button>
+          <button class="btn-primary w-full" type="submit">Proses Upscale</button>
         </form>
         <div id="upscale-status" class="status-strip">Pilih gambar untuk mulai.</div>
       </article>
 
       <article class="glass p-5">
-        <h2 class="text-2xl font-bold text-blue-200 mb-3">Preview</h2>
-        <p class="text-blue-200 text-sm mb-3">Before kiri · After kanan · tombol unduh memakai URL hasil (jika browser block download lintas domain, buka link manual).</p>
+        <h2 class="text-2xl font-bold text-blue-200 mb-3">Preview Hasil</h2>
+        <p class="text-blue-200 text-sm mb-3">Bandingkan gambar asli di sebelah kiri dengan hasil upscale di sebelah kanan.</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <p class="text-xs font-bold uppercase tracking-wide text-blue-300/90">Before</p>

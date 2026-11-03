@@ -112,22 +112,23 @@
     <section class="glass p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-2xl md:text-3xl font-extrabold text-blue-100">Brat generator</h1>
-          <p class="text-blue-200/90 mt-2 text-sm leading-relaxed">Masukkan teks, lalu sistem akan menghasilkan gambar “brat” siap download.</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">Public Tools</p>
+          <h1 class="text-2xl md:text-3xl font-extrabold text-blue-100 mt-1">Brat Text Image</h1>
+          <p class="text-blue-200/90 mt-2 text-sm leading-relaxed">Ketik teks singkat untuk membuat gambar tipografi bergaya Brat yang siap diunduh.</p>
         </div>
         <div class="flex gap-2 flex-wrap">
-          <a class="btn" href="/public"><i class="fas fa-th-large"></i>Hub</a>
-          <a class="btn" href="/"><i class="fas fa-home"></i>Beranda</a>
+          <a class="btn" href="/public"><i class="fas fa-th-large"></i>Public Tools</a>
+          <a class="btn" href="/"><i class="fas fa-home"></i>Home</a>
         </div>
       </div>
     </section>
 
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <article class="glass p-6 space-y-3">
-        <h2 class="text-xl font-bold text-blue-200">Input</h2>
-        <input id="brat-text" class="field" placeholder="Contoh: Arthur Bot — made by Arthur" maxlength="120"/>
-        <button id="brat-generate" type="button" class="btn w-full"><i class="fas fa-wand-magic"></i>Generate image</button>
-        <div id="brat-status" class="status-strip">Tulis teks lalu generate.</div>
+        <h2 class="text-xl font-bold text-blue-200">Teks</h2>
+        <input id="brat-text" class="field" placeholder="Contoh: Arthur Bot" maxlength="120"/>
+        <button id="brat-generate" type="button" class="btn w-full"><i class="fas fa-wand-magic"></i>Buat Gambar</button>
+        <div id="brat-status" class="status-strip">Tulis teks lalu klik Buat Gambar.</div>
       </article>
 
       <article class="glass p-6 space-y-3">

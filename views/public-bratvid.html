@@ -110,22 +110,23 @@
     <section class="glass p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-2xl md:text-3xl font-extrabold text-violet-200">Brat video generator</h1>
-          <p class="text-violet-100/90 mt-2 text-sm leading-relaxed">Masukkan teks, lalu sistem akan menghasilkan video “brat” (mp4) untuk diunduh.</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300">Public Tools</p>
+          <h1 class="text-2xl md:text-3xl font-extrabold text-violet-200 mt-1">Brat Text Video</h1>
+          <p class="text-violet-100/90 mt-2 text-sm leading-relaxed">Ketik teks singkat untuk membuat animasi video MP4 bergaya Brat.</p>
         </div>
         <div class="flex gap-2 flex-wrap">
-          <a class="btn" href="/public"><i class="fas fa-th-large"></i>Hub</a>
-          <a class="btn" href="/"><i class="fas fa-home"></i>Beranda</a>
+          <a class="btn" href="/public"><i class="fas fa-th-large"></i>Public Tools</a>
+          <a class="btn" href="/"><i class="fas fa-home"></i>Home</a>
         </div>
       </div>
     </section>
 
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <article class="glass p-6 space-y-3">
-        <h2 class="text-xl font-bold text-violet-200">Input</h2>
-        <input id="bratvid-text" class="field" placeholder="Contoh: Arthur Bot — made by Arthur" maxlength="120"/>
-        <button id="bratvid-generate" type="button" class="btn w-full"><i class="fas fa-film"></i>Generate video</button>
-        <div id="bratvid-status" class="status-strip">Tulis teks lalu generate.</div>
+        <h2 class="text-xl font-bold text-violet-200">Teks</h2>
+        <input id="bratvid-text" class="field" placeholder="Contoh: Arthur Bot" maxlength="120"/>
+        <button id="bratvid-generate" type="button" class="btn w-full"><i class="fas fa-film"></i>Buat Video</button>
+        <div id="bratvid-status" class="status-strip">Tulis teks lalu klik Buat Video.</div>
       </article>
 
       <article class="glass p-6 space-y-3">

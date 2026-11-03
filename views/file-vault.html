@@ -20,14 +20,15 @@
     ]
   }
   </script>
-  <title>File Vault - Upload dengan Expired</title>
+  <title>File Vault · Admin</title>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root { color-scheme: dark; }
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
       color: #dbeafe;
       min-height: 100vh;
       position: relative;
@@ -38,6 +39,42 @@
       background-size: 130% 130%, 130% 130%, 220% 220%;
       animation: vaultGradientShift 20s ease-in-out infinite;
       overflow-x: hidden;
+    }
+    h1, h2 {
+      font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+      letter-spacing: -0.02em;
+    }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(96, 165, 250, 0.32);
+      background: rgba(15, 23, 42, 0.65);
+      padding: 0.48rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #dbeafe;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .nav-pill:hover {
+      border-color: rgba(147, 197, 253, 0.7);
+      background: rgba(37, 99, 235, 0.22);
+      transform: translateY(-1px);
+    }
+    .nav-pill.active {
+      border-color: rgba(96, 165, 250, 0.85);
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(14, 165, 233, 0.3));
+      color: #fff;
+    }
+    .nav-pill.danger {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: #fecaca;
+    }
+    .nav-pill.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(248, 113, 113, 0.75);
     }
     body::before {
       content: "";
@@ -97,37 +134,24 @@
 <body class="px-4 py-8 md:px-8 md:py-10">
   <main class="mx-auto max-w-7xl space-y-6">
     <header class="glass rounded-2xl p-6 md:p-8">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p class="text-sm uppercase tracking-[0.25em] text-blue-300">/admin/file-vault</p>
-          <h1 class="mt-2 text-3xl font-bold text-blue-100 md:text-4xl">File Vault (Upload + Auto Expired)</h1>
-          <p class="mt-3 max-w-3xl text-sm text-blue-200 md:text-base">
-            Upload file/folder, atur masa aktif (hari), pantau sisa storage, statistik klik/download, dan upload folder sebagai 1 link publik.
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">/admin/file-vault</p>
+          <h1 class="mt-2 text-3xl font-bold text-white md:text-4xl">File Vault</h1>
+          <p class="mt-2 max-w-2xl text-sm text-blue-200/90 md:text-base">
+            Simpan file atau folder dengan masa aktif kustom, pantau kapasitas storage, dan bagikan otomatis lewat shortlink.
           </p>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <a href="/admin" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
-            Admin Home
-          </a>
-          <a href="/" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
-            Beranda
-          </a>
-          <a href="/admin/ip-calculator" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
-            IP Calculator
-          </a>
-          <a href="/admin/pdf-to-jpg" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
-            PD2JPG
-          </a>
-          <a href="/admin/pastebin" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
-            Pastebin
-          </a>
-          <a href="/admin/short-link" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
-            Short Link
-          </a>
-          <a href="/admin/logout" class="link-btn rounded-lg border border-rose-300/60 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20">
-            Logout
-          </a>
-        </div>
+        <nav class="flex flex-wrap gap-2" aria-label="Admin Navigation">
+          <a href="/" class="nav-pill">Home</a>
+          <a href="/admin" class="nav-pill">Dashboard</a>
+          <a href="/admin/file-vault" class="nav-pill active">File Vault</a>
+          <a href="/admin/pastebin" class="nav-pill">Pastebin</a>
+          <a href="/admin/short-link" class="nav-pill">Short Link</a>
+          <a href="/admin/ip-calculator" class="nav-pill">IP Calculator</a>
+          <a href="/admin/pdf-to-jpg" class="nav-pill">PDF to JPG</a>
+          <a href="/admin/logout" class="nav-pill danger">Logout</a>
+        </nav>
       </div>
     </header>
 
@@ -175,15 +199,26 @@
                 class="w-full rounded-lg border border-blue-500/40 bg-slate-950/60 px-4 py-2.5 text-sm text-blue-100 placeholder:text-blue-300/50"
               />
             </div>
-            <div class="rounded-lg border border-blue-500/20 bg-slate-900/50 p-3 text-xs text-blue-200">
-              <p class="font-semibold text-blue-100">Catatan:</p>
-              <ul class="mt-2 list-inside list-disc space-y-1">
-                <li>Tanpa durasi = file tetap ada selama server hidup.</li>
-                <li>Upload folder akan jadi 1 link publik: <code>/u/f/:folderId</code>.</li>
-                <li>User publik bisa preview isi folder + download all (ZIP).</li>
-                <li>File ≥50MB otomatis memakai upload chunked (dukung &gt;200MB).</li>
-              </ul>
+            <div>
+              <label for="shortLinkAlias" class="mb-2 block text-sm font-semibold text-blue-200">Short Link Custom (Opsional)</label>
+              <input
+                id="shortLinkAlias"
+                name="shortLinkAlias"
+                type="text"
+                placeholder="Contoh: docs (kosong = otomatis)"
+                class="w-full rounded-lg border border-blue-500/40 bg-slate-950/60 px-4 py-2.5 text-sm text-blue-100 placeholder:text-blue-300/50"
+              />
             </div>
+          </div>
+
+          <div class="rounded-lg border border-blue-500/20 bg-slate-900/50 p-3 text-xs text-blue-200">
+            <p class="font-semibold text-blue-100">Catatan:</p>
+            <ul class="mt-2 list-inside list-disc space-y-1">
+              <li>Setiap upload file atau folder otomatis dibuatkan Short Link (<code>/s/...</code>).</li>
+              <li>Tanpa durasi = file tetap ada selama server hidup.</li>
+              <li>Upload folder akan jadi 1 link publik: <code>/u/f/:folderId</code> + 1 Short Link.</li>
+              <li>File ≥50MB otomatis memakai upload chunked (dukung &gt;200MB).</li>
+            </ul>
           </div>
 
           <button
@@ -274,6 +309,7 @@
           <thead>
             <tr class="text-left text-xs uppercase tracking-[0.12em] text-blue-300">
               <th class="px-3 py-2">File / Folder</th>
+              <th class="px-3 py-2">Short Link</th>
               <th class="px-3 py-2">Status</th>
               <th class="px-3 py-2">Klik / Download</th>
               <th class="px-3 py-2">Masa Aktif</th>
@@ -291,10 +327,25 @@
 
   <script src="/utama.js?v=20260820a"></script>
   <script>
+    (function syncAdminSession() {
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)arthur_admin_token=([^;]+)/);
+        if (match && match[1]) {
+          localStorage.setItem('arthur_admin_session', decodeURIComponent(match[1]));
+        } else {
+          const saved = localStorage.getItem('arthur_admin_session');
+          if (saved) {
+            document.cookie = 'arthur_admin_token=' + encodeURIComponent(saved) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+          }
+        }
+      } catch (_e) {}
+    })();
+
     const uploadForm = document.getElementById('upload-form');
     const fileInput = document.getElementById('file-input');
     const folderInput = document.getElementById('folder-input');
     const expiresInput = document.getElementById('expiresInDays');
+    const shortLinkAliasInput = document.getElementById('shortLinkAlias');
     const feedback = document.getElementById('feedback');
     const entriesBody = document.getElementById('entries-body');
     const emptyState = document.getElementById('empty-state');
@@ -390,15 +441,20 @@
         const statusBadge = folder.status === 'active'
           ? '<span class="rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-200">Folder Aktif</span>'
           : '<span class="rounded-full border border-rose-400/40 bg-rose-500/20 px-2 py-0.5 text-xs text-rose-200">Folder Expired</span>';
+        const shortUrl = folder.shortUrl || folder.openUrl;
 
         const row = document.createElement('tr');
         row.className = 'bg-slate-900/55';
         row.innerHTML = `
           <td class="rounded-l-lg px-3 py-3 align-top">
             <p class="font-semibold text-blue-100 break-all">📁 ${folder.folderName}</p>
-            <p class="text-xs text-blue-300">Total file: ${folder.fileCount}</p>
-            <p class="mt-1 text-xs text-blue-300">Ukuran: ${formatBytes(folder.totalSizeBytes)}</p>
+            <p class="text-xs text-blue-300">Total file: ${folder.fileCount ?? folder.totalFiles ?? 0}</p>
+            <p class="mt-1 text-xs text-blue-300">Ukuran: ${formatBytes(folder.totalSizeBytes ?? folder.totalBytes ?? 0)}</p>
             <p class="text-xs text-blue-300">Upload: ${formatDate(folder.createdAt)}</p>
+          </td>
+          <td class="px-3 py-3 align-top">
+            <a href="${shortUrl}" target="_blank" class="block break-all font-semibold text-emerald-300 underline hover:text-emerald-200">${shortUrl}</a>
+            <button data-action="copy-short" data-url="${shortUrl}" class="mt-1.5 rounded border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-200 hover:bg-emerald-500/25">Copy Shortlink</button>
           </td>
           <td class="px-3 py-3 align-top">${statusBadge}</td>
           <td class="px-3 py-3 align-top">
@@ -415,7 +471,7 @@
             <div class="flex flex-col gap-2">
               <a href="${folder.openUrl}" target="_blank" class="rounded-md border border-blue-400/40 px-2 py-1 text-center text-xs font-semibold text-blue-100 hover:bg-blue-500/20">Preview Folder</a>
               <a href="${folder.downloadAllUrl}" class="rounded-md border border-cyan-400/40 px-2 py-1 text-center text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20">Download All</a>
-              <button data-action="copy-folder" data-url="${folder.openUrl}" class="rounded-md border border-violet-400/40 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-500/20">Copy Link</button>
+              <button data-action="copy-folder" data-url="${shortUrl}" class="rounded-md border border-violet-400/40 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-500/20">Copy Shortlink</button>
               <button data-action="delete-folder" data-id="${folder.folderId}" class="rounded-md border border-rose-400/40 px-2 py-1 text-xs font-semibold text-rose-200 hover:bg-rose-500/20">Hapus Folder</button>
             </div>
           </td>
@@ -427,6 +483,7 @@
         const statusBadge = entry.status === 'active'
           ? '<span class="rounded-full border border-emerald-400/40 bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-200">Aktif</span>'
           : '<span class="rounded-full border border-rose-400/40 bg-rose-500/20 px-2 py-0.5 text-xs text-rose-200">Expired</span>';
+        const shortUrl = entry.shortUrl || entry.openUrl;
 
         const row = document.createElement('tr');
         row.className = 'bg-slate-900/55';
@@ -436,6 +493,10 @@
             <p class="text-xs text-blue-300 break-all">${entry.relativePath || '-'}</p>
             <p class="mt-1 text-xs text-blue-300">Ukuran: ${formatBytes(entry.sizeBytes)}</p>
             <p class="text-xs text-blue-300">Upload: ${formatDate(entry.createdAt)}</p>
+          </td>
+          <td class="px-3 py-3 align-top">
+            <a href="${shortUrl}" target="_blank" class="block break-all font-semibold text-emerald-300 underline hover:text-emerald-200">${shortUrl}</a>
+            <button data-action="copy-short" data-url="${shortUrl}" class="mt-1.5 rounded border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-200 hover:bg-emerald-500/25">Copy Shortlink</button>
           </td>
           <td class="px-3 py-3 align-top">${statusBadge}</td>
           <td class="px-3 py-3 align-top">
@@ -452,7 +513,7 @@
             <div class="flex flex-col gap-2">
               <a href="${entry.openUrl}" target="_blank" class="rounded-md border border-blue-400/40 px-2 py-1 text-center text-xs font-semibold text-blue-100 hover:bg-blue-500/20">Buka</a>
               <a href="${entry.downloadUrl}" class="rounded-md border border-cyan-400/40 px-2 py-1 text-center text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20">Download</a>
-              <button data-action="copy" data-url="${entry.openUrl}" class="rounded-md border border-violet-400/40 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-500/20">Copy Link</button>
+              <button data-action="copy" data-url="${shortUrl}" class="rounded-md border border-violet-400/40 px-2 py-1 text-xs font-semibold text-violet-200 hover:bg-violet-500/20">Copy Shortlink</button>
               <button data-action="delete" data-id="${entry.id}" class="rounded-md border border-rose-400/40 px-2 py-1 text-xs font-semibold text-rose-200 hover:bg-rose-500/20">Hapus</button>
             </div>
           </td>
@@ -490,7 +551,7 @@
       });
     }
 
-    async function uploadSingleFileChunked(file, relativePath, expiresInDays, onProgress) {
+    async function uploadSingleFileChunked(file, relativePath, expiresInDays, shortLinkAlias, onProgress) {
       const initRes = await fetch('/api/uploads/chunk/init', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -499,7 +560,8 @@
           relativePath: relativePath || file.name,
           size: file.size,
           mimeType: file.type || 'application/octet-stream',
-          expiresInDays: expiresInDays || undefined
+          expiresInDays: expiresInDays || undefined,
+          shortLinkAlias: shortLinkAlias || undefined
         })
       });
       const initData = await initRes.json();
@@ -531,7 +593,7 @@
       const completeRes = await fetch('/api/uploads/chunk/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ uploadId })
+        body: JSON.stringify({ uploadId, shortLinkAlias: shortLinkAlias || undefined })
       });
       const completeData = await completeRes.json();
       if (!completeRes.ok) throw new Error(completeData.message || 'Gagal menyelesaikan chunk upload.');
@@ -567,6 +629,7 @@
       }
 
       const expiresInDays = String(expiresInput.value || '').trim();
+      const shortLinkAlias = String(shortLinkAliasInput?.value || '').trim();
       const LARGE_FILE_BYTES = 50 * 1024 * 1024;
       const hasLarge = allFiles.some((f) => f.size >= LARGE_FILE_BYTES);
       const hasFolder = folderFiles.length > 0;
@@ -584,6 +647,7 @@
             plainFiles[0],
             plainFiles[0].webkitRelativePath || plainFiles[0].name,
             expiresInDays,
+            shortLinkAlias,
             (pct) => {
               uploadProgressBar.style.width = `${pct}%`;
               uploadProgressPct.textContent = `${pct}%`;
@@ -596,10 +660,12 @@
             const file = allFiles[i];
             const base = Math.round((i / allFiles.length) * 100);
             const span = Math.round(100 / allFiles.length);
+            const aliasForPart = shortLinkAlias ? (i === 0 ? shortLinkAlias : `${shortLinkAlias}-${i + 1}`) : '';
             const part = await uploadSingleFileChunked(
               file,
               file.webkitRelativePath || file.name,
               expiresInDays,
+              aliasForPart,
               (pct) => {
                 const overall = Math.min(100, base + Math.round((pct / 100) * span));
                 uploadProgressBar.style.width = `${overall}%`;
@@ -621,6 +687,7 @@
           });
           formData.append('relativePaths', JSON.stringify(relativePaths));
           if (expiresInDays) formData.append('expiresInDays', expiresInDays);
+          if (shortLinkAlias) formData.append('shortLinkAlias', shortLinkAlias);
 
           data = await postFormDataWithProgress('/api/uploads', formData, (pct) => {
             uploadProgressBar.style.width = `${pct}%`;
@@ -652,7 +719,7 @@
       if (!(target instanceof HTMLElement)) return;
       const action = target.getAttribute('data-action');
 
-      if (action === 'copy' || action === 'copy-folder') {
+      if (action === 'copy' || action === 'copy-folder' || action === 'copy-short') {
         const url = target.getAttribute('data-url') || '';
         const copied = await copyText(url);
         if (window.ArthurSiteSoundFX?.playByType) {

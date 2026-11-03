@@ -88,28 +88,26 @@
    <section class="glass p-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
      <div>
-      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200">📩 Tempmail Read</h1>
-      <p class="text-blue-100 mt-2">
-       Cek inbox email sementara dengan cepat. Cocok buat OTP, verifikasi, dan testing.
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">Public Tools</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-100 mt-1">Temp Mail Reader</h1>
+      <p class="text-blue-200/90 mt-2">
+       Periksa pesan masuk pada alamat email sementara untuk menerima kode OTP atau verifikasi layanan.
       </p>
      </div>
-     <a href="/public" class="btn-primary w-fit">⬅️ Kembali</a>
-    </div>
-    <div class="mt-4">
-     <span class="emoji-badge">📬 Inbox</span>
-     <span class="emoji-badge">🔐 OTP</span>
-     <span class="emoji-badge">⚡ Cepat</span>
-     <span class="emoji-badge">🧪 Testing</span>
+     <div class="flex gap-2 flex-wrap">
+      <a href="/public" class="btn-primary w-fit">Public Tools</a>
+      <a href="/" class="btn-primary w-fit opacity-90">Home</a>
+     </div>
     </div>
    </section>
 
    <section class="glass p-6">
-    <h2 class="text-xl font-bold text-blue-200">Form Email</h2>
+    <h2 class="text-xl font-bold text-blue-200">Alamat Email</h2>
     <form id="tempmail-form" class="mt-3 flex flex-col sm:flex-row gap-2">
      <input class="field" id="tempmail-email" name="email" placeholder="email@guysmail.com" value="xupaxu2244@guysmail.com"/>
-     <button class="btn-primary" type="submit">Baca Inbox 🚀</button>
+     <button class="btn-primary whitespace-nowrap" type="submit">Cek Inbox</button>
     </form>
-    <div id="tempmail-result" class="result-box text-blue-100 mt-4">Masukkan email tempmail lalu baca inbox.</div>
+    <div id="tempmail-result" class="result-box text-blue-100 mt-4">Masukkan alamat email sementara lalu klik Cek Inbox.</div>
    </section>
   </main>
 

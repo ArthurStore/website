@@ -20,22 +20,59 @@
     ]
   }
   </script>
-  <title>Short Link Generator</title>
+  <title>Short Link &amp; QR · Admin</title>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
       color-scheme: dark;
     }
 
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
       background:
         radial-gradient(circle at 0% 0%, #1d4ed8 0%, #0b1220 55%),
         linear-gradient(160deg, #05080f 0%, #071328 100%);
       color: #dbeafe;
       min-height: 100vh;
+    }
+    h1, h2 {
+      font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+      letter-spacing: -0.02em;
+    }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(96, 165, 250, 0.32);
+      background: rgba(15, 23, 42, 0.65);
+      padding: 0.48rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #dbeafe;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .nav-pill:hover {
+      border-color: rgba(147, 197, 253, 0.7);
+      background: rgba(37, 99, 235, 0.22);
+      transform: translateY(-1px);
+    }
+    .nav-pill.active {
+      border-color: rgba(96, 165, 250, 0.85);
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(14, 165, 233, 0.3));
+      color: #fff;
+    }
+    .nav-pill.danger {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: #fecaca;
+    }
+    .nav-pill.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(248, 113, 113, 0.75);
     }
 
     .glass {
@@ -75,51 +112,28 @@
 <body class="px-4 py-8 md:px-8 md:py-10">
   <main class="mx-auto max-w-7xl space-y-6">
     <header class="glass rounded-2xl p-6 md:p-8">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p class="text-sm uppercase tracking-[0.25em] text-blue-300">/admin/short-link</p>
-          <h1 class="mt-2 text-3xl font-bold text-blue-100 md:text-4xl">Shortlink Generator + Tracking</h1>
-          <p class="mt-3 max-w-3xl text-sm text-blue-200 md:text-base">
-            Buat link pendek, atur masa aktif dalam hari, set batas klik, lalu pantau statistik klik secara realtime.
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">/admin/short-link</p>
+          <h1 class="mt-2 text-3xl font-bold text-white md:text-4xl">Short Link &amp; QR Generator</h1>
+          <p class="mt-2 max-w-2xl text-sm text-blue-200/90 md:text-base">
+            Buat URL pendek dengan alias kustom, atur masa aktif dan batas klik, serta unduh QR Code instan.
           </p>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <a
-            href="/admin"
-            class="inline-flex items-center justify-center rounded-lg border border-blue-400 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-600/30"
-          >
-            Dashboard Admin
-          </a>
-          <a
-            href="/admin/file-vault"
-            class="inline-flex items-center justify-center rounded-lg border border-blue-400/60 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-600/20"
-          >
-            File Vault
-          </a>
-          <a
-            href="/admin/ip-calculator"
-            class="inline-flex items-center justify-center rounded-lg border border-blue-400/60 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-600/20"
-          >
-            IP Calculator
-          </a>
-          <a
-            href="/admin/pdf-to-jpg"
-            class="inline-flex items-center justify-center rounded-lg border border-cyan-400/60 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-500/20"
-          >
-            PD2JPG
-          </a>
-          <form method="GET" action="/admin/logout" class="inline-flex">
-            <button
-              type="submit"
-              class="inline-flex items-center justify-center rounded-lg border border-rose-400/60 px-4 py-2 text-sm font-semibold text-rose-200 transition hover:bg-rose-500/20"
-            >
-              Logout
-            </button>
-          </form>
-        </div>
+        <nav class="flex flex-wrap gap-2" aria-label="Admin Navigation">
+          <a href="/" class="nav-pill">Home</a>
+          <a href="/admin" class="nav-pill">Dashboard</a>
+          <a href="/admin/file-vault" class="nav-pill">File Vault</a>
+          <a href="/admin/pastebin" class="nav-pill">Pastebin</a>
+          <a href="/admin/short-link" class="nav-pill active">Short Link</a>
+          <a href="/admin/ip-calculator" class="nav-pill">IP Calculator</a>
+          <a href="/admin/pdf-to-jpg" class="nav-pill">PDF to JPG</a>
+          <a href="/admin/logout" class="nav-pill danger">Logout</a>
+        </nav>
       </div>
     </header>
 
+    <div id="shortlink-main-content" class="space-y-6">
     <section class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <div class="glass rounded-2xl p-6 md:p-7">
         <h2 class="text-xl font-semibold text-blue-100">Buat Shortlink Baru</h2>
@@ -202,13 +216,22 @@
           <p class="text-xs uppercase tracking-[0.2em] text-emerald-300">Shortlink Baru</p>
           <div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <a id="latest-link-url" href="#" target="_blank" class="truncate text-sm font-semibold text-emerald-200 underline"></a>
-            <button
-              id="copy-latest-btn"
-              type="button"
-              class="rounded-md border border-emerald-300/50 px-3 py-1.5 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/20"
-            >
-              Copy Link
-            </button>
+            <div class="flex flex-wrap gap-2">
+              <button
+                id="copy-latest-btn"
+                type="button"
+                class="rounded-md border border-emerald-300/50 px-3 py-1.5 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/20"
+              >
+                Copy Link
+              </button>
+              <button
+                id="qr-latest-btn"
+                type="button"
+                class="rounded-md border border-cyan-300/50 bg-cyan-500/20 px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/30"
+              >
+                QR Code
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -285,18 +308,106 @@
         Belum ada shortlink. Buat link pertama kamu sekarang.
       </p>
     </section>
+    </div>
+
+    <section id="qr-view-section" class="glass hidden rounded-2xl p-6 md:p-8">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-blue-400/20 pb-4">
+        <div>
+          <p class="text-xs uppercase tracking-[0.22em] text-cyan-300">QR Code Generator</p>
+          <h2 class="mt-1 text-2xl font-bold text-blue-100">QR Code Shortlink</h2>
+        </div>
+        <button
+          id="qr-back-top-btn"
+          type="button"
+          class="inline-flex items-center gap-2 rounded-lg border border-blue-400/50 bg-blue-600/20 px-4 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-600/35"
+        >
+          ← Back ke Short Link
+        </button>
+      </div>
+
+      <div class="mt-6 flex flex-col items-center text-center">
+        <div class="rounded-2xl border border-blue-400/30 bg-white p-4 shadow-xl">
+          <img
+            id="qr-view-img"
+            src=""
+            alt="QR Code Shortlink"
+            class="h-64 w-64 object-contain sm:h-72 sm:w-72"
+          />
+        </div>
+        <p class="mt-4 text-xs uppercase tracking-[0.18em] text-blue-300">Direct Shortlink</p>
+        <a
+          id="qr-view-short-url"
+          href="#"
+          target="_blank"
+          class="mt-1 break-all text-lg font-bold text-emerald-300 underline hover:text-emerald-200"
+        ></a>
+        <p class="mt-2 max-w-xl break-all text-xs text-blue-200/80">
+          Tujuan: <span id="qr-view-original-url" class="text-blue-100"></span>
+        </p>
+
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <button
+            id="qr-view-copy-btn"
+            type="button"
+            class="rounded-lg border border-emerald-400/50 bg-emerald-500/20 px-4 py-2.5 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/30"
+          >
+            Copy Shortlink
+          </button>
+          <a
+            id="qr-view-download-btn"
+            href="#"
+            download="qrcode.png"
+            class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-500"
+          >
+            Download QR Code (PNG)
+          </a>
+          <button
+            id="qr-back-bottom-btn"
+            type="button"
+            class="rounded-lg border border-slate-400/50 bg-slate-800/70 px-4 py-2.5 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+          >
+            ← Back
+          </button>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script>
+    (function syncAdminSession() {
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)arthur_admin_token=([^;]+)/);
+        if (match && match[1]) {
+          localStorage.setItem('arthur_admin_session', decodeURIComponent(match[1]));
+        } else {
+          const saved = localStorage.getItem('arthur_admin_session');
+          if (saved) {
+            document.cookie = 'arthur_admin_token=' + encodeURIComponent(saved) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+          }
+        }
+      } catch (_e) {}
+    })();
+
     const createForm = document.getElementById('create-form');
     const feedback = document.getElementById('create-feedback');
     const latestLinkContainer = document.getElementById('latest-link');
     const latestLinkUrl = document.getElementById('latest-link-url');
     const copyLatestBtn = document.getElementById('copy-latest-btn');
+    const qrLatestBtn = document.getElementById('qr-latest-btn');
     const linksTableBody = document.getElementById('links-table-body');
     const refreshBtn = document.getElementById('refresh-btn');
     const emptyState = document.getElementById('empty-state');
     const filterButtons = document.querySelectorAll('.filter-btn');
+
+    const mainContent = document.getElementById('shortlink-main-content');
+    const qrViewSection = document.getElementById('qr-view-section');
+    const qrViewImg = document.getElementById('qr-view-img');
+    const qrViewShortUrl = document.getElementById('qr-view-short-url');
+    const qrViewOriginalUrl = document.getElementById('qr-view-original-url');
+    const qrViewCopyBtn = document.getElementById('qr-view-copy-btn');
+    const qrViewDownloadBtn = document.getElementById('qr-view-download-btn');
+    const qrBackTopBtn = document.getElementById('qr-back-top-btn');
+    const qrBackBottomBtn = document.getElementById('qr-back-bottom-btn');
 
     const statTotalLinks = document.getElementById('stat-total-links');
     const statTotalClicks = document.getElementById('stat-total-clicks');
@@ -306,6 +417,41 @@
 
     let allLinks = [];
     let activeFilter = 'all';
+    let latestCreatedLink = null;
+
+    function openQrView(linkObj) {
+      if (!linkObj || !linkObj.code) return;
+      const code = linkObj.code;
+      const shortUrl = linkObj.shortUrl || `${window.location.origin}/s/${encodeURIComponent(code)}`;
+      const qrSrc = `/api/short-links/${encodeURIComponent(code)}/qr?t=${Date.now()}`;
+      const qrDownload = `/api/short-links/${encodeURIComponent(code)}/qr?download=1`;
+
+      qrViewImg.src = qrSrc;
+      qrViewShortUrl.textContent = shortUrl;
+      qrViewShortUrl.href = shortUrl;
+      qrViewOriginalUrl.textContent = linkObj.originalUrl || '-';
+      qrViewDownloadBtn.href = qrDownload;
+      qrViewDownloadBtn.setAttribute('download', `qr-${code}.png`);
+
+      mainContent.classList.add('hidden');
+      qrViewSection.classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function closeQrView() {
+      qrViewSection.classList.add('hidden');
+      mainContent.classList.remove('hidden');
+    }
+
+    qrBackTopBtn.addEventListener('click', closeQrView);
+    qrBackBottomBtn.addEventListener('click', closeQrView);
+    qrViewCopyBtn.addEventListener('click', async () => {
+      const url = qrViewShortUrl.textContent;
+      if (!url) return;
+      const ok = await copyToClipboard(url);
+      qrViewCopyBtn.textContent = ok ? 'Copied!' : 'Gagal Copy';
+      setTimeout(() => { qrViewCopyBtn.textContent = 'Copy Shortlink'; }, 1400);
+    });
 
     function formatDateTime(timestamp) {
       if (!timestamp) return '-';
@@ -389,6 +535,9 @@
               <button data-action="copy" data-url="${link.shortUrl}" class="rounded-md border border-blue-400/40 px-2 py-1 text-xs font-semibold text-blue-100 hover:bg-blue-500/20">
                 Copy
               </button>
+              <button data-action="qr" data-code="${link.code}" class="rounded-md border border-cyan-400/40 bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/25">
+                QR Code
+              </button>
               <button data-action="delete" data-code="${link.code}" class="rounded-md border border-rose-400/40 px-2 py-1 text-xs font-semibold text-rose-200 hover:bg-rose-500/20">
                 Hapus
               </button>
@@ -453,6 +602,7 @@
         if (!response.ok) throw new Error(result.message || 'Gagal membuat shortlink.');
 
         showFeedback('success', result.message || 'Shortlink berhasil dibuat.');
+        latestCreatedLink = result.link;
         latestLinkUrl.textContent = result.link.shortUrl;
         latestLinkUrl.href = result.link.shortUrl;
         latestLinkContainer.classList.remove('hidden');
@@ -470,6 +620,14 @@
       showFeedback(copied ? 'success' : 'error', copied ? 'Shortlink berhasil disalin.' : 'Gagal menyalin link.');
     });
 
+    if (qrLatestBtn) {
+      qrLatestBtn.addEventListener('click', () => {
+        if (latestCreatedLink) {
+          openQrView(latestCreatedLink);
+        }
+      });
+    }
+
     refreshBtn.addEventListener('click', async () => {
       await loadLinks();
       showFeedback('success', 'Data shortlink berhasil diperbarui.');
@@ -485,6 +643,17 @@
         if (!url) return;
         const copied = await copyToClipboard(url);
         showFeedback(copied ? 'success' : 'error', copied ? 'Shortlink disalin.' : 'Gagal menyalin shortlink.');
+      }
+
+      if (action === 'qr') {
+        const code = target.getAttribute('data-code');
+        if (!code) return;
+        const found = allLinks.find((item) => item.code === code) || {
+          code,
+          shortUrl: `${window.location.origin}/s/${encodeURIComponent(code)}`,
+          originalUrl: '-'
+        };
+        openQrView(found);
       }
 
       if (action === 'delete') {

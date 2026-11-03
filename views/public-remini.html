@@ -182,27 +182,28 @@
    <section class="glass p-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
      <div>
-      <h1 class="text-3xl md:text-4xl font-extrabold text-purple-200">Remini-style online</h1>
-      <p class="text-purple-100 mt-2 leading-relaxed">Enhance foto blur / low-res menjadi lebih crisp—alur singkat: upload → preview before/after → download.</p>
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-purple-300">Public Tools</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-purple-200 mt-1">Photo Enhancer</h1>
+      <p class="text-purple-100 mt-2 leading-relaxed">Perjelas detail foto yang buram atau beresolusi rendah, lalu bandingkan hasilnya sebelum diunduh.</p>
      </div>
      <div class="flex gap-2 flex-wrap">
-      <a class="btn" href="/public"><i class="fas fa-th-large"></i>Hub</a>
-      <a class="btn" href="/"><i class="fas fa-home"></i>Beranda</a>
+      <a class="btn" href="/public"><i class="fas fa-th-large"></i>Public Tools</a>
+      <a class="btn" href="/"><i class="fas fa-home"></i>Home</a>
      </div>
     </div>
    </section>
 
    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
     <article class="glass p-6 space-y-4 relative">
-     <h2 class="text-2xl font-bold text-purple-200"><i class="fas fa-upload mr-2"></i>Upload</h2>
+     <h2 class="text-2xl font-bold text-purple-200"><i class="fas fa-upload mr-2"></i>Upload Foto</h2>
      <input id="remini-file" class="hidden-input" accept="image/*" type="file" aria-label="Pilih file foto"/>
      <div class="dropzone" id="remini-dropzone" tabindex="0" role="button" aria-label="Klik untuk memilih foto">
-      <p class="text-lg font-semibold text-purple-100"><i class="fas fa-camera-retro mr-2"></i>Klik area ini atau tombol di bawah</p>
-      <p class="text-sm text-purple-200 mt-2">JPG / PNG / WEBP · bisa juga drag &amp; drop ke kotak ini</p>
+      <p class="text-lg font-semibold text-purple-100"><i class="fas fa-camera-retro mr-2"></i>Klik area ini atau tarik foto ke sini</p>
+      <p class="text-sm text-purple-200 mt-2">Mendukung format JPG, PNG, dan WEBP</p>
      </div>
-     <button type="button" class="btn w-full" id="remini-browse"><i class="fas fa-folder-open"></i>Pilih dari perangkat</button>
+     <button type="button" class="btn w-full" id="remini-browse"><i class="fas fa-folder-open"></i>Pilih File</button>
      <p id="remini-file-name" class="text-sm text-purple-200">Belum ada file dipilih.</p>
-     <button class="btn w-full" id="remini-submit" type="button"><i class="fas fa-magic"></i>Proses enhance</button>
+     <button class="btn w-full" id="remini-submit" type="button"><i class="fas fa-magic"></i>Enhance Foto</button>
      <div class="status-strip" id="remini-status">Pilih foto untuk mulai.</div>
     </article>
 

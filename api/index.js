@@ -9,6 +9,7 @@ const fs = require('fs');
 const os = require('os');
 const multer = require('multer');
 const archiver = require('archiver');
+const QRCode = require('qrcode');
 const { Readable } = require('stream');
 const { pipeline } = require('stream/promises');
 
@@ -81,11 +82,15 @@ const NEOXR_API_KEY = String(
   PDF_CONVERTER_API_KEY ||
   'yokheimoet'
 ).trim();
-const IMGBB_API_KEY = String(
-  process.env.IMGBB_API_KEY ||
-  process.env.IBB_API_KEY ||
+const rawEnvImgbbKey = String(process.env.IMGBB_API_KEY || process.env.IBB_API_KEY || '').trim();
+const IMGBB_API_KEY = /^[a-f0-9]{32}$/i.test(rawEnvImgbbKey)
+  ? rawEnvImgbbKey
+  : 'f6f51ae27d6509e9a555a312d14ae3d7';
+const IMGBB_KEY_CANDIDATES = Array.from(new Set([
+  IMGBB_API_KEY,
+  'f6f51ae27d6509e9a555a312d14ae3d7',
   'd052a761e2b9f16bee42eeea229e8a02'
-).trim();
+].filter((k) => /^[a-f0-9]{32}$/i.test(k))));
 const configuredNeoxrTimeoutMs = Number(process.env.NEOXR_TIMEOUT_MS || 30000);
 const NEOXR_TIMEOUT_MS = Number.isFinite(configuredNeoxrTimeoutMs) &&
   configuredNeoxrTimeoutMs >= 3000 &&
@@ -144,12 +149,69 @@ app.use((req, res, next) => {
   next();
 });
 
+const ADMIN_AUTH_TOKEN = crypto
+  .createHmac('sha256', process.env.SESSION_SECRET || 'arthur-admin-token-v1')
+  .update(TOOL_ACCESS_PIN)
+  .digest('hex');
+
 app.use(sesss({
   secret: process.env.SESSION_SECRET || 'captchaSecretKey12345',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: process.env.NODE_ENV === 'production' }
+  cookie: {
+    secure: false,
+    maxAge: 365 * 24 * 60 * 60 * 1000,
+    sameSite: 'lax'
+  }
 }));
+
+function parseCookies(req) {
+  const header = String(req?.headers?.cookie || '');
+  const out = {};
+  if (!header) return out;
+  header.split(';').forEach((part) => {
+    const idx = part.indexOf('=');
+    if (idx <= 0) return;
+    const key = part.slice(0, idx).trim();
+    const val = part.slice(idx + 1).trim();
+    try {
+      out[key] = decodeURIComponent(val);
+    } catch (_e) {
+      out[key] = val;
+    }
+  });
+  return out;
+}
+
+function setAdminAuthCookie(res) {
+  res.setHeader(
+    'Set-Cookie',
+    `arthur_admin_token=${encodeURIComponent(ADMIN_AUTH_TOKEN)}; Path=/; Max-Age=31536000; SameSite=Lax`
+  );
+}
+
+function clearAdminAuthCookie(res) {
+  res.setHeader(
+    'Set-Cookie',
+    'arthur_admin_token=; Path=/; Max-Age=0; SameSite=Lax'
+  );
+}
+
+function hasValidAdminAuth(req) {
+  if (req.session?.toolAccessGranted) return true;
+  const cookies = parseCookies(req);
+  const headerToken = String(req.get('x-admin-token') || req.query?.adminToken || req.body?.adminToken || '').trim();
+  const headerPin = String(req.get('x-admin-pin') || req.query?.adminPin || req.body?.adminPin || '').trim();
+  if (
+    cookies.arthur_admin_token === ADMIN_AUTH_TOKEN ||
+    headerToken === ADMIN_AUTH_TOKEN ||
+    (headerPin && headerPin === TOOL_ACCESS_PIN)
+  ) {
+    if (req.session) req.session.toolAccessGranted = true;
+    return true;
+  }
+  return false;
+}
 
 function escapeHtml(value) {
   return String(value || '')
@@ -180,12 +242,15 @@ function isStorageLimitEnabled() {
 }
 
 function ensureToolAccess(req, res, next) {
-  if (req.session?.toolAccessGranted) return next();
+  if (hasValidAdminAuth(req)) {
+    setAdminAuthCookie(res);
+    return next();
+  }
   return res.redirect(`${TOOL_PREFIX}`);
 }
 
 function ensureToolApiAccess(req, res, next) {
-  if (req.session?.toolAccessGranted) return next();
+  if (hasValidAdminAuth(req)) return next();
   return res.status(401).json({ message: 'Akses admin diperlukan.' });
 }
 
@@ -353,92 +418,252 @@ app.get('/pdf-to-jpg', (_req, res) => res.status(404).send(renderShortLinkErrorP
 )));
 
 app.get(`${TOOL_PREFIX}`, (req, res) => {
-  if (req.session?.toolAccessGranted) {
+  if (hasValidAdminAuth(req)) {
+    setAdminAuthCookie(res);
     return res.send(`
       <!DOCTYPE html>
       <html lang="id">
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Admin Dashboard</title>
+          <title>Admin Workspace · Arthur</title>
+          <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+          <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet"/>
           <style>
             :root { color-scheme: dark; }
             body {
               margin: 0;
               min-height: 100vh;
-              display: grid;
-              place-items: center;
-              padding: 24px;
-              font-family: Arial, sans-serif;
-              background:
-                radial-gradient(circle at 14% 16%, rgba(56, 189, 248, 0.26), transparent 32%),
-                radial-gradient(circle at 80% 8%, rgba(59, 130, 246, 0.2), transparent 36%),
-                linear-gradient(145deg, #030712 0%, #0b1733 50%, #06152e 100%);
+              font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
               color: #dbeafe;
+              background:
+                radial-gradient(circle at 12% 14%, rgba(56, 189, 248, 0.2), transparent 34%),
+                radial-gradient(circle at 86% 10%, rgba(59, 130, 246, 0.18), transparent 36%),
+                linear-gradient(145deg, #020617 0%, #0b1733 50%, #06152e 100%);
             }
-            .card {
-              width: min(760px, 100%);
-              background: rgba(15, 23, 42, 0.85);
-              border: 1px solid rgba(148, 163, 184, 0.28);
-              border-radius: 16px;
-              box-shadow: 0 18px 36px rgba(2, 6, 23, 0.42);
-              padding: 24px;
+            h1, h2, h3 {
+              font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+              letter-spacing: -0.02em;
             }
-            h1 { margin: 0 0 8px; font-size: 1.5rem; color: #93c5fd; }
-            p { margin: 0 0 18px; color: #bfdbfe; line-height: 1.6; }
-            .tools { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
-            a.tool {
-              display: block;
-              text-decoration: none;
-              border-radius: 12px;
-              border: 1px solid rgba(96, 165, 250, 0.36);
-              background: linear-gradient(160deg, rgba(30, 64, 175, 0.35), rgba(15, 23, 42, 0.78));
-              color: #e2e8f0;
-              padding: 14px;
-              font-weight: 700;
-              text-align: center;
-              transition: transform .2s ease, border-color .2s ease;
+            .glass {
+              background: linear-gradient(160deg, rgba(15, 23, 42, 0.84), rgba(9, 15, 31, 0.78));
+              border: 1px solid rgba(148, 163, 184, 0.22);
+              box-shadow: 0 20px 45px rgba(2, 6, 23, 0.45);
+              backdrop-filter: blur(12px);
             }
-            a.tool:hover {
-              transform: translateY(-1px);
-              border-color: rgba(147, 197, 253, 0.7);
-            }
-            .footer {
-              margin-top: 16px;
-              display: flex;
-              justify-content: space-between;
+            .nav-pill {
+              display: inline-flex;
               align-items: center;
-              gap: 10px;
-              flex-wrap: wrap;
-            }
-            .hint { color: #93c5fd; font-size: .88rem; }
-            .logout {
-              border: 1px solid rgba(248, 113, 113, 0.45);
-              border-radius: 10px;
-              background: rgba(127, 29, 29, 0.35);
-              color: #fecaca;
-              padding: 8px 12px;
-              font-weight: 700;
+              gap: 0.45rem;
+              border-radius: 0.65rem;
+              border: 1px solid rgba(96, 165, 250, 0.32);
+              background: rgba(15, 23, 42, 0.65);
+              padding: 0.48rem 0.85rem;
+              font-size: 0.82rem;
+              font-weight: 600;
+              color: #dbeafe;
               text-decoration: none;
+              transition: all 0.2s ease;
+            }
+            .nav-pill:hover {
+              border-color: rgba(147, 197, 253, 0.7);
+              background: rgba(37, 99, 235, 0.22);
+              transform: translateY(-1px);
+            }
+            .nav-pill.active {
+              border-color: rgba(96, 165, 250, 0.85);
+              background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(14, 165, 233, 0.3));
+              color: #fff;
+            }
+            .nav-pill.danger {
+              border-color: rgba(248, 113, 113, 0.45);
+              color: #fecaca;
+            }
+            .nav-pill.danger:hover {
+              background: rgba(239, 68, 68, 0.2);
+              border-color: rgba(248, 113, 113, 0.75);
+            }
+            .tool-card {
+              position: relative;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              border-radius: 1.15rem;
+              border: 1px solid rgba(96, 165, 250, 0.24);
+              background: linear-gradient(160deg, rgba(15, 23, 42, 0.85), rgba(8, 14, 28, 0.78));
+              padding: 1.4rem;
+              text-decoration: none;
+              color: #e2e8f0;
+              transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+              overflow: hidden;
+            }
+            .tool-card:hover {
+              transform: translateY(-3px);
+              border-color: rgba(125, 211, 252, 0.65);
+              box-shadow: 0 18px 36px rgba(37, 99, 235, 0.25);
+            }
+            .icon-box {
+              width: 44px;
+              height: 44px;
+              border-radius: 12px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 1.15rem;
+              border: 1px solid rgba(125, 211, 252, 0.35);
+              background: linear-gradient(135deg, rgba(37, 99, 235, 0.35), rgba(14, 165, 233, 0.2));
+              color: #93c5fd;
             }
           </style>
         </head>
-        <body>
-          <main class="card">
-            <h1>Admin Dashboard</h1>
-            <p>Pilih tool yang ingin kamu gunakan.</p>
-            <div class="tools">
-              <a class="tool" href="${TOOL_PREFIX}/file-vault">File Vault</a>
-              <a class="tool" href="${TOOL_PREFIX}/pastebin">Text Pastebin</a>
-              <a class="tool" href="${TOOL_PREFIX}/short-link">Short Link</a>
-              <a class="tool" href="${TOOL_PREFIX}/ip-calculator">IP Calculator</a>
-              <a class="tool" href="${TOOL_PREFIX}/pdf-to-jpg">PDF to JPG</a>
-            </div>
-            <div class="footer">
-              <span class="hint">Akses privat aktif</span>
-              <a class="logout" href="${TOOL_PREFIX}/logout">Logout</a>
-            </div>
+        <body class="px-4 py-8 md:px-8 md:py-10">
+          <main class="mx-auto max-w-6xl space-y-6">
+            <header class="glass rounded-2xl p-6 md:p-8">
+              <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/35 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                    <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+                    Session Active
+                  </div>
+                  <h1 class="mt-3 text-3xl font-bold text-white md:text-4xl">Admin Workspace</h1>
+                  <p class="mt-2 max-w-2xl text-sm text-blue-200/90 md:text-base">
+                    Kelola penyimpanan file, snippet kode, shortlink, dan utilitas jaringan dari satu tempat.
+                  </p>
+                </div>
+                <nav class="flex flex-wrap gap-2" aria-label="Admin Navigation">
+                  <a href="/" class="nav-pill">Home</a>
+                  <a href="${TOOL_PREFIX}" class="nav-pill active">Dashboard</a>
+                  <a href="${TOOL_PREFIX}/file-vault" class="nav-pill">File Vault</a>
+                  <a href="${TOOL_PREFIX}/pastebin" class="nav-pill">Pastebin</a>
+                  <a href="${TOOL_PREFIX}/short-link" class="nav-pill">Short Link</a>
+                  <a href="${TOOL_PREFIX}/ip-calculator" class="nav-pill">IP Calculator</a>
+                  <a href="${TOOL_PREFIX}/pdf-to-jpg" class="nav-pill">PDF to JPG</a>
+                  <a href="${TOOL_PREFIX}/logout" id="logout-btn" class="nav-pill danger">Logout</a>
+                </nav>
+              </div>
+            </header>
+
+            <section class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <a class="tool-card" href="${TOOL_PREFIX}/file-vault">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="icon-box"><i class="fas fa-cloud-upload-alt"></i></span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">/admin/file-vault</span>
+                  </div>
+                  <h2 class="mt-4 text-xl font-bold text-white">File Vault</h2>
+                  <p class="mt-1.5 text-sm leading-relaxed text-blue-200/85">
+                    Upload file atau satu folder penuh dengan masa aktif kustom dan auto-shortlink.
+                  </p>
+                </div>
+                <div class="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-sky-300">
+                  <span>Buka File Vault</span>
+                  <i class="fas fa-arrow-right text-[10px]"></i>
+                </div>
+              </a>
+
+              <a class="tool-card" href="${TOOL_PREFIX}/pastebin">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="icon-box"><i class="fas fa-code"></i></span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">/admin/pastebin</span>
+                  </div>
+                  <h2 class="mt-4 text-xl font-bold text-white">Pastebin</h2>
+                  <p class="mt-1.5 text-sm leading-relaxed text-blue-200/85">
+                    Simpan catatan atau potongan kode dan bagikan lewat link ringkas <code>/p/slug</code>.
+                  </p>
+                </div>
+                <div class="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-sky-300">
+                  <span>Buka Pastebin</span>
+                  <i class="fas fa-arrow-right text-[10px]"></i>
+                </div>
+              </a>
+
+              <a class="tool-card" href="${TOOL_PREFIX}/short-link">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="icon-box"><i class="fas fa-link"></i></span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">/admin/short-link</span>
+                  </div>
+                  <h2 class="mt-4 text-xl font-bold text-white">Short Link &amp; QR</h2>
+                  <p class="mt-1.5 text-sm leading-relaxed text-blue-200/85">
+                    Buat URL pendek dengan alias kustom, batas klik, statistik kunjungan, dan QR Code instan.
+                  </p>
+                </div>
+                <div class="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-sky-300">
+                  <span>Buka Short Link</span>
+                  <i class="fas fa-arrow-right text-[10px]"></i>
+                </div>
+              </a>
+
+              <a class="tool-card" href="${TOOL_PREFIX}/ip-calculator">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="icon-box"><i class="fas fa-network-wired"></i></span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">/admin/ip-calculator</span>
+                  </div>
+                  <h2 class="mt-4 text-xl font-bold text-white">IP Calculator</h2>
+                  <p class="mt-1.5 text-sm leading-relaxed text-blue-200/85">
+                    Hitung subnetting IPv4, rentang host, broadcast, wildcard mask, dan pecah prefix jaringan.
+                  </p>
+                </div>
+                <div class="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-sky-300">
+                  <span>Buka IP Calculator</span>
+                  <i class="fas fa-arrow-right text-[10px]"></i>
+                </div>
+              </a>
+
+              <a class="tool-card" href="${TOOL_PREFIX}/pdf-to-jpg">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="icon-box"><i class="fas fa-file-pdf"></i></span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">/admin/pdf-to-jpg</span>
+                  </div>
+                  <h2 class="mt-4 text-xl font-bold text-white">PDF to JPG</h2>
+                  <p class="mt-1.5 text-sm leading-relaxed text-blue-200/85">
+                    Konversi halaman dokumen PDF menjadi gambar JPG atau PNG siap unduh.
+                  </p>
+                </div>
+                <div class="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-sky-300">
+                  <span>Buka Converter</span>
+                  <i class="fas fa-arrow-right text-[10px]"></i>
+                </div>
+              </a>
+
+              <a class="tool-card" href="/bot-status">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="icon-box"><i class="fas fa-server"></i></span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">/bot-status</span>
+                  </div>
+                  <h2 class="mt-4 text-xl font-bold text-white">Server &amp; Bot Status</h2>
+                  <p class="mt-1.5 text-sm leading-relaxed text-blue-200/85">
+                    Pantau penggunaan CPU, memori, disk, dan uptime server secara realtime.
+                  </p>
+                </div>
+                <div class="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-sky-300">
+                  <span>Lihat Status</span>
+                  <i class="fas fa-arrow-right text-[10px]"></i>
+                </div>
+              </a>
+            </section>
           </main>
+          <script>
+            try {
+              localStorage.setItem('arthur_admin_session', ${JSON.stringify(ADMIN_AUTH_TOKEN)});
+              document.cookie = 'arthur_admin_token=' + encodeURIComponent(${JSON.stringify(ADMIN_AUTH_TOKEN)}) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+            } catch (_e) {}
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+              logoutBtn.addEventListener('click', () => {
+                try {
+                  localStorage.removeItem('arthur_admin_session');
+                  localStorage.removeItem('arthur_admin_pin');
+                } catch (_e) {}
+              });
+            }
+          </script>
         </body>
       </html>
     `);
@@ -450,7 +675,11 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Admin Access</title>
+        <title>Admin Access · Arthur</title>
+        <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet"/>
         <style>
           :root { color-scheme: dark; }
           body {
@@ -459,111 +688,130 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
             display: grid;
             place-items: center;
             padding: 24px;
-            font-family: Arial, sans-serif;
+            font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
             background:
-              radial-gradient(circle at 16% 12%, rgba(59, 130, 246, 0.3), transparent 35%),
-              radial-gradient(circle at 80% 8%, rgba(14, 165, 233, 0.22), transparent 36%),
+              radial-gradient(circle at 16% 12%, rgba(59, 130, 246, 0.25), transparent 35%),
+              radial-gradient(circle at 80% 8%, rgba(14, 165, 233, 0.2), transparent 36%),
               linear-gradient(145deg, #020617 0%, #0b1733 52%, #06152e 100%);
             color: #dbeafe;
           }
-          .card {
-            width: min(460px, 100%);
-            background: linear-gradient(160deg, rgba(15, 23, 42, 0.88), rgba(8, 15, 32, 0.82));
-            border: 1px solid rgba(148, 163, 184, 0.3);
-            border-radius: 18px;
-            box-shadow: 0 18px 42px rgba(2, 6, 23, 0.48);
-            padding: 28px;
-            backdrop-filter: blur(8px);
+          h1 {
+            font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+            letter-spacing: -0.02em;
           }
-          h1 { margin: 0 0 8px; font-size: 1.4rem; color: #93c5fd; }
-          p { margin: 0 0 18px; color: #bfdbfe; line-height: 1.6; font-size: 0.95rem; }
-          label { display: block; margin-bottom: 8px; font-size: 0.9rem; color: #cbd5e1; }
+          .card {
+            width: min(440px, 100%);
+            background: linear-gradient(160deg, rgba(15, 23, 42, 0.9), rgba(8, 15, 32, 0.84));
+            border: 1px solid rgba(148, 163, 184, 0.26);
+            border-radius: 22px;
+            box-shadow: 0 24px 48px rgba(2, 6, 23, 0.55);
+            padding: 32px;
+            backdrop-filter: blur(12px);
+          }
           .pin-wrap {
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-bottom: 14px;
           }
           input {
             width: 100%;
             box-sizing: border-box;
-            border-radius: 10px;
-            border: 1px solid rgba(59, 130, 246, 0.45);
-            background: rgba(2, 6, 23, 0.72);
-            color: #e2e8f0;
-            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(96, 165, 250, 0.4);
+            background: rgba(2, 6, 23, 0.75);
+            color: #f8fafc;
+            padding: 12px 14px;
+            font-size: 1rem;
+            letter-spacing: 0.12em;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
           }
           input:focus {
-            outline: 2px solid rgba(96, 165, 250, 0.55);
-            outline-offset: 1px;
+            outline: none;
+            border-color: rgba(96, 165, 250, 0.85);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
           }
-          button {
-            border: none;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+          .btn-submit {
+            width: 100%;
+            border: 1px solid rgba(147, 197, 253, 0.35);
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 55%, #0ea5e9 100%);
             color: #fff;
             font-weight: 700;
-            padding: 10px 12px;
+            padding: 12px 16px;
             cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
           }
-          button[type="submit"] {
-            width: 100%;
+          .btn-submit:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(37, 99, 235, 0.35);
           }
           .toggle-pin {
-            width: auto;
-            border: 1px solid rgba(96, 165, 250, 0.48);
-            background: rgba(30, 64, 175, 0.25);
+            border-radius: 12px;
+            border: 1px solid rgba(96, 165, 250, 0.38);
+            background: rgba(30, 64, 175, 0.22);
             color: #bfdbfe;
-            font-size: 0.8rem;
-            padding: 10px 12px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 12px 14px;
+            cursor: pointer;
             white-space: nowrap;
           }
           .toggle-pin:hover {
-            background: rgba(30, 64, 175, 0.45);
-          }
-          .hint {
-            margin-top: 8px;
-            color: #93c5fd;
-            font-size: 0.82rem;
+            background: rgba(30, 64, 175, 0.4);
           }
           .error {
-            margin-top: 12px;
+            margin-top: 14px;
             border: 1px solid rgba(248, 113, 113, 0.45);
             background: rgba(127, 29, 29, 0.35);
             color: #fecaca;
-            border-radius: 10px;
-            padding: 9px 10px;
+            border-radius: 12px;
+            padding: 10px 12px;
             font-size: 0.86rem;
           }
         </style>
       </head>
       <body>
         <main class="card">
-          <h1>Admin Tool Access</h1>
-          <p>Masukkan PIN untuk membuka File Vault, Short Link, dan IP Calculator.</p>
-          <form method="POST" action="${TOOL_PREFIX}/login">
-            <label for="pin">PIN Admin</label>
-            <div class="pin-wrap">
-              <input
-                id="pin"
-                name="pin"
-                type="password"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                autocomplete="current-password"
-                placeholder="••••••"
-                required
-              />
-              <button id="toggle-pin" class="toggle-pin" type="button" aria-label="Tampilkan PIN">Lihat</button>
+          <div class="flex items-center justify-between">
+            <span class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-blue-400/35 bg-blue-500/15 text-blue-300">
+              <i class="fas fa-shield-alt text-lg"></i>
+            </span>
+            <a href="/" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-400/30 bg-slate-900/60 px-3 py-1.5 text-xs font-semibold text-blue-100 hover:border-blue-400/60">
+              <i class="fas fa-home"></i>
+              <span>Home</span>
+            </a>
+          </div>
+          <h1 class="mt-5 text-2xl font-bold text-white">Admin Workspace</h1>
+          <p class="mt-1.5 text-sm leading-relaxed text-blue-200/85">
+            Masukkan PIN untuk membuka halaman admin. Sesi login akan tersimpan otomatis di browser ini.
+          </p>
+          <form id="login-form" method="POST" action="${TOOL_PREFIX}/login" class="mt-6 space-y-4">
+            <div>
+              <label for="pin" class="mb-2 block text-xs font-semibold uppercase tracking-wider text-blue-300">PIN Akses</label>
+              <div class="pin-wrap">
+                <input
+                  id="pin"
+                  name="pin"
+                  type="password"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  autocomplete="current-password"
+                  placeholder="••••••"
+                  required
+                />
+                <button id="toggle-pin" class="toggle-pin" type="button" aria-label="Tampilkan PIN">Lihat</button>
+              </div>
             </div>
-            <button type="submit">Masuk</button>
-            <p class="hint">PIN disembunyikan untuk menjaga privasi saat input.</p>
+            <button class="btn-submit" type="submit">Buka Dashboard</button>
           </form>
-          ${req.query?.error ? '<div class="error">PIN salah. Coba lagi.</div>' : ''}
+          <div id="login-error" class="error" style="${req.query?.error ? '' : 'display:none'}">PIN tidak sesuai. Silakan coba lagi.</div>
         </main>
         <script>
           const pinInput = document.getElementById('pin');
           const toggleButton = document.getElementById('toggle-pin');
+          const loginForm = document.getElementById('login-form');
+          const loginError = document.getElementById('login-error');
+
           if (pinInput && toggleButton) {
             toggleButton.addEventListener('click', () => {
               const reveal = pinInput.type === 'password';
@@ -572,25 +820,111 @@ app.get(`${TOOL_PREFIX}`, (req, res) => {
               toggleButton.setAttribute('aria-label', reveal ? 'Sembunyikan PIN' : 'Tampilkan PIN');
             });
           }
+
+          (async function restoreSessionFromLocalStorage() {
+            try {
+              const savedToken = localStorage.getItem('arthur_admin_session');
+              const savedPin = localStorage.getItem('arthur_admin_pin');
+              if (!savedToken && !savedPin) return;
+              const res = await fetch('${TOOL_PREFIX}/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: savedToken || undefined, pin: savedPin || undefined })
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.token) {
+                  localStorage.setItem('arthur_admin_session', data.token);
+                  document.cookie = 'arthur_admin_token=' + encodeURIComponent(data.token) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+                }
+                window.location.replace('${TOOL_PREFIX}');
+              } else {
+                localStorage.removeItem('arthur_admin_session');
+                localStorage.removeItem('arthur_admin_pin');
+              }
+            } catch (_e) {}
+          })();
+
+          if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+              e.preventDefault();
+              if (loginError) loginError.style.display = 'none';
+              const pinVal = String(pinInput?.value || '').trim();
+              try {
+                const res = await fetch('${TOOL_PREFIX}/session', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ pin: pinVal })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.token) {
+                  try {
+                    localStorage.setItem('arthur_admin_session', data.token);
+                    document.cookie = 'arthur_admin_token=' + encodeURIComponent(data.token) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+                  } catch (_err) {}
+                  window.location.replace('${TOOL_PREFIX}');
+                  return;
+                }
+                if (loginError) {
+                  loginError.textContent = data.message || 'PIN tidak sesuai. Silakan coba lagi.';
+                  loginError.style.display = 'block';
+                }
+              } catch (_err) {
+                loginForm.submit();
+              }
+            });
+          }
         </script>
       </body>
     </html>
   `);
 });
 
+app.post(`${TOOL_PREFIX}/session`, (req, res) => {
+  const candidatePin = String(req.body?.pin || '').trim();
+  const candidateToken = String(req.body?.token || '').trim();
+  if ((candidatePin && candidatePin === TOOL_ACCESS_PIN) || (candidateToken && candidateToken === ADMIN_AUTH_TOKEN)) {
+    if (req.session) req.session.toolAccessGranted = true;
+    setAdminAuthCookie(res);
+    return res.json({ ok: true, token: ADMIN_AUTH_TOKEN });
+  }
+  return res.status(401).json({ ok: false, message: 'PIN salah. Coba lagi.' });
+});
+
 app.post(`${TOOL_PREFIX}/login`, (req, res) => {
   const candidate = String(req.body?.pin || '').trim();
   if (candidate && candidate === TOOL_ACCESS_PIN) {
-    req.session.toolAccessGranted = true;
+    if (req.session) req.session.toolAccessGranted = true;
+    setAdminAuthCookie(res);
     return res.redirect(`${TOOL_PREFIX}`);
   }
   return res.redirect(`${TOOL_PREFIX}?error=1`);
 });
 
-app.get(`${TOOL_PREFIX}/logout`, (req, res) => {
-  req.session.toolAccessGranted = false;
-  return res.redirect(`${TOOL_PREFIX}`);
-});
+function handleAdminLogout(req, res) {
+  if (req.session) req.session.toolAccessGranted = false;
+  clearAdminAuthCookie(res);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  return res.send(`
+    <!DOCTYPE html>
+    <html lang="id">
+      <head><meta charset="UTF-8"><title>Logout...</title></head>
+      <body style="background:#020617;color:#dbeafe;font-family:sans-serif;display:grid;place-items:center;min-height:100vh;">
+        <script>
+          try {
+            localStorage.removeItem('arthur_admin_session');
+            localStorage.removeItem('arthur_admin_pin');
+            document.cookie = 'arthur_admin_token=; Path=/; Max-Age=0; SameSite=Lax';
+          } catch (_e) {}
+          window.location.replace('${TOOL_PREFIX}');
+        </script>
+      </body>
+    </html>
+  `);
+}
+
+app.get(`${TOOL_PREFIX}/logout`, handleAdminLogout);
+app.post(`${TOOL_PREFIX}/logout`, handleAdminLogout);
 
 app.get(`${TOOL_PREFIX}/short-link`, ensureToolAccess, (_req, res) => sendToolView(res, 'short-link.html'));
 app.get(`${TOOL_PREFIX}/file-vault`, ensureToolAccess, (_req, res) => sendToolView(res, 'file-vault.html'));
@@ -886,8 +1220,54 @@ app.get('/api/pdf-to-jpg/quick-test', ensureToolApiAccess, async (req, res) => {
   }
 });
 
+function generateUniqueShortCode() {
+  for (let i = 0; i < 32; i += 1) {
+    const candidate = generateCode();
+    if (!shortLinks.has(candidate)) {
+      return candidate;
+    }
+  }
+  return crypto.randomBytes(4).toString('hex');
+}
+
+function ensureShortLinkForVaultItem(req, targetUrl, expiresAt, preferredAlias = '', currentCode = '') {
+  if (currentCode && shortLinks.has(currentCode)) {
+    const existing = shortLinks.get(currentCode);
+    existing.originalUrl = targetUrl;
+    existing.expiresAt = expiresAt ?? existing.expiresAt ?? null;
+    return currentCode;
+  }
+
+  let code = '';
+  const cleanedAlias = sanitizeAlias(String(preferredAlias || ''));
+  if (cleanedAlias && /^[a-z0-9_-]{2,32}$/.test(cleanedAlias) && !shortLinks.has(cleanedAlias)) {
+    code = cleanedAlias;
+  } else {
+    code = generateUniqueShortCode();
+  }
+
+  shortLinks.set(code, {
+    code,
+    originalUrl: targetUrl,
+    createdAt: Date.now(),
+    expiresAt: expiresAt ?? null,
+    clickCount: 0,
+    maxClicks: null,
+    lastClickedAt: null,
+    clickHistory: []
+  });
+  return code;
+}
+
 function serializeUploadEntry(req, entry) {
   const folder = entry.folderId ? fileVaultFolders.get(entry.folderId) : null;
+  const openUrl = buildUploadPublicUrl(req, entry.id);
+  if (!entry.folderId) {
+    entry.shortCode = ensureShortLinkForVaultItem(req, openUrl, entry.expiresAt, '', entry.shortCode);
+  }
+  const shortCode = entry.shortCode || null;
+  const shortUrl = shortCode ? buildShortUrl(req, shortCode) : null;
+  const qrUrl = shortCode ? `${req.protocol}://${req.get('host')}/api/short-links/${encodeURIComponent(shortCode)}/qr` : null;
   return {
     id: entry.id,
     originalName: entry.originalName,
@@ -903,8 +1283,11 @@ function serializeUploadEntry(req, entry) {
     lastDownloadedAt: entry.lastDownloadedAt,
     folderId: entry.folderId || null,
     folderName: folder?.name || null,
-    openUrl: buildUploadPublicUrl(req, entry.id),
-    downloadUrl: buildUploadDownloadUrl(req, entry.id)
+    openUrl,
+    downloadUrl: buildUploadDownloadUrl(req, entry.id),
+    shortCode,
+    shortUrl,
+    qrUrl
   };
 }
 
@@ -923,11 +1306,18 @@ function serializeFolderEntry(req, folder) {
   const downloadCount = files.reduce((acc, file) => acc + (file.downloadCount || 0), 0);
   const lastClickedAt = files.reduce((acc, file) => Math.max(acc, file.lastClickedAt || 0), 0) || null;
   const lastDownloadedAt = files.reduce((acc, file) => Math.max(acc, file.lastDownloadedAt || 0), 0) || null;
+  const openUrl = buildFolderPublicUrl(req, folder.id);
+  folder.shortCode = ensureShortLinkForVaultItem(req, openUrl, expiresAt, '', folder.shortCode);
+  const shortCode = folder.shortCode || null;
+  const shortUrl = shortCode ? buildShortUrl(req, shortCode) : null;
+  const qrUrl = shortCode ? `${req.protocol}://${req.get('host')}/api/short-links/${encodeURIComponent(shortCode)}/qr` : null;
 
   return {
     folderId: folder.id,
     folderName: folder.name,
+    fileCount: files.length,
     totalFiles: files.length,
+    totalSizeBytes: totalBytes,
     totalBytes,
     createdAt,
     expiresAt,
@@ -936,8 +1326,11 @@ function serializeFolderEntry(req, folder) {
     lastClickedAt,
     lastDownloadedAt,
     status: files.some((file) => getFileStatus(file) === 'active') ? 'active' : 'expired',
-    openUrl: buildFolderPublicUrl(req, folder.id),
-    downloadAllUrl: buildFolderDownloadAllUrl(req, folder.id)
+    openUrl,
+    downloadAllUrl: buildFolderDownloadAllUrl(req, folder.id),
+    shortCode,
+    shortUrl,
+    qrUrl
   };
 }
 
@@ -957,12 +1350,14 @@ function cleanupExpiredUploads() {
   for (const [id, entry] of fileVaultEntries.entries()) {
     if (typeof entry.expiresAt === 'number' && now > entry.expiresAt) {
       deleteUploadFile(entry);
+      if (entry.shortCode) shortLinks.delete(entry.shortCode);
       fileVaultEntries.delete(id);
     }
   }
   for (const [folderId, folder] of fileVaultFolders.entries()) {
     const activeFileIds = folder.fileIds.filter((id) => fileVaultEntries.has(id));
     if (activeFileIds.length === 0) {
+      if (folder.shortCode) shortLinks.delete(folder.shortCode);
       fileVaultFolders.delete(folderId);
     } else {
       folder.fileIds = activeFileIds;
@@ -1077,6 +1472,20 @@ app.post('/api/uploads', (req, res) => {
       expiresInDays = parsedDays;
     }
 
+    const rawShortAlias = String(req.body.shortLinkAlias || req.body.customAlias || req.body.slug || '').trim();
+    let baseAlias = '';
+    if (rawShortAlias) {
+      if (!/^[a-zA-Z0-9_-]{2,32}$/.test(rawShortAlias)) {
+        cleanupUploadedTempFiles(files);
+        return res.status(400).json({ message: 'Alias shortlink hanya boleh huruf/angka, underscore, dash (2-32 karakter).' });
+      }
+      baseAlias = sanitizeAlias(rawShortAlias);
+      if (shortLinks.has(baseAlias)) {
+        cleanupUploadedTempFiles(files);
+        return res.status(409).json({ message: `Shortlink "${baseAlias}" sudah dipakai, gunakan alias lain.` });
+      }
+    }
+
     const incomingBytes = files.reduce((acc, file) => acc + (file.size || 0), 0);
     if (isStorageLimitEnabled() && (getUsedStorageBytes() + incomingBytes) > STORAGE_CAPACITY_BYTES) {
       cleanupUploadedTempFiles(files);
@@ -1106,13 +1515,27 @@ app.post('/api/uploads', (req, res) => {
           id: `${normalizeFolderKey(firstFolder)}-${Date.now()}-${crypto.randomBytes(2).toString('hex')}`,
           name: firstFolder,
           createdAt,
-          fileIds: []
+          fileIds: [],
+          shortCode: null
         }
       : null;
+
+    if (folderRecord) {
+      const folderOpenUrl = buildFolderPublicUrl(req, folderRecord.id);
+      folderRecord.shortCode = ensureShortLinkForVaultItem(req, folderOpenUrl, expiresAt, baseAlias);
+    }
 
     const savedEntries = files.map((file, index) => {
       const id = generateCode() + crypto.randomBytes(2).toString('hex');
       const relativePath = parsedRelativePaths[index];
+      const entryOpenUrl = buildUploadPublicUrl(req, id);
+      let entryShortCode = null;
+      if (!folderRecord) {
+        const aliasForEntry = baseAlias
+          ? (index === 0 ? baseAlias : `${baseAlias}-${index + 1}`)
+          : '';
+        entryShortCode = ensureShortLinkForVaultItem(req, entryOpenUrl, expiresAt, aliasForEntry);
+      }
       const entry = {
         id,
         filePath: file.path,
@@ -1127,21 +1550,28 @@ app.post('/api/uploads', (req, res) => {
         clickCount: 0,
         downloadCount: 0,
         lastClickedAt: null,
-        lastDownloadedAt: null
+        lastDownloadedAt: null,
+        shortCode: entryShortCode
       };
       fileVaultEntries.set(id, entry);
       if (folderRecord) folderRecord.fileIds.push(id);
       return serializeUploadEntry(req, entry);
     });
 
+    let serializedFolder = null;
     if (folderRecord && folderRecord.fileIds.length > 0) {
       fileVaultFolders.set(folderRecord.id, folderRecord);
+      serializedFolder = serializeFolderEntry(req, folderRecord);
     }
 
+    const primaryShortUrl = serializedFolder?.shortUrl || savedEntries[0]?.shortUrl || null;
     return res.status(201).json({
-      message: `${savedEntries.length} file berhasil diupload.`,
+      message: primaryShortUrl
+        ? `${savedEntries.length} file berhasil diupload. Shortlink: ${primaryShortUrl}`
+        : `${savedEntries.length} file berhasil diupload.`,
       entries: savedEntries,
-      folder: folderRecord ? serializeFolderEntry(req, folderRecord) : null,
+      folder: serializedFolder,
+      shortUrl: primaryShortUrl,
       summary: createUploadSummary()
     });
   });
@@ -1206,6 +1636,7 @@ app.post('/api/uploads/chunk/init', (req, res) => {
   const size = Number(req.body?.size || 0);
   const mimeType = String(req.body?.mimeType || 'application/octet-stream').trim() || 'application/octet-stream';
   const expiresInDays = Number(req.body?.expiresInDays || 0);
+  const rawShortAlias = String(req.body?.shortLinkAlias || req.body?.customAlias || '').trim();
 
   if (!Number.isFinite(size) || size <= 0) {
     return res.status(400).json({ message: 'Ukuran file wajib diisi.' });
@@ -1214,6 +1645,16 @@ app.post('/api/uploads/chunk/init', (req, res) => {
     return res.status(400).json({
       message: `Ukuran file melebihi batas ${Math.floor(MAX_UPLOAD_FILE_SIZE_BYTES / (1024 * 1024))}MB per file.`
     });
+  }
+  let shortLinkAlias = '';
+  if (rawShortAlias) {
+    if (!/^[a-zA-Z0-9_-]{2,32}$/.test(rawShortAlias)) {
+      return res.status(400).json({ message: 'Alias shortlink hanya boleh huruf/angka, underscore, dash (2-32 karakter).' });
+    }
+    shortLinkAlias = sanitizeAlias(rawShortAlias);
+    if (shortLinks.has(shortLinkAlias)) {
+      return res.status(409).json({ message: `Shortlink "${shortLinkAlias}" sudah dipakai, gunakan alias lain.` });
+    }
   }
 
   const uploadId = crypto.randomBytes(12).toString('hex');
@@ -1227,6 +1668,7 @@ app.post('/api/uploads/chunk/init', (req, res) => {
     size,
     mimeType,
     expiresInDays: Number.isFinite(expiresInDays) && expiresInDays > 0 ? expiresInDays : null,
+    shortLinkAlias,
     totalChunks,
     received: new Set(),
     dir,
@@ -1328,6 +1770,13 @@ app.post('/api/uploads/chunk/complete', async (req, res) => {
       expiresAt = createdAt + (session.expiresInDays * 24 * 60 * 60 * 1000);
     }
     const id = generateCode() + crypto.randomBytes(2).toString('hex');
+    const openUrl = buildUploadPublicUrl(req, id);
+    const shortCode = ensureShortLinkForVaultItem(
+      req,
+      openUrl,
+      expiresAt,
+      req.body?.shortLinkAlias || session.shortLinkAlias || ''
+    );
     const entry = {
       id,
       filePath: finalPath,
@@ -1342,15 +1791,18 @@ app.post('/api/uploads/chunk/complete', async (req, res) => {
       clickCount: 0,
       downloadCount: 0,
       lastClickedAt: null,
-      lastDownloadedAt: null
+      lastDownloadedAt: null,
+      shortCode
     };
     fileVaultEntries.set(id, entry);
     cleanupChunkSession(uploadId);
 
+    const serialized = serializeUploadEntry(req, entry);
     return res.status(201).json({
-      message: 'File besar berhasil diupload (chunked).',
-      entries: [serializeUploadEntry(req, entry)],
+      message: `File besar berhasil diupload (chunked). Shortlink: ${serialized.shortUrl}`,
+      entries: [serialized],
       folder: null,
+      shortUrl: serialized.shortUrl,
       summary: createUploadSummary()
     });
   } catch (error) {
@@ -1365,7 +1817,7 @@ function sanitizePasteSlug(raw) {
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
+    .slice(0, 64);
 }
 
 function findPasteBySlug(slug) {
@@ -1408,7 +1860,7 @@ function serializePasteEntry(req, entry, includeContent = true) {
   const base = {
     id: entry.id,
     slug,
-    title: entry.title,
+    title: entry.title || slug,
     size: String(entry.content || '').length,
     clickCount: Number(entry.clickCount || 0),
     views: Number(entry.clickCount || 0),
@@ -1421,7 +1873,7 @@ function serializePasteEntry(req, entry, includeContent = true) {
 }
 
 app.get('/api/pastebin', (req, res) => {
-  if (!req.session?.toolAccessGranted) {
+  if (!hasValidAdminAuth(req)) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
   const items = Array.from(pastebinEntries.values())
@@ -1430,11 +1882,11 @@ app.get('/api/pastebin', (req, res) => {
   return res.json({ items });
 });
 
-app.post('/api/pastebin', (req, res) => {
-  if (!req.session?.toolAccessGranted) {
+function handleSaveOrUpdatePaste(req, res) {
+  if (!hasValidAdminAuth(req)) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
-  const title = String(req.body?.title || '').trim().slice(0, 120);
+  const rawName = String(req.body?.title || req.body?.slug || '').trim().slice(0, 120);
   const content = String(req.body?.content || '');
   if (!content.trim()) {
     return res.status(400).json({ message: 'Konten snippet wajib diisi.' });
@@ -1443,14 +1895,39 @@ app.post('/api/pastebin', (req, res) => {
     return res.status(400).json({ message: 'Snippet terlalu besar (maks 500KB karakter).' });
   }
 
-  const requestedSlug = sanitizePasteSlug(req.body?.slug);
+  const editId = String(req.params?.id || req.body?.id || '').trim();
+  const requestedSlug = sanitizePasteSlug(req.body?.slug || req.body?.title || '');
+  let existingEntry = editId ? (pastebinEntries.get(editId) || findPasteBySlug(editId)) : null;
+
+  if (!existingEntry && req.body?.overwrite && requestedSlug) {
+    existingEntry = findPasteBySlug(requestedSlug);
+  }
+
+  if (existingEntry) {
+    const nextSlug = requestedSlug || existingEntry.slug;
+    if (nextSlug.length < 1) {
+      return res.status(400).json({ message: 'Judul / slug tidak valid.' });
+    }
+    if (isPasteSlugTaken(nextSlug, existingEntry.id)) {
+      return res.status(409).json({ message: 'Judul / slug sudah dipakai snippet lain, gunakan yang lain.' });
+    }
+    existingEntry.slug = nextSlug;
+    existingEntry.title = rawName || nextSlug;
+    existingEntry.content = content;
+    existingEntry.updatedAt = Date.now();
+    return res.status(200).json({
+      message: 'Snippet berhasil diperbarui.',
+      item: serializePasteEntry(req, existingEntry, true)
+    });
+  }
+
   let slug = requestedSlug;
   if (slug) {
-    if (slug.length < 3) {
-      return res.status(400).json({ message: 'Slug minimal 3 karakter (huruf/angka/dash/underscore).' });
+    if (slug.length < 1) {
+      return res.status(400).json({ message: 'Judul / slug tidak valid.' });
     }
     if (isPasteSlugTaken(slug)) {
-      return res.status(409).json({ message: 'Slug sudah dipakai, gunakan slug lain.' });
+      return res.status(409).json({ message: 'Judul / slug sudah dipakai, gunakan yang lain.' });
     }
   } else {
     slug = generateUniquePasteSlug();
@@ -1461,7 +1938,7 @@ app.post('/api/pastebin', (req, res) => {
   const entry = {
     id,
     slug,
-    title,
+    title: rawName || slug,
     content,
     clickCount: 0,
     createdAt: now,
@@ -1472,10 +1949,13 @@ app.post('/api/pastebin', (req, res) => {
     message: 'Snippet tersimpan.',
     item: serializePasteEntry(req, entry, true)
   });
-});
+}
+
+app.post('/api/pastebin', handleSaveOrUpdatePaste);
+app.put('/api/pastebin/:id', handleSaveOrUpdatePaste);
 
 app.get('/api/pastebin/:id', (req, res) => {
-  if (!req.session?.toolAccessGranted) {
+  if (!hasValidAdminAuth(req)) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
   const key = String(req.params.id || '').trim();
@@ -1485,7 +1965,7 @@ app.get('/api/pastebin/:id', (req, res) => {
 });
 
 app.delete('/api/pastebin/:id', (req, res) => {
-  if (!req.session?.toolAccessGranted) {
+  if (!hasValidAdminAuth(req)) {
     return res.status(401).json({ message: 'Unauthorized.' });
   }
   const key = String(req.params.id || '').trim();
@@ -1516,10 +1996,12 @@ app.delete('/api/uploads/:id', (req, res) => {
   }
 
   deleteUploadFile(entry);
+  if (entry.shortCode) shortLinks.delete(entry.shortCode);
   if (entry.folderId && fileVaultFolders.has(entry.folderId)) {
     const folder = fileVaultFolders.get(entry.folderId);
     folder.fileIds = folder.fileIds.filter((fileId) => fileId !== id);
     if (folder.fileIds.length === 0) {
+      if (folder.shortCode) shortLinks.delete(folder.shortCode);
       fileVaultFolders.delete(entry.folderId);
     }
   }
@@ -1543,9 +2025,11 @@ app.delete('/api/folders/:folderId', (req, res) => {
     const entry = fileVaultEntries.get(fileId);
     if (entry) {
       deleteUploadFile(entry);
+      if (entry.shortCode) shortLinks.delete(entry.shortCode);
       fileVaultEntries.delete(fileId);
     }
   });
+  if (folder.shortCode) shortLinks.delete(folder.shortCode);
   fileVaultFolders.delete(folderId);
 
   return res.json({
@@ -1752,74 +2236,89 @@ function isAllowedIbbImageUrl(urlValue) {
     return host === 'i.ibb.co' ||
       host.endsWith('.i.ibb.co') ||
       host === 'i.ibb.co.com' ||
-      host.endsWith('.i.ibb.co.com');
+      host.endsWith('.i.ibb.co.com') ||
+      host === 'catbox.moe' ||
+      host.endsWith('.catbox.moe');
   } catch (_error) {
     return false;
   }
 }
 
 async function uploadImageBufferToImgbb(fileBuffer, originalName = 'image-upload') {
-  if (!IMGBB_API_KEY) {
-    const keyError = new Error('IMGBB_API_KEY belum diatur di server.');
-    keyError.statusCode = 500;
-    throw keyError;
-  }
-
-  const payload = new FormData();
   const safeName = String(originalName || 'image-upload')
     .trim()
     .replace(/[^\w.\-]+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 80) || 'image-upload';
-  payload.append('name', safeName);
-  payload.append('image', Buffer.from(fileBuffer).toString('base64'));
+  const base64Image = Buffer.from(fileBuffer).toString('base64');
+  let lastError = null;
 
-  let response;
+  for (const apiKey of IMGBB_KEY_CANDIDATES) {
+    try {
+      const payload = new FormData();
+      payload.append('name', safeName);
+      payload.append('image', base64Image);
+
+      const response = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(apiKey)}`, {
+        method: 'POST',
+        body: payload
+      });
+      const rawText = await response.text();
+      let parsed = {};
+      try {
+        parsed = rawText ? JSON.parse(rawText) : {};
+      } catch (_error) {
+        parsed = { raw: rawText };
+      }
+
+      if (!response.ok || parsed?.success === false) {
+        const uploadError = new Error(parsed?.error?.message || parsed?.message || `Upload gambar gagal (${response.status})`);
+        uploadError.statusCode = 502;
+        uploadError.payload = parsed;
+        lastError = uploadError;
+        continue;
+      }
+
+      const imageUrl = String(
+        parsed?.data?.url ||
+        parsed?.data?.display_url ||
+        parsed?.data?.image?.url ||
+        ''
+      ).trim();
+      if (!imageUrl || !isValidHttpUrl(imageUrl)) {
+        lastError = new Error('Server upload tidak mengembalikan URL gambar valid.');
+        continue;
+      }
+
+      return {
+        url: imageUrl,
+        deleteUrl: parsed?.data?.delete_url || null,
+        raw: parsed
+      };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  // Fallback ke Litterbox jika semua key ImgBB sedang bermasalah
   try {
-    response = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`, {
-      method: 'POST',
-      body: payload
-    });
-  } catch (error) {
-    const networkError = new Error(`Gagal upload ke i.bb: ${error.message}`);
-    networkError.statusCode = 502;
-    throw networkError;
-  }
+    const lbPayload = new FormData();
+    lbPayload.append('reqtype', 'fileupload');
+    lbPayload.append('time', '24h');
+    lbPayload.append('fileToUpload', new Blob([fileBuffer], { type: 'image/png' }), `${safeName}.png`);
+    const lbRes = await fetch(LITTERBOX_UPLOAD_ENDPOINT, { method: 'POST', body: lbPayload });
+    const lbUrl = String(await lbRes.text() || '').trim();
+    if (lbRes.ok && isValidHttpUrl(lbUrl)) {
+      return {
+        url: lbUrl,
+        deleteUrl: null,
+        raw: { fallback: 'litterbox', url: lbUrl }
+      };
+    }
+  } catch (_fallbackErr) {}
 
-  const rawText = await response.text();
-  let parsed = {};
-  try {
-    parsed = rawText ? JSON.parse(rawText) : {};
-  } catch (_error) {
-    parsed = { raw: rawText };
-  }
-
-  if (!response.ok || parsed?.success === false) {
-    const uploadError = new Error(parsed?.error?.message || parsed?.message || `Upload i.bb gagal (${response.status})`);
-    uploadError.statusCode = 502;
-    uploadError.payload = parsed;
-    throw uploadError;
-  }
-
-  const imageUrl = String(
-    parsed?.data?.url ||
-    parsed?.data?.display_url ||
-    parsed?.data?.image?.url ||
-    ''
-  ).trim();
-  if (!imageUrl || !isValidHttpUrl(imageUrl)) {
-    const invalidUrlError = new Error('i.bb tidak mengembalikan URL gambar valid.');
-    invalidUrlError.statusCode = 502;
-    invalidUrlError.payload = parsed;
-    throw invalidUrlError;
-  }
-
-  return {
-    url: imageUrl,
-    deleteUrl: parsed?.data?.delete_url || null,
-    raw: parsed
-  };
+  throw lastError || new Error('Gagal mengunggah gambar ke server pemrosesan.');
 }
 
 const publicImageUpload = multer({
@@ -2517,6 +3016,82 @@ app.post('/api/public/upload-temp', (req, res) => {
   });
 });
 
+function mapMetNoSymbolToWeatherText(symbolCode, cloudFraction = 0, precipAmount = 0) {
+  const sym = String(symbolCode || '').toLowerCase();
+  if (sym.includes('thunder')) return 'Badai Petir';
+  if (sym.includes('heavyrain')) return 'Hujan Lebat';
+  if (sym.includes('rain') || sym.includes('sleet') || Number(precipAmount) > 0.3) return 'Hujan Ringan';
+  if (sym.includes('cloudy') || Number(cloudFraction) > 75) return 'Berawan';
+  if (sym.includes('partlycloudy') || sym.includes('fair') || Number(cloudFraction) > 25) return 'Cerah Berawan';
+  return 'Cerah';
+}
+
+async function fetchOpenMeteoWeatherFallback(query) {
+  const geoUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(`${query}, Indonesia`)}&format=json&limit=1&addressdetails=1`;
+  const geoRes = await fetch(geoUrl, {
+    headers: { 'User-Agent': 'arthurg-weather/1.0 (https://arthurg.my.id)', 'Accept-Language': 'id' }
+  });
+  if (!geoRes.ok) return null;
+  const geoList = await geoRes.json();
+  const loc = Array.isArray(geoList) ? geoList[0] : null;
+  const lat = Number(loc?.lat);
+  const lon = Number(loc?.lon);
+  if (!loc || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+  const fcUrl = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`;
+  const fcRes = await fetch(fcUrl, {
+    headers: { 'User-Agent': 'arthurg-weather/1.0 (https://arthurg.my.id)' }
+  });
+  if (!fcRes.ok) return null;
+  const fcData = await fcRes.json();
+  const series = Array.isArray(fcData?.properties?.timeseries) ? fcData.properties.timeseries : [];
+  if (!series.length) return null;
+
+  const toEntry = (item, isCurrent = false) => {
+    const details = item?.data?.instant?.details || {};
+    const next1h = item?.data?.next_1_hours || item?.data?.next_6_hours || {};
+    const symbolCode = next1h?.summary?.symbol_code || '';
+    const precip = next1h?.details?.precipitation_amount ?? 0;
+    const temp = Math.round(Number(details.air_temperature ?? 28));
+    const windKmh = Math.round(Number(details.wind_speed ?? 2.2) * 3.6);
+    const weather = mapMetNoSymbolToWeatherText(symbolCode, details.cloud_area_fraction, precip);
+    let timeLabel = 'Sekarang';
+    if (!isCurrent && item?.time) {
+      const dt = new Date(item.time);
+      if (!Number.isNaN(dt.getTime())) {
+        timeLabel = `${dt.toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', hour12: false }).replace('.', ':')} WIB`;
+      }
+    }
+    return {
+      time: timeLabel,
+      weather,
+      temperature: temp,
+      wind: `${windKmh} km/j`
+    };
+  };
+
+  const current = toEntry(series[0], true);
+  const forecast = [];
+  for (let i = 1; i <= 8 && i * 2 < series.length; i += 1) {
+    forecast.push(toEntry(series[i * 2], false));
+  }
+
+  const addr = loc.address || {};
+  const subdistrict = addr.suburb || addr.village || addr.town || addr.municipality || addr.city_district || loc.name || query;
+  const regency = addr.city || addr.county || addr.regency || null;
+  const province = addr.state || 'Indonesia';
+
+  return {
+    location: {
+      subdistrict,
+      regency,
+      province
+    },
+    current,
+    forecast
+  };
+}
+
 app.get('/api/public/cuaca', async (req, res) => {
   const query = String(
     req.query.q ||
@@ -2528,9 +3103,25 @@ app.get('/api/public/cuaca', async (req, res) => {
     return res.status(400).json({ message: 'Parameter q / subdistrict wajib diisi.' });
   }
 
+  const rawLower = String(query || '').toLowerCase();
+  const suggestionsByCity = [
+    {
+      keys: ['surabaya', 'sby'],
+      values: ['Sukolilo', 'Rungkut', 'Wonokromo', 'Tegalsari', 'Genteng', 'Gubeng']
+    },
+    {
+      keys: ['jakarta', 'jkt'],
+      values: ['Menteng', 'Tanah Abang', 'Kebayoran Baru', 'Cempaka Putih', 'Tebet', 'Kemayoran']
+    },
+    {
+      keys: ['bandung'],
+      values: ['Coblong', 'Sukajadi', 'Cicendo', 'Lengkong', 'Kiaracondong', 'Antapani']
+    }
+  ];
+  const suggestionHit = suggestionsByCity.find((x) => x.keys.some((k) => rawLower.includes(k)));
+  const suggestions = suggestionHit ? suggestionHit.values : [];
+
   try {
-    // NeoXR cuaca docs/variasi: beberapa build pakai q, yang aktif saat ini wajib subdistrict.
-    // Kirim keduanya agar kompatibel, lalu parse JSON dengan aman.
     let payload;
     try {
       payload = await callNeoxrApi('cuaca', { q: query, subdistrict: query });
@@ -2548,28 +3139,15 @@ app.get('/api/public/cuaca', async (req, res) => {
 
     const normalized = normalizeWeatherSummary(payload);
     const current = normalized?.current || null;
-    const rawLower = String(query || '').toLowerCase();
-    const suggestionsByCity = [
-      {
-        keys: ['surabaya', 'sby'],
-        values: ['Sukolilo', 'Rungkut', 'Wonokromo', 'Tegalsari', 'Genteng', 'Gubeng']
-      },
-      {
-        keys: ['jakarta', 'jkt'],
-        values: ['Menteng', 'Tanah Abang', 'Kebayoran Baru', 'Cempaka Putih', 'Tebet', 'Kemayoran']
-      },
-      {
-        keys: ['bandung'],
-        values: ['Coblong', 'Sukajadi', 'Cicendo', 'Lengkong', 'Kiaracondong', 'Antapani']
-      }
-    ];
-    const suggestionHit = suggestionsByCity.find((x) => x.keys.some((k) => rawLower.includes(k)));
-    const suggestions = suggestionHit ? suggestionHit.values : [];
 
     if (!current) {
+      const fallbackNormalized = await fetchOpenMeteoWeatherFallback(query).catch(() => null);
+      if (fallbackNormalized?.current) {
+        return res.json({ status: true, normalized: fallbackNormalized, suggestions });
+      }
       return res.status(404).json({
         status: false,
-        message: 'Lokasi tidak ditemukan. Coba ketik nama kecamatan (bukan nama kota).',
+        message: 'Lokasi tidak ditemukan. Coba ketik nama kecamatan atau kota lain.',
         suggestions,
         normalized
       });
@@ -2581,10 +3159,21 @@ app.get('/api/public/cuaca', async (req, res) => {
       suggestions
     });
   } catch (error) {
+    try {
+      const fallbackNormalized = await fetchOpenMeteoWeatherFallback(query);
+      if (fallbackNormalized?.current) {
+        return res.json({
+          status: true,
+          normalized: fallbackNormalized,
+          suggestions
+        });
+      }
+    } catch (_fallbackErr) {}
+
     const upstreamMsg = String(error?.payload?.msg || error?.message || '').toLowerCase();
     let message = sanitizePublicUpstreamMessage(error, 'Gagal mengambil data cuaca.');
     if (upstreamMsg.includes('something went wrong') || upstreamMsg.includes('html, bukan json')) {
-      message = 'Layanan cuaca upstream sedang bermasalah. Coba lagi beberapa saat, atau coba nama kecamatan lain.';
+      message = 'Layanan cuaca sedang tidak dapat memuat lokasi tersebut. Coba nama kecamatan atau kota lain.';
     }
     return res.status(Number(error?.statusCode) || 502).json({
       status: false,
@@ -3333,10 +3922,14 @@ function getLinkStatus(link) {
 
 function serializeLink(req, link) {
   const status = getLinkStatus(link);
+  const shortUrl = buildShortUrl(req, link.code);
+  const qrUrl = `${req.protocol}://${req.get('host')}/api/short-links/${encodeURIComponent(link.code)}/qr`;
   return {
     code: link.code,
     originalUrl: link.originalUrl,
-    shortUrl: buildShortUrl(req, link.code),
+    shortUrl,
+    qrUrl,
+    qrDownloadUrl: `${qrUrl}?download=1`,
     createdAt: link.createdAt,
     expiresAt: link.expiresAt,
     clickCount: link.clickCount,
@@ -3434,8 +4027,8 @@ app.post('/api/short-links', (req, res) => {
   const aliasSource = String(customAlias || '').trim();
   let code = '';
   if (aliasSource) {
-    if (!/^[a-zA-Z0-9_-]{4,20}$/.test(aliasSource)) {
-      return res.status(400).json({ message: 'Alias hanya boleh huruf/angka, underscore, dash (4-20 karakter).' });
+    if (!/^[a-zA-Z0-9_-]{2,32}$/.test(aliasSource)) {
+      return res.status(400).json({ message: 'Alias hanya boleh huruf/angka, underscore, dash (2-32 karakter).' });
     }
     code = sanitizeAlias(aliasSource);
     if (shortLinks.has(code)) {
@@ -3470,6 +4063,62 @@ app.post('/api/short-links', (req, res) => {
     message: 'Shortlink berhasil dibuat.',
     link: serializeLink(req, linkData)
   });
+});
+
+app.get('/api/short-links/:code/qr', async (req, res) => {
+  try {
+    const code = String(req.params.code || '').trim().toLowerCase();
+    const link = shortLinks.get(code);
+    if (!link) {
+      return res.status(404).json({ message: 'Shortlink tidak ditemukan.' });
+    }
+    const shortUrl = buildShortUrl(req, link.code);
+    const pngBuffer = await QRCode.toBuffer(shortUrl, {
+      type: 'png',
+      width: 520,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    });
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'no-cache');
+    if (req.query?.download) {
+      res.setHeader('Content-Disposition', `attachment; filename="qr-${link.code}.png"`);
+    }
+    return res.send(pngBuffer);
+  } catch (error) {
+    return res.status(500).json({ message: error?.message || 'Gagal membuat QR code.' });
+  }
+});
+
+app.get('/api/qr', async (req, res) => {
+  try {
+    const text = String(req.query?.text || req.query?.url || '').trim();
+    if (!text) {
+      return res.status(400).json({ message: 'Parameter text/url wajib diisi.' });
+    }
+    const pngBuffer = await QRCode.toBuffer(text, {
+      type: 'png',
+      width: 520,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    });
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'no-cache');
+    if (req.query?.download) {
+      res.setHeader('Content-Disposition', 'attachment; filename="qrcode.png"');
+    }
+    return res.send(pngBuffer);
+  } catch (error) {
+    return res.status(500).json({ message: error?.message || 'Gagal membuat QR code.' });
+  }
 });
 
 app.get('/api/short-links', (req, res) => {

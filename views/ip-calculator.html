@@ -20,17 +20,54 @@
     ]
   }
   </script>
-  <title>IP Calculator - Subnetting Lengkap</title>
+  <title>IP Calculator · Admin</title>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root { color-scheme: dark; }
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
       min-height: 100vh;
       background: radial-gradient(circle at top left, #1e3a8a 0%, #020617 62%);
       color: #dbeafe;
+    }
+    h1, h2 {
+      font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+      letter-spacing: -0.02em;
+    }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(96, 165, 250, 0.32);
+      background: rgba(15, 23, 42, 0.65);
+      padding: 0.48rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #dbeafe;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .nav-pill:hover {
+      border-color: rgba(147, 197, 253, 0.7);
+      background: rgba(37, 99, 235, 0.22);
+      transform: translateY(-1px);
+    }
+    .nav-pill.active {
+      border-color: rgba(96, 165, 250, 0.85);
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(14, 165, 233, 0.3));
+      color: #fff;
+    }
+    .nav-pill.danger {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: #fecaca;
+    }
+    .nav-pill.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(248, 113, 113, 0.75);
     }
     .glass {
       background: rgba(15, 23, 42, 0.82);
@@ -48,22 +85,25 @@
 </head>
 <body class="px-4 py-8 md:px-8">
   <main class="mx-auto max-w-6xl space-y-6">
-    <header class="glass rounded-2xl p-6">
-      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <header class="glass rounded-2xl p-6 md:p-8">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p class="text-sm uppercase tracking-[0.2em] text-blue-300">Toolkit Jaringan</p>
-          <h1 class="mt-2 text-3xl font-bold text-blue-100">IP Calculator Paket Lengkap (Subnetting)</h1>
-          <p class="mt-2 text-sm text-blue-200 md:text-base">Hitung network, broadcast, host range, wildcard mask, dan pembagian subnet otomatis.</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">/admin/ip-calculator</p>
+          <h1 class="mt-2 text-3xl font-bold text-white md:text-4xl">IP Subnet Calculator</h1>
+          <p class="mt-2 max-w-2xl text-sm text-blue-200/90 md:text-base">
+            Hitung network address, broadcast, rentang host usable, wildcard mask, dan pembagian subnet IPv4.
+          </p>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <a href="/admin" class="inline-flex rounded-lg border border-blue-400/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Dashboard Admin</a>
-          <a href="/admin/file-vault" class="inline-flex rounded-lg border border-blue-400/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">File Vault</a>
-          <a href="/admin/short-link" class="inline-flex rounded-lg border border-blue-400/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Short Link</a>
-          <a href="/admin/pdf-to-jpg" class="inline-flex rounded-lg border border-indigo-300/60 px-4 py-2 text-sm font-semibold text-indigo-100 hover:bg-indigo-500/20">PD2JPG</a>
-          <form method="POST" action="/admin/logout">
-            <button type="submit" class="inline-flex rounded-lg border border-rose-400/50 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20">Logout</button>
-          </form>
-        </div>
+        <nav class="flex flex-wrap gap-2" aria-label="Admin Navigation">
+          <a href="/" class="nav-pill">Home</a>
+          <a href="/admin" class="nav-pill">Dashboard</a>
+          <a href="/admin/file-vault" class="nav-pill">File Vault</a>
+          <a href="/admin/pastebin" class="nav-pill">Pastebin</a>
+          <a href="/admin/short-link" class="nav-pill">Short Link</a>
+          <a href="/admin/ip-calculator" class="nav-pill active">IP Calculator</a>
+          <a href="/admin/pdf-to-jpg" class="nav-pill">PDF to JPG</a>
+          <a href="/admin/logout" class="nav-pill danger">Logout</a>
+        </nav>
       </div>
     </header>
 
@@ -131,6 +171,20 @@
   </main>
 
   <script>
+    (function syncAdminSession() {
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)arthur_admin_token=([^;]+)/);
+        if (match && match[1]) {
+          localStorage.setItem('arthur_admin_session', decodeURIComponent(match[1]));
+        } else {
+          const saved = localStorage.getItem('arthur_admin_session');
+          if (saved) {
+            document.cookie = 'arthur_admin_token=' + encodeURIComponent(saved) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+          }
+        }
+      } catch (_e) {}
+    })();
+
     const ipForm = document.getElementById('ip-form');
     const splitForm = document.getElementById('split-form');
     const resultBody = document.getElementById('calc-result-body');

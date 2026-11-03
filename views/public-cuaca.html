@@ -401,15 +401,15 @@
    <section class="glass p-6">
     <div class="flex flex-col lg:flex-row gap-5 items-start lg:items-center lg:justify-between">
      <div>
-      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200 flex flex-wrap items-center gap-3">
-       <span class="headline-emoji" aria-hidden="true">🌤️</span>
-       <span>Cek Cuaca</span>
+      <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">Public Tools</p>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-blue-200 mt-1">
+       <span>Weather Forecast</span>
       </h1>
-      <p class="text-blue-100 mt-2 max-w-2xl leading-relaxed">Masukkan nama kecamatan untuk melihat kondisi sekarang dan ramalan per jam berikutnya.</p>
+      <p class="text-blue-100 mt-2 max-w-2xl leading-relaxed">Masukkan nama kecamatan atau kota untuk melihat kondisi cuaca saat ini beserta prakiraan jam berikutnya.</p>
      </div>
      <div class="flex flex-wrap gap-2">
-      <a href="/public" class="btn inline-flex items-center gap-2"><i class="fas fa-th-large"></i><span>Hub Public</span></a>
-      <a href="/" class="btn inline-flex items-center gap-2"><i class="fas fa-home"></i><span>Beranda</span></a>
+      <a href="/public" class="btn inline-flex items-center gap-2"><i class="fas fa-th-large"></i><span>Public Tools</span></a>
+      <a href="/" class="btn inline-flex items-center gap-2"><i class="fas fa-home"></i><span>Home</span></a>
      </div>
     </div>
    </section>
@@ -418,22 +418,16 @@
     <article class="glass p-5 lg:col-span-1">
      <h2 class="text-xl font-bold text-blue-300 mb-2"><i class="fas fa-map-marker-alt mr-2"></i>Cari Lokasi</h2>
      <p class="text-sm text-blue-100/90 mb-3 leading-relaxed">
-      Ketik nama <strong class="text-blue-50">kecamatan</strong> atau subdistrict yang kamu inginkan (wilayah Indonesia). Contoh: <em>batang</em>, <em>medan petisah</em>, atau nama kecamatan lain — sistem akan mencocokkan ke data cuaca NeoXR.
+      Ketik nama kecamatan atau kota di Indonesia, misalnya <em>Sukolilo</em>, <em>Menteng</em>, atau <em>Surabaya</em>.
      </p>
      <form id="weather-form" class="space-y-3">
-      <input class="field" id="subdistrict" name="subdistrict" placeholder="Contoh: batang (nama kecamatan)" value="batang"/>
+      <input class="field" id="subdistrict" name="subdistrict" placeholder="Contoh: Sukolilo" value="Sukolilo"/>
       <button class="btn w-full" type="submit">Lihat Cuaca</button>
      </form>
-     <div class="mt-4 text-sm text-blue-200">
-      <p>🌤️ Cerah → icon matahari</p>
-      <p>☁️ Berawan → icon awan</p>
-      <p>🌧️ Hujan → icon hujan</p>
-      <p>⛈️ Badai → icon petir</p>
-     </div>
     </article>
     <article class="glass p-5 lg:col-span-2">
-     <h2 class="text-xl font-bold text-blue-300 mb-3"><i class="fas fa-cloud-sun mr-2"></i>Panel Cuaca</h2>
-     <div id="weather-result" class="result-box text-blue-100">Tekan "Lihat Cuaca" untuk memuat data wilayah kamu.</div>
+     <h2 class="text-xl font-bold text-blue-300 mb-3"><i class="fas fa-cloud-sun mr-2"></i>Prakiraan Cuaca</h2>
+     <div id="weather-result" class="result-box text-blue-100">Klik tombol "Lihat Cuaca" untuk memuat informasi cuaca wilayahmu.</div>
     </article>
    </section>
   </main>

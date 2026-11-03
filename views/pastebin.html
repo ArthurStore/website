@@ -20,14 +20,15 @@
     ]
   }
   </script>
-  <title>Text Vault / Pastebin</title>
+  <title>Pastebin · Admin</title>
   <link rel="icon" type="image/svg+xml" href="/favicon-robot.svg"/>
   <link rel="shortcut icon" href="/favicon-robot.svg"/>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root { color-scheme: dark; }
     body {
-      font-family: Arial, sans-serif;
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
       color: #dbeafe;
       min-height: 100vh;
       position: relative;
@@ -38,6 +39,42 @@
       background-size: 130% 130%, 130% 130%, 220% 220%;
       animation: vaultGradientShift 20s ease-in-out infinite;
       overflow-x: hidden;
+    }
+    h1, h2 {
+      font-family: "Outfit", "Plus Jakarta Sans", sans-serif;
+      letter-spacing: -0.02em;
+    }
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      border-radius: 0.65rem;
+      border: 1px solid rgba(96, 165, 250, 0.32);
+      background: rgba(15, 23, 42, 0.65);
+      padding: 0.48rem 0.85rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #dbeafe;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .nav-pill:hover {
+      border-color: rgba(147, 197, 253, 0.7);
+      background: rgba(37, 99, 235, 0.22);
+      transform: translateY(-1px);
+    }
+    .nav-pill.active {
+      border-color: rgba(96, 165, 250, 0.85);
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.45), rgba(14, 165, 233, 0.3));
+      color: #fff;
+    }
+    .nav-pill.danger {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: #fecaca;
+    }
+    .nav-pill.danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(248, 113, 113, 0.75);
     }
     body::before {
       content: "";
@@ -83,21 +120,33 @@
     }
     textarea, input {
       width: 100%;
+      box-sizing: border-box !important;
       border-radius: 12px;
-      border: 1px solid rgba(59, 130, 246, 0.4);
-      background: rgba(2, 6, 23, 0.72);
+      border: 1px solid rgba(59, 130, 246, 0.45);
+      background: rgba(2, 6, 23, 0.78);
       color: #e2e8f0;
-      padding: 12px 14px;
+      padding: 14px 18px !important;
+      line-height: 1.65 !important;
       outline: none;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.9rem;
+      font-size: 0.92rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    textarea { min-height: 220px; resize: vertical; }
+    textarea:focus, input:focus {
+      border-color: rgba(96, 165, 250, 0.85);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    textarea {
+      min-height: 260px;
+      padding: 16px 20px !important;
+      line-height: 1.7 !important;
+      resize: vertical;
+    }
     .snippet-card {
       border: 1px solid rgba(96, 165, 250, 0.22);
       background: rgba(2, 6, 23, 0.5);
       border-radius: 14px;
-      padding: 14px;
+      padding: 16px;
     }
     .snippet-body {
       white-space: pre-wrap;
@@ -105,9 +154,14 @@
       max-height: 160px;
       overflow: auto;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 0.82rem;
+      font-size: 0.84rem;
+      line-height: 1.6;
       color: #cbd5e1;
-      margin-top: 8px;
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(59, 130, 246, 0.18);
     }
     @keyframes vaultGradientShift {
       0% { background-position: 0% 0%, 100% 0%, 0% 50%; }
@@ -127,42 +181,46 @@
 <body class="px-4 py-8 md:px-8 md:py-10">
   <main class="mx-auto max-w-7xl space-y-6">
     <header class="glass rounded-2xl p-6 md:p-8">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p class="text-sm uppercase tracking-[0.25em] text-blue-300">/admin/pastebin</p>
-          <h1 class="mt-2 text-3xl font-bold text-blue-100 md:text-4xl">Text Vault / Pastebin</h1>
-          <p class="mt-3 max-w-3xl text-sm text-blue-200 md:text-base">
-            Simpan snippet kode/teks, dapatkan short link publik <code>/p/slug</code>, pantau klik, salin, atau unduh.
+          <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-400">/admin/pastebin</p>
+          <h1 class="mt-2 text-3xl font-bold text-white md:text-4xl">Pastebin</h1>
+          <p class="mt-2 max-w-2xl text-sm text-blue-200/90 md:text-base">
+            Simpan catatan atau potongan kode dan bagikan lewat link publik <code>/p/slug</code>.
           </p>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <a href="/admin" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Admin Home</a>
-          <a href="/admin/file-vault" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">File Vault</a>
-          <a href="/admin/short-link" class="link-btn rounded-lg border border-blue-300/50 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">Short Link</a>
-          <a href="/admin/logout" class="link-btn rounded-lg border border-rose-300/60 px-4 py-2 text-sm font-semibold text-rose-100 hover:bg-rose-500/20">Logout</a>
-        </div>
+        <nav class="flex flex-wrap gap-2" aria-label="Admin Navigation">
+          <a href="/" class="nav-pill">Home</a>
+          <a href="/admin" class="nav-pill">Dashboard</a>
+          <a href="/admin/file-vault" class="nav-pill">File Vault</a>
+          <a href="/admin/pastebin" class="nav-pill active">Pastebin</a>
+          <a href="/admin/short-link" class="nav-pill">Short Link</a>
+          <a href="/admin/ip-calculator" class="nav-pill">IP Calculator</a>
+          <a href="/admin/pdf-to-jpg" class="nav-pill">PDF to JPG</a>
+          <a href="/admin/logout" class="nav-pill danger">Logout</a>
+        </nav>
       </div>
     </header>
 
     <section class="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
       <div class="glass rounded-2xl p-6 md:p-7 space-y-4">
-        <h2 class="text-xl font-semibold text-blue-100">Snippet baru</h2>
-        <div>
-          <label class="mb-2 block text-sm font-semibold text-blue-200" for="paste-title">Judul (opsional)</label>
-          <input id="paste-title" placeholder="contoh: nginx config / snippet API" />
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="editor-heading" class="text-xl font-semibold text-blue-100">Snippet Baru</h2>
+          <span id="edit-badge" class="hidden rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-200">Mode Edit</span>
         </div>
         <div>
-          <label class="mb-2 block text-sm font-semibold text-blue-200" for="paste-slug">Custom slug (opsional)</label>
-          <input id="paste-slug" placeholder="contoh: nginx-prod (kosong = otomatis)" />
+          <label class="mb-2 block text-sm font-semibold text-blue-200" for="paste-title">Judul / Slug (opsional)</label>
+          <input id="paste-title" class="px-4 py-3.5 leading-relaxed" placeholder="contoh: nginx-prod (kosong = otomatis)" />
+          <p class="mt-1.5 text-xs text-blue-300/80">Otomatis digunakan sebagai judul sekaligus link publik <code>/p/slug</code>.</p>
         </div>
         <div>
           <label class="mb-2 block text-sm font-semibold text-blue-200" for="paste-content">Isi teks / kode</label>
-          <textarea id="paste-content" placeholder="Tempel teks atau kode di sini..."></textarea>
+          <textarea id="paste-content" class="p-5 leading-relaxed" placeholder="Tempel teks atau kode di sini..."></textarea>
         </div>
         <div class="flex flex-wrap gap-2">
           <button id="paste-save" type="button" class="neon-btn rounded-lg px-5 py-2.5 text-sm font-semibold text-white">Save Snippet</button>
           <button id="paste-copy-draft" type="button" class="link-btn rounded-lg border border-violet-400/40 px-4 py-2.5 text-sm font-semibold text-violet-100 hover:bg-violet-500/20">Copy to Clipboard</button>
-          <button id="paste-clear" type="button" class="link-btn rounded-lg border border-slate-400/40 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-500/20">Clear</button>
+          <button id="paste-clear" type="button" class="link-btn rounded-lg border border-slate-400/40 px-4 py-2.5 text-sm font-semibold text-slate-100 hover:bg-slate-500/20">Clear / Reset</button>
         </div>
         <div id="feedback" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
       </div>
@@ -179,12 +237,46 @@
   </main>
 
   <script>
+    (function syncAdminSession() {
+      try {
+        const match = document.cookie.match(/(?:^|;\s*)arthur_admin_token=([^;]+)/);
+        if (match && match[1]) {
+          localStorage.setItem('arthur_admin_session', decodeURIComponent(match[1]));
+        } else {
+          const saved = localStorage.getItem('arthur_admin_session');
+          if (saved) {
+            document.cookie = 'arthur_admin_token=' + encodeURIComponent(saved) + '; Path=/; Max-Age=31536000; SameSite=Lax';
+          }
+        }
+      } catch (_e) {}
+    })();
+
     const titleInput = document.getElementById('paste-title');
-    const slugInput = document.getElementById('paste-slug');
     const contentInput = document.getElementById('paste-content');
     const listRoot = document.getElementById('paste-list');
     const emptyState = document.getElementById('paste-empty');
     const feedback = document.getElementById('feedback');
+    const editorHeading = document.getElementById('editor-heading');
+    const editBadge = document.getElementById('edit-badge');
+    const saveBtn = document.getElementById('paste-save');
+
+    let editingId = null;
+
+    function setEditMode(item = null) {
+      if (item && item.id) {
+        editingId = item.id;
+        editorHeading.textContent = 'Edit Snippet';
+        editBadge.textContent = `Mengedit: /p/${item.slug || item.id}`;
+        editBadge.classList.remove('hidden');
+        saveBtn.textContent = 'Update Snippet';
+      } else {
+        editingId = null;
+        editorHeading.textContent = 'Snippet Baru';
+        editBadge.textContent = 'Mode Edit';
+        editBadge.classList.add('hidden');
+        saveBtn.textContent = 'Save Snippet';
+      }
+    }
 
     function showFeedback(type, message) {
       feedback.classList.remove('hidden');
@@ -233,11 +325,12 @@
         card.className = 'snippet-card';
         const created = item.createdAt ? new Date(item.createdAt).toLocaleString('id-ID') : '-';
         const slug = item.slug || item.id;
+        const displayTitle = item.title || slug || 'Untitled';
         const share = publicUrl(slug);
         card.innerHTML = `
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <p class="font-semibold text-blue-100">${escapeHtml(item.title || 'Untitled')}</p>
+              <p class="font-semibold text-blue-100">${escapeHtml(displayTitle)}</p>
               <p class="text-xs text-blue-300 mt-1">${created} · ${Number(item.size || 0)} chars · ${Number(item.clickCount || 0)} klik</p>
               <a href="${escapeHtml(share)}" target="_blank" rel="noopener" class="mt-1 inline-block break-all text-xs font-semibold text-cyan-200 hover:underline">${escapeHtml(share)}</a>
             </div>
@@ -262,26 +355,35 @@
     }
 
     document.getElementById('paste-save').addEventListener('click', async () => {
-      const title = String(titleInput.value || '').trim();
-      const slug = String(slugInput.value || '').trim();
+      const unifiedName = String(titleInput.value || '').trim();
       const content = String(contentInput.value || '');
       if (!content.trim()) {
         showFeedback('error', 'Isi teks tidak boleh kosong.');
         return;
       }
       try {
-        const res = await fetch('/api/pastebin', {
-          method: 'POST',
+        const isEditing = Boolean(editingId);
+        const endpoint = isEditing
+          ? `/api/pastebin/${encodeURIComponent(editingId)}`
+          : '/api/pastebin';
+        const method = isEditing ? 'PUT' : 'POST';
+        const res = await fetch(endpoint, {
+          method,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title, content, slug })
+          body: JSON.stringify({
+            id: editingId || undefined,
+            title: unifiedName,
+            slug: unifiedName,
+            content
+          })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Gagal menyimpan.');
         const share = data.item?.publicUrl || publicUrl(data.item?.slug || data.item?.id);
-        showFeedback('success', `Snippet tersimpan. Short link: ${share}`);
+        showFeedback('success', `${isEditing ? 'Snippet diperbarui' : 'Snippet tersimpan'}. Short link: ${share}`);
         titleInput.value = '';
-        slugInput.value = '';
         contentInput.value = '';
+        setEditMode(null);
         await loadSnippets();
       } catch (e) {
         showFeedback('error', e.message);
@@ -295,8 +397,8 @@
 
     document.getElementById('paste-clear').addEventListener('click', () => {
       titleInput.value = '';
-      slugInput.value = '';
       contentInput.value = '';
+      setEditMode(null);
       feedback.classList.add('hidden');
     });
 
@@ -329,10 +431,10 @@
             const ok = await copyText(String(data.item?.content || ''));
             showFeedback(ok ? 'success' : 'error', ok ? 'Snippet disalin.' : 'Gagal menyalin.');
           } else {
-            titleInput.value = data.item?.title || '';
-            slugInput.value = data.item?.slug || '';
+            titleInput.value = data.item?.slug || data.item?.title || '';
             contentInput.value = data.item?.content || '';
-            showFeedback('success', 'Snippet dimuat ke editor.');
+            setEditMode(data.item);
+            showFeedback('success', `Mode edit aktif untuk "/p/${data.item?.slug || data.item?.id}". Silakan ubah lalu klik Update Snippet.`);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
           return;
@@ -343,6 +445,11 @@
           const res = await fetch(`/api/pastebin/${encodeURIComponent(id)}`, { method: 'DELETE' });
           const data = await res.json();
           if (!res.ok) throw new Error(data.message || 'Gagal menghapus.');
+          if (editingId === id) {
+            titleInput.value = '';
+            contentInput.value = '';
+            setEditMode(null);
+          }
           showFeedback('success', 'Snippet dihapus.');
           await loadSnippets();
         }
