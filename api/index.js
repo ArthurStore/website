@@ -992,20 +992,32 @@ function getUsedStorageBytes() {
   return Array.from(fileVaultEntries.values()).reduce((acc, entry) => acc + entry.sizeBytes, 0);
 }
 
+function getPublicOrigin(req) {
+  if (PUBLIC_BASE_URL) return PUBLIC_BASE_URL;
+  const forwardedHost = String(req?.get?.('x-forwarded-host') || '').trim();
+  const host = forwardedHost || String(req?.get?.('host') || '').trim();
+  if (!host || /^(127\.0\.0\.1|localhost)(:\d+)?$/i.test(host)) {
+    return 'https://arthurg.my.id';
+  }
+  const forwardedProto = String(req?.get?.('x-forwarded-proto') || '').trim();
+  const protocol = forwardedProto || req?.protocol || 'https';
+  return `${protocol}://${host}`.replace(/\/+$/, '');
+}
+
 function buildUploadPublicUrl(req, id) {
-  return `${req.protocol}://${req.get('host')}/u/${id}`;
+  return `${getPublicOrigin(req)}/u/${id}`;
 }
 
 function buildUploadDownloadUrl(req, id) {
-  return `${req.protocol}://${req.get('host')}/api/uploads/${id}/download`;
+  return `${getPublicOrigin(req)}/api/uploads/${id}/download`;
 }
 
 function buildFolderPublicUrl(req, folderId) {
-  return `${req.protocol}://${req.get('host')}/u/f/${folderId}`;
+  return `${getPublicOrigin(req)}/u/f/${folderId}`;
 }
 
 function buildFolderDownloadAllUrl(req, folderId) {
-  return `${req.protocol}://${req.get('host')}/api/folders/${folderId}/download-all`;
+  return `${getPublicOrigin(req)}/api/folders/${folderId}/download-all`;
 }
 
 function resolvePdfPublicBaseUrl(req) {
@@ -1267,7 +1279,7 @@ function serializeUploadEntry(req, entry) {
   }
   const shortCode = entry.shortCode || null;
   const shortUrl = shortCode ? buildShortUrl(req, shortCode) : null;
-  const qrUrl = shortCode ? `${req.protocol}://${req.get('host')}/api/short-links/${encodeURIComponent(shortCode)}/qr` : null;
+  const qrUrl = shortCode ? `${getPublicOrigin(req)}/api/short-links/${encodeURIComponent(shortCode)}/qr` : null;
   return {
     id: entry.id,
     originalName: entry.originalName,
@@ -1310,7 +1322,7 @@ function serializeFolderEntry(req, folder) {
   folder.shortCode = ensureShortLinkForVaultItem(req, openUrl, expiresAt, '', folder.shortCode);
   const shortCode = folder.shortCode || null;
   const shortUrl = shortCode ? buildShortUrl(req, shortCode) : null;
-  const qrUrl = shortCode ? `${req.protocol}://${req.get('host')}/api/short-links/${encodeURIComponent(shortCode)}/qr` : null;
+  const qrUrl = shortCode ? `${getPublicOrigin(req)}/api/short-links/${encodeURIComponent(shortCode)}/qr` : null;
 
   return {
     folderId: folder.id,
@@ -1852,7 +1864,7 @@ function generateUniquePasteSlug() {
 }
 
 function buildPastePublicUrl(req, slug) {
-  return `${req.protocol}://${req.get('host')}/p/${encodeURIComponent(slug)}`;
+  return `${getPublicOrigin(req)}/p/${encodeURIComponent(slug)}`;
 }
 
 function serializePasteEntry(req, entry, includeContent = true) {
@@ -1988,12 +2000,22 @@ app.get('/api/public/paste/:slug', (req, res) => {
 
 app.delete('/api/uploads/:id', (req, res) => {
   cleanupExpiredUploads();
-  const id = String(req.params.id || '').trim();
-  const entry = fileVaultEntries.get(id);
+  const rawId = String(req.params.id || '').trim();
+  let entry = fileVaultEntries.get(rawId);
+  if (!entry && rawId) {
+    const lowerKey = rawId.toLowerCase();
+    for (const candidate of fileVaultEntries.values()) {
+      if (String(candidate.shortCode || '').toLowerCase() === lowerKey) {
+        entry = candidate;
+        break;
+      }
+    }
+  }
 
   if (!entry) {
     return res.status(404).json({ message: 'File tidak ditemukan.' });
   }
+  const id = entry.id;
 
   deleteUploadFile(entry);
   if (entry.shortCode) shortLinks.delete(entry.shortCode);
@@ -3904,7 +3926,7 @@ function generateCode() {
 }
 
 function buildShortUrl(req, code) {
-  return `${req.protocol}://${req.get('host')}/s/${code}`;
+  return `${getPublicOrigin(req)}/s/${code}`;
 }
 
 function getLinkStatus(link) {
@@ -3923,7 +3945,7 @@ function getLinkStatus(link) {
 function serializeLink(req, link) {
   const status = getLinkStatus(link);
   const shortUrl = buildShortUrl(req, link.code);
-  const qrUrl = `${req.protocol}://${req.get('host')}/api/short-links/${encodeURIComponent(link.code)}/qr`;
+  const qrUrl = `${getPublicOrigin(req)}/api/short-links/${encodeURIComponent(link.code)}/qr`;
   return {
     code: link.code,
     originalUrl: link.originalUrl,
